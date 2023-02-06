@@ -150,3 +150,6 @@ experiments/car_on_hill/figures/*
 
 # Save optimal values
 !experiments/car_on_hill/figures/data
+# !experiments/car_on_hill/figures/data/optimal
+!experiments/car_on_hill/figures/data/optimal/Q.npy
+!experiments/car_on_hill/figures/data/optimal/V.npy
