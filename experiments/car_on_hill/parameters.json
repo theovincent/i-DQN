@@ -1,0 +1,19 @@
+{
+    "env_seed": 0,
+    "layers_dimension": [
+        30
+    ],
+    "n_states_x": 17,
+    "n_states_v": 17,
+    "---- Shared parameters ---": "-",
+    "horizon": 100,
+    "gamma": 0.95,
+    "n_samples": 5000,
+    "batch_size_samples": 500,
+    "---- iFQIs ---": "-",
+    "n_epochs": 2,
+    "forward_moves": 1,
+    "fitting_steps": 10,
+    "target_update_frequency": 10,
+    "learning_rate": 0.0001
+}

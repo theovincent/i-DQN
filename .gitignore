@@ -103,12 +103,19 @@ celerybeat.pid
 
 # Environments
 .env
+.env_*
 .venv
+.venv_*
 env/
+env_*/
 venv/
+venv_*/
 ENV/
+ENV_*/
 env.bak/
+env_*.bak/
 venv.bak/
+venv*.bak/
 
 # Spyder project settings
 .spyderproject
@@ -127,3 +134,19 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Avoid pushing htlm and npy files
+**/*.html
+**/*.npy
+
+# Avoid pushing images and pdfs
+**/*.png 
+**/*.jpg
+**/*.pdf
+
+# Avoid pushing experiments output
+experiments/car_on_hill/figures/*
+**/*.out
+
+# Save optimal values
+!experiments/car_on_hill/figures/data
