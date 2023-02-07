@@ -15,8 +15,9 @@ def load_params(path: str) -> hk.Params:
     return jax.device_put(params)
 
 
-def add_values(layers_param_1: hk.Params, layers_param_2: hk.Params) -> hk.Params:
+def add_values(layers_param_1: dict, layers_param_2: dict) -> dict:
+    sum_params = {}
     for key_weight_layer in layers_param_1.keys():
-        layers_param_1[key_weight_layer] += layers_param_2[key_weight_layer]
+        sum_params[key_weight_layer] = layers_param_1[key_weight_layer] + layers_param_2[key_weight_layer]
 
-    return layers_param_1
+    return sum_params
