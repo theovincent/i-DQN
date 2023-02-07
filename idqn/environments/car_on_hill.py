@@ -238,7 +238,7 @@ class CarOnHillEnv:
         absorbing = False
 
         while not absorbing and self.n_steps < horizon:
-            action = q(params, self.state)[idx_head].argmax()
+            action = q(params, self.state)[0, idx_head].argmax()
             _, reward, absorbing, _ = self.step(action)
 
             if render:

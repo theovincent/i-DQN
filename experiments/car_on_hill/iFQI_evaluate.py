@@ -16,10 +16,10 @@ def run_cli(argvs=sys.argv[1:]):
 
         warnings.simplefilter(action="ignore", category=FutureWarning)
 
-        parser = argparse.ArgumentParser("Evaluate IFQI on Car-On-Hill.")
+        parser = argparse.ArgumentParser("Evaluate iFQI on Car-On-Hill.")
         addparse(parser)
         args = parser.parse_args(argvs)
-        print_info(args.experiment_name, "IFQI", "Car-On-Hill", args.bellman_iterations_scope, args.seed, train=False)
+        print_info(args.experiment_name, "iFQI", "Car-On-Hill", args.bellman_iterations_scope, args.seed, train=False)
         p = json.load(
             open(f"experiments/car_on_hill/figures/{args.experiment_name}/parameters.json")
         )  # p for parameters
@@ -76,7 +76,7 @@ def run_cli(argvs=sys.argv[1:]):
         n_forward_moves = p["n_epochs"] * p["n_bellman_iterations_per_epoch"] // args.bellman_iterations_scope
 
         params = load_params(
-            f"experiments/car_on_hill/figures/{args.experiment_name}/iFQI/{args.bellman_iterations_scope}_P_{args.seed}_{0}-{args.bellman_iterations_scope}"
+            f"experiments/car_on_hill/figures/{args.experiment_name}/iFQI/{args.bellman_iterations_scope}_P_{args.seed}_0-{args.bellman_iterations_scope}"
         )
         processes.append(
             multiprocessing.Process(

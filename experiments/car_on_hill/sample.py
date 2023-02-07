@@ -49,6 +49,8 @@ def run_cli(argvs=sys.argv[1:]):
             n_episodes += 1
 
     assert sum(jnp.array(replay_buffer.rewards) == 1) > 0, "No positive reward has been sampled, please do something!"
-    print(f"Number of episodes: {n_episodes}")
+    print(
+        f"Number of episodes: {n_episodes}, number of positive reward: {sum(jnp.array(replay_buffer.rewards) == 1)}, number of negative reward: {sum(jnp.array(replay_buffer.rewards) == -1)}"
+    )
 
     replay_buffer.save(f"experiments/car_on_hill/figures/{args.experiment_name}/replay_buffer.npz")

@@ -15,9 +15,11 @@ def load_params(path: str) -> hk.Params:
     return jax.device_put(params)
 
 
-def add_values(layers_param_1: dict, layers_param_2: dict) -> dict:
+def add_noise(layers_param_1: dict, layers_param_2: dict, fading_factor: float = 100) -> dict:
     sum_params = {}
     for key_weight_layer in layers_param_1.keys():
-        sum_params[key_weight_layer] = layers_param_1[key_weight_layer] + layers_param_2[key_weight_layer]
+        sum_params[key_weight_layer] = (
+            layers_param_1[key_weight_layer] + layers_param_2[key_weight_layer] / fading_factor
+        )
 
     return sum_params

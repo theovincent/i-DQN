@@ -9,12 +9,12 @@
     "---- Shared parameters ---": "-",
     "horizon": 100,
     "gamma": 0.95,
-    "n_samples": 5000,
-    "batch_size_samples": 500,
+    "n_samples": 50000,
+    "batch_size_samples": 1000,
     "---- iFQIs ---": "-",
     "n_epochs": 1,
     "n_bellman_iterations_per_epoch": 12,
-    "fitting_steps_per_bellman_iteration": 100,
+    "fitting_steps_per_bellman_iteration": 1000,
     "target_update_frequency": 10,
     "learning_rate": 0.0001
 }

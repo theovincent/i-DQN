@@ -3,7 +3,7 @@ import jax
 import jax.numpy as jnp
 
 from idqn.networks.base_q import iQ
-from idqn.utils.params import add_values
+from idqn.utils.params import add_noise
 
 
 class FullyConnectedMultiQNet(hk.Module):
@@ -68,11 +68,11 @@ class FullyConnectedMultiQ(iQ):
 
         for idx_head in range(self.n_heads):
             for idx_layer in range(self.n_layers):
-                params[f"FullyConnectedNet/head_{idx_head}_linear_{idx_layer}"] = add_values(
+                params[f"FullyConnectedNet/head_{idx_head}_linear_{idx_layer}"] = add_noise(
                     params[f"FullyConnectedNet/head_{self.n_heads - 1}_linear_{idx_layer}"],
                     randon_params[f"FullyConnectedNet/head_{idx_head}_linear_{idx_layer}"],
                 )
-            params[f"FullyConnectedNet/head_{idx_head}_linear_last"] = add_values(
+            params[f"FullyConnectedNet/head_{idx_head}_linear_last"] = add_noise(
                 params[f"FullyConnectedNet/head_{self.n_heads - 1}_linear_last"],
                 randon_params[f"FullyConnectedNet/head_{idx_head}_linear_last"],
             )
