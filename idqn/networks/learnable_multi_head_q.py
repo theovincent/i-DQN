@@ -46,6 +46,8 @@ class FullyConnectedMultiQ(iQ):
         zero_initializer: bool,
         learning_rate: dict = None,
     ) -> None:
+        self.n_layers = len(layers_dimension)
+
         def network(state: jnp.ndarray) -> jnp.ndarray:
             return FullyConnectedMultiQNet(n_heads, layers_dimension, zero_initializer, n_actions)(state)
 
@@ -60,18 +62,19 @@ class FullyConnectedMultiQ(iQ):
 
     def move_forward(self, params: hk.Params) -> hk.Params:
         randon_params = self.random_init_params()
-        for idx_layer in range(1, len(self.network.layers_dimension) + 1):
-            randon_params[f"head_{0}_linear_{idx_layer}"] = {"w": 0, "b": 0}
-        randon_params[f"head_{0}_linear_last"] = {"w": 0, "b": 0}
+        for idx_layer in range(self.n_layers):
+            randon_params[f"FullyConnectedNet/head_{0}_linear_{idx_layer}"] = {"w": 0, "b": 0}
+        randon_params[f"FullyConnectedNet/head_{0}_linear_last"] = {"w": 0, "b": 0}
 
-        for idx_head in range(self.network.n_heads):
-            for idx_layer in range(len(self.network.layers_dimension)):
-                params[f"head_{idx_head}_linear_{idx_layer}"] = add_values(
-                    params[f"head_{self.network.n_heads - 1}_linear_{idx_layer}"],
-                    randon_params[f"head_{idx_head}_linear_{idx_layer}"],
+        for idx_head in range(self.n_heads):
+            for idx_layer in range(self.n_layers):
+                params[f"FullyConnectedNet/head_{idx_head}_linear_{idx_layer}"] = add_values(
+                    params[f"FullyConnectedNet/head_{self.n_heads - 1}_linear_{idx_layer}"],
+                    randon_params[f"FullyConnectedNet/head_{idx_head}_linear_{idx_layer}"],
                 )
-            params[f"head_{idx_head}_linear_last"] = add_values(
-                params[f"head_{self.network.n_heads - 1}_linear_last"], randon_params[f"head_{idx_head}_linear_last"]
+            params[f"FullyConnectedNet/head_{idx_head}_linear_last"] = add_values(
+                params[f"FullyConnectedNet/head_{self.n_heads - 1}_linear_last"],
+                randon_params[f"FullyConnectedNet/head_{idx_head}_linear_last"],
             )
 
         return params

@@ -6,7 +6,7 @@ def print_info(
     seed: int,
     train: bool = True,
 ):
-    print(f"\n\n-------- {experiment_name} --------")
+    print(f"-------- {experiment_name} --------")
     if train:
         print(
             f"Training {algorithm} on {environment_name} with {bellman_iteration_scope} Bellman iterations at a time and seed {seed}..."

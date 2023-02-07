@@ -8,7 +8,11 @@ from idqn.utils.params import save_params
 
 
 def train(environment_name: str, args: Namespace, q: iQ, p: dict, data_loader_samples: SampleDataLoader) -> None:
-    n_training_steps = p["forward_moves"] * args.bellman_iterations_scope * p["fitting_steps"]
+    assert (
+        p["n_bellman_iterations_per_epoch"] % args.bellman_iterations_scope == 0
+    ), f"n_bellman_iterations_per_epoch: {p['n_bellman_iterations_per_epoch']} shoud be a multiple of bellman_iterations_scope: {args.bellman_iterations_scope}."
+
+    n_training_steps = p["n_bellman_iterations_per_epoch"] * p["fitting_steps_per_bellman_iteration"]
     l2_losses = np.ones(p["n_epochs"] * n_training_steps) * np.nan
     n_steps = 0
     params_target = q.params
@@ -24,6 +28,7 @@ def train(environment_name: str, args: Namespace, q: iQ, p: dict, data_loader_sa
                 )
                 cumulative_l2_loss += l2_loss
 
+            l2_losses[n_steps] = cumulative_l2_loss
             n_steps += 1
 
             # Target update
@@ -31,17 +36,20 @@ def train(environment_name: str, args: Namespace, q: iQ, p: dict, data_loader_sa
                 params_target = q.params
 
             # Move forward in the number of Bellman iterations
-            if n_steps % (args.bellman_iterations_scope * p["fitting_steps"]) == 0:
+            if n_steps % (args.bellman_iterations_scope * p["fitting_steps_per_bellman_iteration"]) == 0:
+                n_forward_moves = (
+                    n_steps // (args.bellman_iterations_scope * p["fitting_steps_per_bellman_iteration"]) - 1
+                )
+                start_k = n_forward_moves * args.bellman_iterations_scope
+                end_k = start_k + args.bellman_iterations_scope
                 save_params(
-                    f"experiments/{environment_name}/figures/{args.experiment_name}/IFQI/{args.max_bellman_iterations}_P_{args.seed}_{n_steps}",
+                    f"experiments/{environment_name}/figures/{args.experiment_name}/iFQI/{args.bellman_iterations_scope}_P_{args.seed}_{start_k}-{end_k}",
                     q.params,
                 )
                 q.params = q.move_forward(q.params)
                 params_target = q.params
 
-            l2_losses[n_steps] = cumulative_l2_loss
-
     np.save(
-        f"experiments/{environment_name}/figures/{args.experiment_name}/IFQI/{args.max_bellman_iterations}_L_{args.seed}.npy",
+        f"experiments/{environment_name}/figures/{args.experiment_name}/iFQI/{args.bellman_iterations_scope}_L_{args.seed}.npy",
         l2_losses,
     )

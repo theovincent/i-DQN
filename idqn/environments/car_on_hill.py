@@ -190,7 +190,7 @@ class CarOnHillEnv:
 
     @partial(jax.jit, static_argnames=("self", "q"))
     def q_multi_head_estimate_mesh(
-        self, q: BaseMultiHeadQ, params: hk.Params, states_x: jnp.ndarray, states_v: jnp.ndarray
+        self, q: BaseMultiHeadQ, idx_head: int, params: hk.Params, states_x: jnp.ndarray, states_v: jnp.ndarray
     ) -> jnp.ndarray:
         n_boxes = states_x.shape[0] * states_v.shape[0]
         states_x_mesh, states_v_mesh = jnp.meshgrid(states_x, states_v, indexing="ij")
@@ -198,7 +198,9 @@ class CarOnHillEnv:
         states = jnp.hstack((states_x_mesh.reshape((n_boxes, 1)), states_v_mesh.reshape((n_boxes, 1))))
 
         # Dangerous reshape: the indexing of meshgrid is 'ij'.
-        return q(params, states).reshape((states_x.shape[0], states_v.shape[0], q.n_heads, self.n_actions))
+        return q(params, states).reshape((states_x.shape[0], states_v.shape[0], q.n_heads, self.n_actions))[
+            :, :, idx_head
+        ]
 
     def evaluate(
         self, q: BaseQ, params: hk.Params, horizon: int, initial_state: jnp.ndarray, render: bool = False
@@ -224,7 +226,7 @@ class CarOnHillEnv:
     def evaluate_multi_head(
         self,
         q: BaseMultiHeadQ,
-        head_idx: int,
+        idx_head: int,
         params: hk.Params,
         horizon: int,
         initial_state: jnp.ndarray,
@@ -236,7 +238,7 @@ class CarOnHillEnv:
         absorbing = False
 
         while not absorbing and self.n_steps < horizon:
-            action = q(params, self.state)[head_idx].argmax()
+            action = q(params, self.state)[idx_head].argmax()
             _, reward, absorbing, _ = self.step(action)
 
             if render:
@@ -262,7 +264,7 @@ class CarOnHillEnv:
     def v_mesh_multi_head(
         self,
         q: BaseMultiHeadQ,
-        head_idx: int,
+        idx_head: int,
         params: hk.Params,
         horizon: int,
         states_x: jnp.ndarray,
@@ -273,7 +275,7 @@ class CarOnHillEnv:
         for idx_state_x, state_x in enumerate(states_x):
             for idx_state_v, state_v in enumerate(states_v):
                 v_mesh_[idx_state_x, idx_state_v] = self.evaluate_multi_head(
-                    q, head_idx, params, horizon, jnp.array([state_x, state_v])
+                    q, idx_head, params, horizon, jnp.array([state_x, state_v])
                 )
 
         return v_mesh_

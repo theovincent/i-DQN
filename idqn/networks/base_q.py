@@ -22,22 +22,6 @@ class BaseQ:
         self.network_key = network_key
         self.params = self.network.init(rng=self.network_key, state=jnp.zeros(self.state_shape))
 
-        self.weights_information = {}
-        self.weights_dimension = 0
-
-        for key_layer, layer in self.params.items():
-            self.weights_information[key_layer] = dict()
-            for key_weight_layer, weight_layer in layer.items():
-                # int because weight_layer.shape = () can happen
-                weight_layer_dimensions = int(np.prod(weight_layer.shape))
-
-                self.weights_information[key_layer][key_weight_layer] = {
-                    "begin_idx": self.weights_dimension,
-                    "end_idx": self.weights_dimension + weight_layer_dimensions,
-                    "shape": weight_layer.shape,
-                }
-                self.weights_dimension += weight_layer_dimensions
-
         self.loss_and_grad = jax.jit(jax.value_and_grad(self.loss))
 
         if learning_rate is not None:
@@ -140,7 +124,7 @@ class iQ(BaseMultiHeadQ):
     @partial(jax.jit, static_argnames=("self", "ord"))
     def loss(self, params: hk.Params, params_target: hk.Params, samples: dict, ord: int = 2) -> jnp.ndarray:
         targets = self.compute_target(params_target, samples)[:, :-1]
-        predictions = self(params, samples["state"])[:, 1:, samples["action"]]
+        predictions = self(params, samples["state"])[jnp.arange(samples["state"].shape[0]), 1:, samples["action"]]
 
         if ord == 1:
             return jnp.abs(predictions - targets).mean()
