@@ -48,7 +48,7 @@ function parse_arguments() {
     then
         echo "experiment name is missing, use -e" >&2
         exit
-    elif ( [[ $FIRST_SEED = "" ]] && [[ $LAST_SEED = "" ]] ) || ( [[ $FIRST_SEED != "" ]] && [[ $LAST_SEED = "" ]] ) || ( [[ $FIRST_SEED == "" ]] && [[ $LAST_SEED != "" ]] )
+    elif ( [[ $FIRST_SEED != "" ]] && [[ $LAST_SEED = "" ]] ) || ( [[ $FIRST_SEED == "" ]] && [[ $LAST_SEED != "" ]] )
     then
         echo "you need to specify -fs and -ls, not only one" >&2
         exit
