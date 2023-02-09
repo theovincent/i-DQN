@@ -53,6 +53,7 @@ def run_cli(argvs=sys.argv[1:]):
             q_estimate_list[iteration] = env.q_multi_head_estimate_mesh(q, idx_head, params, states_x, states_v)
 
             if iteration > 0:
+                ae_list[iteration - 1] = 0
                 for batch_samples in data_loader_samples:
                     ae_list[iteration - 1] += q.loss(params, params, batch_samples, ord="sum")
 
