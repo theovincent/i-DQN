@@ -14,7 +14,8 @@ def train(environment_name: str, args: Namespace, q: iQ, p: dict, data_loader_sa
 
     n_training_steps = p["n_bellman_iterations_per_epoch"] * p["fitting_steps_per_bellman_iteration"]
     l2_losses = np.ones(p["n_epochs"] * n_training_steps) * np.nan
-    n_steps = 0
+    n_fits = 0
+    n_gradient_steps = 0
     params_target = q.params
 
     for _ in tqdm(range(p["n_epochs"])):
@@ -27,18 +28,19 @@ def train(environment_name: str, args: Namespace, q: iQ, p: dict, data_loader_sa
                     q.params, params_target, q.optimizer_state, batch_samples
                 )
                 cumulative_l2_loss += l2_loss
+                n_gradient_steps += 1
 
-            l2_losses[n_steps] = cumulative_l2_loss
-            n_steps += 1
+                # Target update
+                if n_gradient_steps % p["target_update_per_gradient_step"] == 0:
+                    params_target = q.params
 
-            # Target update
-            if n_steps % p["target_update_frequency"] == 0:
-                params_target = q.params
+            l2_losses[n_fits] = cumulative_l2_loss
+            n_fits += 1
 
             # Move forward in the number of Bellman iterations
-            if n_steps % (args.bellman_iterations_scope * p["fitting_steps_per_bellman_iteration"]) == 0:
+            if n_fits % (args.bellman_iterations_scope * p["fitting_steps_per_bellman_iteration"]) == 0:
                 n_forward_moves = (
-                    n_steps // (args.bellman_iterations_scope * p["fitting_steps_per_bellman_iteration"]) - 1
+                    n_fits // (args.bellman_iterations_scope * p["fitting_steps_per_bellman_iteration"]) - 1
                 )
                 start_k = n_forward_moves * args.bellman_iterations_scope
                 end_k = start_k + args.bellman_iterations_scope
