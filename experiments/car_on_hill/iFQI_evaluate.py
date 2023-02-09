@@ -29,6 +29,7 @@ def run_cli(argvs=sys.argv[1:]):
         from idqn.utils.params import load_params
 
         env, states_x, _, states_v, _ = define_environment(p["gamma"], p["n_states_x"], p["n_states_v"])
+        data_loader_samples = define_data_loader_samples(p["n_samples"], args.experiment_name, p["batch_size"], None)
 
         def evaluate(
             iteration: int,
@@ -52,9 +53,6 @@ def run_cli(argvs=sys.argv[1:]):
             q_estimate_list[iteration] = env.q_multi_head_estimate_mesh(q, idx_head, params, states_x, states_v)
 
             if iteration > 0:
-                data_loader_samples = define_data_loader_samples(
-                    p["n_samples"], args.experiment_name, p["batch_size"], None
-                )
                 for batch_samples in data_loader_samples:
                     ae_list[iteration - 1] += q.loss(params, params, batch_samples, ord="sum")
 
