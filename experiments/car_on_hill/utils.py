@@ -44,10 +44,10 @@ def define_multi_q(
     )
 
 
-def define_data_loader_samples(n_samples, experiment_name: str, batch_size_samples, key) -> SampleDataLoader:
+def define_data_loader_samples(n_samples, experiment_name: str, batch_size, key) -> SampleDataLoader:
     replay_buffer = ReplayBuffer(n_samples)
     replay_buffer.load(f"experiments/car_on_hill/figures/{experiment_name}/replay_buffer.npz")
-    return SampleDataLoader(replay_buffer, batch_size_samples, key)
+    return SampleDataLoader(replay_buffer, batch_size, key)
 
 
 def generate_keys(seed: int) -> KeyArray:

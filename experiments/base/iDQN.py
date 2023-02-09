@@ -47,7 +47,7 @@ def train(
                 )
 
             sample_key, key = jax.random.split(sample_key)
-            batch_samples = replay_buffer.sample_random_batch(key, p["batch_size_samples"])
+            batch_samples = replay_buffer.sample_random_batch(key, p["batch_size"])
 
             q.params, q.optimizer_state, l2_loss = q.learn_on_batch(
                 q.params, params_target, q.optimizer_state, batch_samples

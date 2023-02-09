@@ -107,12 +107,14 @@ class iQ(BaseMultiHeadQ):
         raise NotImplementedError
 
     @partial(jax.jit, static_argnames=("self", "ord"))
-    def loss(self, params: hk.Params, params_target: hk.Params, samples: dict, ord: int = 2) -> jnp.ndarray:
+    def loss(self, params: hk.Params, params_target: hk.Params, samples: dict, ord: str = "2") -> jnp.ndarray:
         targets = self.compute_target(params_target, samples)[:, :-1]
         predictions = self(params, samples["state"])[jnp.arange(samples["state"].shape[0]), 1:, samples["action"]]
 
         error = (predictions - targets) * jnp.repeat(self.importance_iteration[None, :], targets.shape[0], axis=0)
-        if ord == 1:
+        if ord == "1":
             return jnp.abs(error).mean()
-        elif ord == 2:
+        elif ord == "2":
             return jnp.square(error).mean()
+        elif ord == "sum":
+            return jnp.square(error).sum()

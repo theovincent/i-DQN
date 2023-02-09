@@ -29,7 +29,6 @@ def run_cli(argvs=sys.argv[1:]):
         from idqn.utils.params import load_params
 
         env, states_x, _, states_v, _ = define_environment(p["gamma"], p["n_states_x"], p["n_states_v"])
-        data_loader_samples = define_data_loader_samples(p["n_samples"], args.experiment_name, p["n_samples"], None)
 
         def evaluate(
             iteration: int,
@@ -53,7 +52,15 @@ def run_cli(argvs=sys.argv[1:]):
             q_estimate_list[iteration] = env.q_multi_head_estimate_mesh(q, idx_head, params, states_x, states_v)
 
             if iteration > 0:
-                ae_list[iteration] = q.loss(params, params, data_loader_samples[0])
+                data_loader_samples = define_data_loader_samples(
+                    p["n_samples"], args.experiment_name, p["batch_size"], None
+                )
+                for batch_samples in data_loader_samples:
+                    ae_list[iteration - 1] += q.loss(params, params, batch_samples, ord="sum")
+
+                ae_list[iteration - 1] /= p["n_samples"]
+
+            print(f"Iteration {iteration} done")
 
         manager = multiprocessing.Manager()
         iterated_v = manager.list(
@@ -75,7 +82,7 @@ def run_cli(argvs=sys.argv[1:]):
                 )
             )
         )
-        iterated_ae = manager.list(list(np.nan * np.zeros((p["n_epochs"] * p["n_bellman_iterations_per_epoch"] + 1))))
+        iterated_ae = manager.list(list(np.nan * np.zeros((p["n_epochs"] * p["n_bellman_iterations_per_epoch"]))))
 
         processes = []
         n_forward_moves = p["n_epochs"] * p["n_bellman_iterations_per_epoch"] // args.bellman_iterations_scope

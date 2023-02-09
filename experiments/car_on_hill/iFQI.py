@@ -22,9 +22,7 @@ def run_cli(argvs=sys.argv[1:]):
 
     shuffle_key, q_key = generate_keys(args.seed)
 
-    data_loader_samples = define_data_loader_samples(
-        p["n_samples"], args.experiment_name, p["batch_size_samples"], shuffle_key
-    )
+    data_loader_samples = define_data_loader_samples(p["n_samples"], args.experiment_name, p["batch_size"], shuffle_key)
     q = define_multi_q(
         args.bellman_iterations_scope + 1, p["gamma"], q_key, p["layers_dimension"], learning_rate=p["learning_rate"]
     )
