@@ -3,6 +3,7 @@ import argparse
 import multiprocessing
 import json
 import jax
+import jax.numpy as jnp
 import haiku as hk
 import numpy as np
 
@@ -24,32 +25,35 @@ def run_cli(argvs=sys.argv[1:]):
             open(f"experiments/car_on_hill/figures/{args.experiment_name}/parameters.json")
         )  # p for parameters
 
-        from experiments.car_on_hill.utils import define_environment, define_multi_q
-        from idqn.networks.learnable_multi_head_q import FullyConnectedMultiQ
+        from experiments.car_on_hill.utils import define_environment, define_data_loader_samples, define_multi_q
         from idqn.utils.params import load_params
 
         env, states_x, _, states_v, _ = define_environment(p["gamma"], p["n_states_x"], p["n_states_v"])
-
-        q = define_multi_q(
-            args.bellman_iterations_scope + 1,
-            p["gamma"],
-            jax.random.PRNGKey(0),
-            p["layers_dimension"],
-        )
+        data_loader_samples = define_data_loader_samples(p["n_samples"], args.experiment_name, p["n_samples"], None)
 
         def evaluate(
             iteration: int,
             idx_head: int,
             v_list: list,
             q_estimate_list: list,
-            q: FullyConnectedMultiQ,
+            ae_list: list,
             params: hk.Params,
-            horizon: int,
-            states_x: np.ndarray,
-            states_v: np.ndarray,
         ):
-            v_list[iteration] = env.v_mesh_multi_head(q, idx_head, params, horizon, states_x, states_v)
+            importance_iteration = jnp.zeros(args.bellman_iterations_scope)
+            if iteration > 0:
+                importance_iteration = importance_iteration.at[idx_head - 1].set(1)
+            q = define_multi_q(
+                importance_iteration,
+                p["gamma"],
+                jax.random.PRNGKey(0),
+                p["layers_dimension"],
+            )
+
+            v_list[iteration] = env.v_mesh_multi_head(q, idx_head, params, p["horizon"], states_x, states_v)
             q_estimate_list[iteration] = env.q_multi_head_estimate_mesh(q, idx_head, params, states_x, states_v)
+
+            if iteration > 0:
+                ae_list[iteration] = q.loss(params, params, data_loader_samples[0])
 
         manager = multiprocessing.Manager()
         iterated_v = manager.list(
@@ -71,6 +75,7 @@ def run_cli(argvs=sys.argv[1:]):
                 )
             )
         )
+        iterated_ae = manager.list(list(np.nan * np.zeros((p["n_epochs"] * p["n_bellman_iterations_per_epoch"] + 1))))
 
         processes = []
         n_forward_moves = p["n_epochs"] * p["n_bellman_iterations_per_epoch"] // args.bellman_iterations_scope
@@ -81,7 +86,7 @@ def run_cli(argvs=sys.argv[1:]):
         processes.append(
             multiprocessing.Process(
                 target=evaluate,
-                args=(0, 0, iterated_v, iterated_q_estimate, q, params, p["horizon"], states_x, states_v),
+                args=(0, 0, iterated_v, iterated_q_estimate, iterated_ae, params),
             )
         )
 
@@ -96,17 +101,7 @@ def run_cli(argvs=sys.argv[1:]):
                 processes.append(
                     multiprocessing.Process(
                         target=evaluate,
-                        args=(
-                            iteration,
-                            idx_head,
-                            iterated_v,
-                            iterated_q_estimate,
-                            q,
-                            params,
-                            p["horizon"],
-                            states_x,
-                            states_v,
-                        ),
+                        args=(iteration, idx_head, iterated_v, iterated_q_estimate, iterated_ae, params),
                     )
                 )
 
@@ -123,4 +118,8 @@ def run_cli(argvs=sys.argv[1:]):
         np.save(
             f"experiments/car_on_hill/figures/{args.experiment_name}/iFQI/{args.bellman_iterations_scope}_Q_{args.seed}.npy",
             iterated_q_estimate,
+        )
+        np.save(
+            f"experiments/car_on_hill/figures/{args.experiment_name}/iFQI/{args.bellman_iterations_scope}_A_{args.seed}.npy",
+            iterated_ae,
         )

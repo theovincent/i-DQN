@@ -38,21 +38,8 @@ class BaseQ:
     def __call__(self, params: hk.Params, states: jnp.ndarray) -> jnp.ndarray:
         return self.network.apply(params, states)
 
-    @partial(jax.jit, static_argnames="self")
-    def compute_target(self, params: hk.Params, samples: dict) -> jnp.ndarray:
-        return samples["reward"] + (1 - samples["absorbing"]) * self.gamma * self(params, samples["next_state"]).max(
-            axis=1
-        )
-
-    @partial(jax.jit, static_argnames=("self", "ord"))
     def loss(self, params: hk.Params, params_target: hk.Params, samples: dict, ord: int = 2) -> jnp.ndarray:
-        targets = self.compute_target(params_target, samples)
-        predictions = self(params, samples["state"])[jnp.arange(samples["state"].shape[0]), samples["action"]]
-
-        if ord == 1:
-            return jnp.abs(predictions - targets).mean()
-        else:
-            return jnp.square(predictions - targets).mean()
+        raise NotImplementedError
 
     @partial(jax.jit, static_argnames="self")
     def learn_on_batch(
@@ -94,23 +81,21 @@ class BaseMultiHeadQ(BaseQ):
             1 - samples["absorbing"][:, None], self.n_heads, axis=1
         ) * self.gamma * self(params, samples["next_state"]).max(axis=2)
 
-    def loss(self, params: hk.Params, params_target: hk.Params, samples: dict, ord: int = 2) -> jnp.ndarray:
-        raise NotImplementedError
-
 
 class iQ(BaseMultiHeadQ):
     def __init__(
         self,
-        n_heads: int,
+        importance_iteration: jnp.ndarray,
         state_shape: list,
         gamma: float,
         network: hk.Module,
         network_key: jax.random.PRNGKeyArray,
         learning_rate: dict,
     ) -> None:
-        self.n_heads = n_heads
+        self.importance_iteration = importance_iteration
+
         super().__init__(
-            n_heads=self.n_heads,
+            n_heads=len(importance_iteration) + 1,
             state_shape=state_shape,
             gamma=gamma,
             network=network,
@@ -126,7 +111,8 @@ class iQ(BaseMultiHeadQ):
         targets = self.compute_target(params_target, samples)[:, :-1]
         predictions = self(params, samples["state"])[jnp.arange(samples["state"].shape[0]), 1:, samples["action"]]
 
+        error = (predictions - targets) * jnp.repeat(self.importance_iteration[None, :], targets.shape[0], axis=0)
         if ord == 1:
-            return jnp.abs(predictions - targets).mean()
-        else:
-            return jnp.square(predictions - targets).mean()
+            return jnp.abs(error).mean()
+        elif ord == 2:
+            return jnp.square(error).mean()

@@ -5,7 +5,6 @@ import jax
 import jax.numpy as jnp
 
 from idqn.environments.car_on_hill import CarOnHillEnv
-from idqn.networks.learnable_q import FullyConnectedQ
 from idqn.networks.learnable_multi_head_q import FullyConnectedMultiQ
 from idqn.sample_collection.replay_buffer import ReplayBuffer
 from idqn.sample_collection.dataloader import SampleDataLoader
@@ -26,32 +25,15 @@ def define_environment(
     return env, states_x, states_x_boxes, states_v, states_v_boxes
 
 
-def define_q(
-    gamma: float,
-    key: jax.random.PRNGKeyArray,
-    layers_dimension: dict,
-    learning_rate: dict = None,
-) -> FullyConnectedQ:
-    return FullyConnectedQ(
-        state_shape=(2,),
-        n_actions=2,
-        gamma=gamma,
-        network_key=key,
-        layers_dimension=layers_dimension,
-        zero_initializer=True,
-        learning_rate=learning_rate,
-    )
-
-
 def define_multi_q(
-    n_heads: int,
+    importance_iteration: jnp.ndarray,
     gamma: float,
     key: jax.random.PRNGKeyArray,
     layers_dimension: dict,
     learning_rate: dict = None,
 ) -> FullyConnectedMultiQ:
     return FullyConnectedMultiQ(
-        n_heads=n_heads,
+        importance_iteration=importance_iteration,
         state_shape=(2,),
         n_actions=2,
         gamma=gamma,

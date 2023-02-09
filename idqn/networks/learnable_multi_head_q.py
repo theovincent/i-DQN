@@ -37,22 +37,24 @@ class FullyConnectedMultiQNet(hk.Module):
 class FullyConnectedMultiQ(iQ):
     def __init__(
         self,
-        n_heads: int,
+        importance_iteration: jnp.ndarray,
         state_shape: list,
         n_actions: int,
         gamma: float,
         network_key: jax.random.PRNGKeyArray,
         layers_dimension: list,
         zero_initializer: bool,
-        learning_rate: dict = None,
+        learning_rate: dict,
     ) -> None:
         self.n_layers = len(layers_dimension)
 
         def network(state: jnp.ndarray) -> jnp.ndarray:
-            return FullyConnectedMultiQNet(n_heads, layers_dimension, zero_initializer, n_actions)(state)
+            return FullyConnectedMultiQNet(
+                len(importance_iteration) + 1, layers_dimension, zero_initializer, n_actions
+            )(state)
 
         super().__init__(
-            n_heads,
+            importance_iteration=importance_iteration,
             state_shape=state_shape,
             gamma=gamma,
             network=network,
