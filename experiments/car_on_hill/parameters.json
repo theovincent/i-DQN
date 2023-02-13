@@ -1,7 +1,9 @@
 {
     "env_seed": 0,
+    "shared_layers_dimension": [
+        70
+    ],
     "layers_dimension": [
-        70,
         35
     ],
     "n_states_x": 17,
@@ -14,8 +16,8 @@
     "---- iFQIs ---": "-",
     "n_epochs": 1,
     "n_bellman_iterations_per_epoch": 20,
-    "fitting_steps_per_bellman_iteration": 30,
+    "fitting_steps_per_bellman_iteration": 4,
     "target_update_per_gradient_step": 1,
     "learning_rate": 0.0005,
-    "importance_iteration": "bound"
+    "importance_iteration": "uniform"
 }

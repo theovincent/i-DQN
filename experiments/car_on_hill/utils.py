@@ -29,6 +29,7 @@ def define_multi_q(
     importance_iteration: jnp.ndarray,
     gamma: float,
     key: jax.random.PRNGKeyArray,
+    shared_layers_dimension: dict,
     layers_dimension: dict,
     learning_rate: dict = None,
 ) -> FullyConnectedMultiQ:
@@ -38,6 +39,7 @@ def define_multi_q(
         n_actions=2,
         gamma=gamma,
         network_key=key,
+        shared_layers_dimension=shared_layers_dimension,
         layers_dimension=layers_dimension,
         zero_initializer=True,
         learning_rate=learning_rate,

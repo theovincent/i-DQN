@@ -46,6 +46,7 @@ def run_cli(argvs=sys.argv[1:]):
                 importance_iteration,
                 p["gamma"],
                 jax.random.PRNGKey(0),
+                p["shared_layers_dimension"],
                 p["layers_dimension"],
             )
 

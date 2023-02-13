@@ -30,6 +30,13 @@ def run_cli(argvs=sys.argv[1:]):
     elif p["importance_iteration"] == "uniform":
         importance_iteration = jnp.ones(args.bellman_iterations_scope)
 
-    q = define_multi_q(importance_iteration, p["gamma"], q_key, p["layers_dimension"], learning_rate=p["learning_rate"])
+    q = define_multi_q(
+        importance_iteration,
+        p["gamma"],
+        q_key,
+        p["shared_layers_dimension"],
+        p["layers_dimension"],
+        learning_rate=p["learning_rate"],
+    )
 
     train("car_on_hill", args, q, p, data_loader_samples)
