@@ -28,5 +28,5 @@ do
     submission_id_train_ifqi=${split_submission_train_ifqi[-1]}
 
     echo "launch evaluate ifqi"
-    submission_evaluate_ifqi=$(sbatch -J C_evaluate_ifqi --dependency=afterok:$submission_id_train_ifqi,$submission_id_collect_sample --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=9 --mem-per-cpu=150Mc --time=30:00 --output=out/car_on_hill/$EXPERIMENT_NAME/$bellman_iterations_scope\_evaluate_ifqi_%a.out -p amd,amd2 launch_job/car_on_hill/evaluate_ifqi.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope)
+    submission_evaluate_ifqi=$(sbatch -J C_evaluate_ifqi --dependency=afterok:$submission_id_train_ifqi,$submission_id_collect_sample --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=9 --mem-per-cpu=500Mc --time=30:00 --output=out/car_on_hill/$EXPERIMENT_NAME/$bellman_iterations_scope\_evaluate_ifqi_%a.out -p amd,amd2 launch_job/car_on_hill/evaluate_ifqi.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope)
 done
