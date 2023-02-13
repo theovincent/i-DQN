@@ -1,11 +1,9 @@
 {
     "env_seed": 0,
     "shared_layers_dimension": [
-        70
-    ],
-    "layers_dimension": [
         35
     ],
+    "layers_dimension": [],
     "n_states_x": 17,
     "n_states_v": 17,
     "---- Shared parameters ---": "-",
@@ -19,5 +17,5 @@
     "fitting_steps_per_bellman_iteration": 4,
     "target_update_per_gradient_step": 1,
     "learning_rate": 0.0005,
-    "importance_iteration": "uniform"
+    "importance_iteration": "bound"
 }
