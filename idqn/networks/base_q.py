@@ -14,7 +14,7 @@ class BaseQ:
         gamma: float,
         network: hk.Module,
         network_key: jax.random.PRNGKeyArray,
-        learning_rate: dict,
+        learning_rate: float,
     ) -> None:
         self.state_shape = state_shape
         self.gamma = gamma
@@ -64,7 +64,7 @@ class BaseMultiHeadQ(BaseQ):
         gamma: float,
         network: hk.Module,
         network_key: jax.random.PRNGKeyArray,
-        learning_rate: dict,
+        learning_rate: float,
     ) -> None:
         self.n_heads = n_heads
         super().__init__(
@@ -90,7 +90,7 @@ class iQ(BaseMultiHeadQ):
         gamma: float,
         network: hk.Module,
         network_key: jax.random.PRNGKeyArray,
-        learning_rate: dict,
+        learning_rate: float,
     ) -> None:
         self.importance_iteration = importance_iteration
 

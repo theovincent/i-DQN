@@ -31,7 +31,7 @@ def define_multi_q(
     key: jax.random.PRNGKeyArray,
     shared_layers_dimension: dict,
     layers_dimension: dict,
-    learning_rate: dict = None,
+    learning_rate: float = None,
 ) -> FullyConnectedMultiQ:
     return FullyConnectedMultiQ(
         importance_iteration=importance_iteration,
