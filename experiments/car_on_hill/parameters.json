@@ -15,7 +15,7 @@
     "n_epochs": 1,
     "n_bellman_iterations_per_epoch": 20,
     "fitting_steps_per_bellman_iteration": 4,
-    "target_update_per_gradient_step": 1,
+    "target_updates_per_gradient_step": 1,
     "learning_rate": 0.0005,
     "importance_iteration": "bound"
 }

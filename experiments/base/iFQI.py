@@ -31,7 +31,7 @@ def train(environment_name: str, args: Namespace, q: iQ, p: dict, data_loader_sa
                 n_gradient_steps += 1
 
                 # Target update
-                if n_gradient_steps % p["target_update_per_gradient_step"] == 0:
+                if n_gradient_steps % p["target_updates_per_gradient_step"] == 0:
                     params_target = q.params
 
             l2_losses[n_fits] = cumulative_l2_loss

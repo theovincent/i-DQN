@@ -1,3 +1,4 @@
+import os
 from typing import Tuple
 from functools import partial
 from gymnasium.wrappers.monitoring import video_recorder
@@ -26,11 +27,11 @@ class LunarLanderEnv:
 
         return jnp.array(self.state)
 
-    def step(self, action: jnp.ndarray) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, dict]:
-        self.state, reward, absorbing, _, info = self.env.step(int(action[0]))
+    def step(self, action: float) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, dict]:
+        self.state, reward, absorbing, _, info = self.env.step(int(action))
         self.n_steps += 1
 
-        return jnp.array(self.state), reward, absorbing, info
+        return jnp.array(self.state), jnp.array(reward), jnp.array(absorbing, dtype=bool), info
 
     @partial(jax.jit, static_argnames=("self", "q"))
     def jitted_best_action_multi_head(
@@ -60,8 +61,8 @@ class LunarLanderEnv:
             discount *= self.gamma
 
         if video_path is not None:
-            self.env.close()
             video.close()
+            os.remove(f"experiments/lunar_lander/figures/{video_path}.meta.json")
 
         return cumulative_reward
 

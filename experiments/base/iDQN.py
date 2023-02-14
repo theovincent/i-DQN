@@ -66,7 +66,7 @@ def train(
             l2_losses[n_gradient_steps] = l2_loss
             n_gradient_steps += 1
 
-            if n_gradient_steps % p["target_update_per_gradient_step"] == 0:
+            if n_gradient_steps % p["target_updates_per_gradient_step"] == 0:
                 params_target = q.params
             if n_gradient_steps % (args.bellman_iterations_scope * p["gradient_steps_per_bellman_iteration"]) == 0:
                 n_forward_moves = (
@@ -82,6 +82,6 @@ def train(
                 params_target = q.params
 
     np.save(
-        f"experiments/{environment_name}/figures/{args.experiment_name}/iDQN/{args.max_bellman_iterations}_L_{args.seed}.npy",
+        f"experiments/{environment_name}/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_L_{args.seed}.npy",
         l2_losses,
     )

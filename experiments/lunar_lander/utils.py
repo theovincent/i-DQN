@@ -27,8 +27,8 @@ def define_multi_q(
 ) -> FullyConnectedMultiQ:
     return FullyConnectedMultiQ(
         importance_iteration=importance_iteration,
-        state_shape=(2,),
-        n_actions=2,
+        state_shape=(8,),
+        n_actions=4,
         gamma=gamma,
         network_key=key,
         shared_layers_dimension=shared_layers_dimension,
@@ -56,7 +56,7 @@ def collect_random_samples(
 
         replay_buffer.add(state, action, reward, next_state, absorbing)
 
-        if absorbing[0] or env.n_steps >= horizon:
+        if absorbing or env.n_steps >= horizon:
             env.reset()
 
 
