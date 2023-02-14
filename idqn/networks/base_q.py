@@ -118,3 +118,16 @@ class iQ(BaseMultiHeadQ):
             return jnp.square(error).mean()
         elif ord == "sum":
             return jnp.square(error).sum()
+
+    @partial(jax.jit, static_argnames=("self", "ord"))
+    def bellman_errors(self, params: hk.Params, params_target: hk.Params, samples: dict, ord: str = "2") -> jnp.ndarray:
+        targets = self.compute_target(params_target, samples)
+        predictions = self(params, samples["state"])[jnp.arange(samples["state"].shape[0]), :, samples["action"]]
+
+        error = predictions - targets
+        if ord == "1":
+            return jnp.abs(error).mean(axis=0)
+        elif ord == "2":
+            return jnp.square(error).mean(axis=0)
+        elif ord == "sum":
+            return jnp.square(error).sum(axis=0)

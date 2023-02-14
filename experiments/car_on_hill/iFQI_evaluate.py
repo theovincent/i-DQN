@@ -24,7 +24,15 @@ def run_cli(argvs=sys.argv[1:]):
     from experiments.car_on_hill.utils import define_environment, define_data_loader_samples, define_multi_q
     from idqn.utils.params import load_params
 
-    def evaluate(iteration: int, idx_head: int, v_list: list, q_estimate_list: list, ae_list: list, path_params: str):
+    def evaluate(
+        iteration: int,
+        idx_head: int,
+        v_list: list,
+        q_estimate_list: list,
+        ae_list: list,
+        be_list: list,
+        path_params: str,
+    ):
         importance_iteration = jnp.zeros(args.bellman_iterations_scope)
         if iteration > 0:
             importance_iteration = importance_iteration.at[idx_head - 1].set(1)
@@ -52,6 +60,12 @@ def run_cli(argvs=sys.argv[1:]):
 
             ae_list[iteration - 1] /= p["n_samples"]
 
+        be_list[iteration] = 0
+        for batch_samples in data_loader_samples:
+            be_list[iteration] += q.bellman_errors(params, params, batch_samples, ord="sum")[idx_head]
+
+        be_list[iteration] /= p["n_samples"]
+
         print(f"Iteration {iteration} done")
 
     manager = multiprocessing.Manager()
@@ -75,6 +89,7 @@ def run_cli(argvs=sys.argv[1:]):
         )
     )
     iterated_ae = manager.list(list(np.nan * np.zeros((p["n_epochs"] * p["n_bellman_iterations_per_epoch"]))))
+    iterated_be = manager.list(list(np.nan * np.zeros((p["n_epochs"] * p["n_bellman_iterations_per_epoch"] + 1))))
 
     processes = []
     n_forward_moves = p["n_epochs"] * p["n_bellman_iterations_per_epoch"] // args.bellman_iterations_scope
@@ -83,7 +98,7 @@ def run_cli(argvs=sys.argv[1:]):
     processes.append(
         multiprocessing.Process(
             target=evaluate,
-            args=(0, 0, iterated_v, iterated_q_estimate, iterated_ae, path_params),
+            args=(0, 0, iterated_v, iterated_q_estimate, iterated_ae, iterated_be, path_params),
         )
     )
 
@@ -97,7 +112,7 @@ def run_cli(argvs=sys.argv[1:]):
             processes.append(
                 multiprocessing.Process(
                     target=evaluate,
-                    args=(iteration, idx_head, iterated_v, iterated_q_estimate, iterated_ae, path_params),
+                    args=(iteration, idx_head, iterated_v, iterated_q_estimate, iterated_ae, iterated_be, path_params),
                 )
             )
 
@@ -118,4 +133,8 @@ def run_cli(argvs=sys.argv[1:]):
     np.save(
         f"experiments/car_on_hill/figures/{args.experiment_name}/iFQI/{args.bellman_iterations_scope}_A_{args.seed}.npy",
         iterated_ae,
+    )
+    np.save(
+        f"experiments/car_on_hill/figures/{args.experiment_name}/iFQI/{args.bellman_iterations_scope}_B_{args.seed}.npy",
+        iterated_be,
     )
