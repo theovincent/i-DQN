@@ -1,28 +1,28 @@
 {
     "env_seed": 0,
     "shared_layers_dimension": [
-        30
+        100
     ],
     "layers_dimension": [
-        30
+        100
     ],
     "---- Shared parameters ---": "-",
     "horizon": 1000,
     "gamma": 0.99,
     "n_initial_samples": 1000,
-    "max_size": 20000,
-    "batch_size": 100,
+    "max_size": 10000,
+    "batch_size": 32,
     "n_simulations": 10,
     "---- iDQNs ---": "-",
-    "n_epochs": 1,
-    "n_bellman_iterations_per_epoch": 20,
-    "sampling_steps_per_update": 2,
+    "n_epochs": 10,
+    "n_bellman_iterations_per_epoch": 66,
+    "sampling_steps_per_update": 1,
     "head_behaviorial_policy": "uniform",
     "starting_eps": 1,
     "ending_eps": 0.01,
     "duration_eps": 1000,
-    "gradient_steps_per_bellman_iteration": 4,
-    "target_updates_per_gradient_step": 1,
-    "learning_rate": 0.0005,
-    "importance_iteration": "bound"
+    "gradient_steps_per_bellman_iteration": 300,
+    "target_updates_per_gradient_step": 10,
+    "learning_rate": 0.0003,
+    "importance_iteration": "uniform"
 }
