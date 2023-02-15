@@ -43,8 +43,12 @@ def train(
     l2_losses = np.ones(p["n_epochs"] * n_training_steps) * np.nan
     n_gradient_steps = 0
     params_target = q.params
+    save_params(
+        f"experiments/{environment_name}/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_P_{args.seed}_0",
+        q.params,
+    )
 
-    for _ in tqdm(range(p["n_epochs"])):
+    for idx_epoch in tqdm(range(1, p["n_epochs"] + 1)):
         for _ in tqdm(range(n_training_steps), leave=False):
             sample_key, key = jax.random.split(sample_key)
             collect_samples_multi_head(
@@ -69,19 +73,15 @@ def train(
             if n_gradient_steps % p["target_updates_per_gradient_step"] == 0:
                 params_target = q.params
             if n_gradient_steps % (args.bellman_iterations_scope * p["gradient_steps_per_bellman_iteration"]) == 0:
-                n_forward_moves = (
-                    n_gradient_steps // (args.bellman_iterations_scope * p["gradient_steps_per_bellman_iteration"]) - 1
-                )
-                start_k = n_forward_moves * args.bellman_iterations_scope
-                end_k = start_k + args.bellman_iterations_scope
-                save_params(
-                    f"experiments/{environment_name}/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_P_{args.seed}_{start_k}-{end_k}",
-                    q.params,
-                )
                 q.params = q.move_forward(q.params)
                 params_target = q.params
 
-    np.save(
-        f"experiments/{environment_name}/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_L_{args.seed}.npy",
-        l2_losses,
-    )
+        save_params(
+            f"experiments/{environment_name}/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_P_{args.seed}_{idx_epoch}",
+            q.params,
+        )
+
+        np.save(
+            f"experiments/{environment_name}/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_L_{args.seed}.npy",
+            l2_losses,
+        )

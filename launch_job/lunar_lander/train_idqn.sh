@@ -10,4 +10,4 @@ else
     source env_cpu/bin/activate
 fi 
 
-lunar_lander_ifqi -e $EXPERIMENT_NAME -s $SLURM_ARRAY_TASK_ID -b $BELLMAN_ITERATIONS_SCOPE
+lunar_lander_idqn -e $EXPERIMENT_NAME -s $SLURM_ARRAY_TASK_ID -b $BELLMAN_ITERATIONS_SCOPE

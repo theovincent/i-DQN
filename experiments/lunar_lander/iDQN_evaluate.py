@@ -1,6 +1,7 @@
+import os
 import sys
 import argparse
-import multiprocessing
+import time
 import json
 import jax
 import jax.numpy as jnp
@@ -33,59 +34,28 @@ def run_cli(argvs=sys.argv[1:]):
         p["layers_dimension"],
     )
 
-    def evaluate(
-        iteration: int,
-        idx_head: int,
-        j_list: list,
-        path_params: str,
-    ):
-        params = load_params(path_params)
-        j_list[iteration] = env.evaluate(
-            q,
-            idx_head,
-            params,
-            p["horizon"],
-            p["n_simulations"],
-            video_path=f"{args.experiment_name}/iDQN/K{args.bellman_iterations_scope}_{iteration}_{args.seed}",
-        )
-
-        print(f"Iteration {iteration} done")
-
-    manager = multiprocessing.Manager()
-    iterated_j = manager.list(list(np.nan * np.zeros(p["n_epochs"] * p["n_bellman_iterations_per_epoch"] + 1)))
-
-    processes = []
-    n_forward_moves = p["n_epochs"] * p["n_bellman_iterations_per_epoch"] // args.bellman_iterations_scope
-
-    path_params = f"experiments/lunar_lander/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_P_{args.seed}_0-{args.bellman_iterations_scope}"
-    processes.append(
-        multiprocessing.Process(
-            target=evaluate,
-            args=(0, 0, iterated_j, path_params),
-        )
+    js = np.nan * np.zeros(p["n_epochs"] + 1)
+    path_params = (
+        f"experiments/lunar_lander/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_P_{args.seed}_"
     )
+    idx_epoch = 0
 
-    for idx_forward_move in range(n_forward_moves):
-        start_k = idx_forward_move * args.bellman_iterations_scope
-        end_k = start_k + args.bellman_iterations_scope
-        path_params = f"experiments/lunar_lander/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_P_{args.seed}_{start_k}-{end_k}"
-
-        for idx_head in range(1, args.bellman_iterations_scope + 1):
-            iteration = idx_head + idx_forward_move * args.bellman_iterations_scope
-            processes.append(
-                multiprocessing.Process(
-                    target=evaluate,
-                    args=(iteration, idx_head, iterated_j, path_params),
-                )
+    while idx_epoch <= p["n_epochs"]:
+        if os.path.exists(path_params + str(idx_epoch)):
+            params = load_params(path_params + str(idx_epoch))
+            js[idx_epoch] = env.evaluate(
+                q,
+                0,
+                params,
+                p["horizon"],
+                p["n_simulations"],
+                video_path=f"{args.experiment_name}/iDQN/K{args.bellman_iterations_scope}_{idx_epoch}_{args.seed}",
             )
 
-    for process in processes:
-        process.start()
-
-    for process in processes:
-        process.join()
-
-    np.save(
-        f"experiments/lunar_lander/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_J_{args.seed}.npy",
-        iterated_j,
-    )
+            np.save(
+                f"experiments/lunar_lander/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_J_{args.seed}.npy",
+                js,
+            )
+            idx_epoch += 1
+        else:
+            time.sleep(60)
