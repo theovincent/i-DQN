@@ -56,6 +56,7 @@ def run_cli(argvs=sys.argv[1:]):
                 f"experiments/lunar_lander/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_J_{args.seed}.npy",
                 js,
             )
+            print(f"Epoch {idx_epoch} done")
             idx_epoch += 1
         else:
             time.sleep(60)

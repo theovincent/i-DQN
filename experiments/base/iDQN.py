@@ -40,7 +40,7 @@ def train(
         )
 
     n_training_steps = p["n_bellman_iterations_per_epoch"] * p["gradient_steps_per_bellman_iteration"]
-    l2_losses = np.ones(p["n_epochs"] * n_training_steps) * np.nan
+    l2_losses = np.ones((p["n_epochs"], n_training_steps)) * np.nan
     n_gradient_steps = 0
     params_target = q.params
     save_params(
@@ -49,7 +49,7 @@ def train(
     )
 
     for idx_epoch in tqdm(range(1, p["n_epochs"] + 1)):
-        for _ in tqdm(range(n_training_steps), leave=False):
+        for idx_training_step in tqdm(range(n_training_steps), leave=False):
             sample_key, key = jax.random.split(sample_key)
             collect_samples_multi_head(
                 env,
@@ -67,7 +67,7 @@ def train(
                 q.params, params_target, q.optimizer_state, batch_samples
             )
 
-            l2_losses[n_gradient_steps] = l2_loss
+            l2_losses[idx_epoch - 1, idx_training_step] = l2_loss
             n_gradient_steps += 1
 
             if n_gradient_steps % p["target_updates_per_gradient_step"] == 0:
