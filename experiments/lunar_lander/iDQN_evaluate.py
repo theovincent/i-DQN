@@ -25,7 +25,7 @@ def run_cli(argvs=sys.argv[1:]):
     from experiments.lunar_lander.utils import define_environment, define_multi_q
     from idqn.utils.params import load_params
 
-    env = define_environment(jax.random.PRNGKey(p["env_seed"]), p["gamma"])
+    env = define_environment(jax.random.PRNGKey(p["env_seed"]), 1)
     q = define_multi_q(
         jnp.zeros(args.bellman_iterations_scope),
         p["gamma"],

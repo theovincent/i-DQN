@@ -23,8 +23,8 @@ def train(
     env,
 ) -> None:
     assert (
-        p["n_bellman_iterations_per_epoch"] % args.bellman_iterations_scope == 0
-    ), f"n_bellman_iterations_per_epoch: {p['n_bellman_iterations_per_epoch']} shoud be a multiple of bellman_iterations_scope: {args.bellman_iterations_scope}."
+        p["n_gradient_steps_per_epoch"] % p["n_gradient_steps_per_head_update"] == 0
+    ), f"The number of gradient steps per epoch: {p['n_gradient_steps_per_epoch']} shoud be a multiple of the number of gradient steps per head update: {p['n_gradient_steps_per_head_update']}."
 
     epsilon_schedule = EpsilonGreedySchedule(p["starting_eps"], p["ending_eps"], p["duration_eps"], exploration_key)
 
@@ -35,12 +35,11 @@ def train(
         head_behaviorial_probability = head_behaviorial_probability.at[args.bellman_iterations_scope].set(1)
     elif p["head_behaviorial_policy"] == "bound":
         head_behaviorial_probability = jnp.zeros(args.bellman_iterations_scope + 1)
-        head_behaviorial_probability = head_behaviorial_probability.at[1 : args.bellman_iterations_scope].set(
+        head_behaviorial_probability = head_behaviorial_probability.at[1:].set(
             importance_bound(p["gamma"], args.bellman_iterations_scope)
         )
 
-    n_training_steps = p["n_bellman_iterations_per_epoch"] * p["gradient_steps_per_bellman_iteration"]
-    l2_losses = np.ones((p["n_epochs"], n_training_steps)) * np.nan
+    l2_losses = np.ones((p["n_epochs"], p["n_gradient_steps_per_epoch"])) * np.nan
     n_gradient_steps = 0
     params_target = q.params
     save_params(
@@ -49,14 +48,14 @@ def train(
     )
 
     for idx_epoch in tqdm(range(1, p["n_epochs"] + 1)):
-        for idx_training_step in tqdm(range(n_training_steps), leave=False):
+        for idx_training_step in tqdm(range(p["n_gradient_steps_per_epoch"]), leave=False):
             sample_key, key = jax.random.split(sample_key)
             collect_samples_multi_head(
                 env,
                 replay_buffer,
                 q,
                 q.params,
-                p["sampling_steps_per_update"],
+                p["sampling_steps_per_gradient_step"],
                 p["horizon"],
                 epsilon_schedule,
                 head_behaviorial_probability,
@@ -70,9 +69,9 @@ def train(
             l2_losses[idx_epoch - 1, idx_training_step] = l2_loss
             n_gradient_steps += 1
 
-            if n_gradient_steps % p["target_updates_per_gradient_step"] == 0:
+            if n_gradient_steps % p["n_gradient_steps_per_target_update"] == 0:
                 params_target = q.params
-            if n_gradient_steps % (args.bellman_iterations_scope * p["gradient_steps_per_bellman_iteration"]) == 0:
+            if n_gradient_steps % (p["n_gradient_steps_per_head_update"]) == 0:
                 q.params = q.move_forward(q.params)
                 params_target = q.params
 
