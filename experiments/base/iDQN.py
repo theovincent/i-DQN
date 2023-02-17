@@ -22,10 +22,6 @@ def train(
     collect_samples_multi_head,
     env,
 ) -> None:
-    assert (
-        p["n_gradient_steps_per_epoch"] % p["n_gradient_steps_per_head_update"] == 0
-    ), f"The number of gradient steps per epoch: {p['n_gradient_steps_per_epoch']} shoud be a multiple of the number of gradient steps per head update: {p['n_gradient_steps_per_head_update']}."
-
     epsilon_schedule = EpsilonGreedySchedule(p["starting_eps"], p["ending_eps"], p["duration_eps"], exploration_key)
 
     if p["head_behaviorial_policy"] == "uniform":
@@ -71,7 +67,10 @@ def train(
 
             if n_gradient_steps % p["n_gradient_steps_per_target_update"] == 0:
                 params_target = q.params
-            if n_gradient_steps % (p["n_gradient_steps_per_head_update"]) == 0:
+            if (
+                n_gradient_steps % (p["n_gradient_steps_per_head_update"] * jnp.ceil(args.bellman_iterations_scope / 2))
+                == 0
+            ):
                 q.params = q.move_forward(q.params)
                 params_target = q.params
 
