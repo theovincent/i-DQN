@@ -1,9 +1,10 @@
 {
     "env_seed": 0,
-    "shared_layers_dimension": [],
+    "shared_layers_dimension": [
+        512
+    ],
     "layers_dimension": [
-        100,
-        100
+        256
     ],
     "---- Shared parameters ---": "-",
     "horizon": 1000,
@@ -16,12 +17,12 @@
     "n_epochs": 100,
     "n_gradient_steps_per_epoch": 20000,
     "sampling_steps_per_gradient_step": 1,
-    "head_behaviorial_policy": "bound",
+    "head_behaviorial_policy": "uniform",
     "starting_eps": 1,
     "ending_eps": 0.01,
     "duration_eps": 1000,
-    "n_gradient_steps_per_head_update": 250,
+    "n_gradient_steps_per_head_update": 400,
     "n_gradient_steps_per_target_update": 1,
     "learning_rate": 0.0003,
-    "importance_iteration": "uniform"
+    "importance_iteration": "bound"
 }
