@@ -1,0 +1,25 @@
+{
+    "env_seed": 0,
+    "n_shared_layers": [
+        3
+    ],
+    "---- Shared parameters ---": "-",
+    "horizon": 27000,
+    "gamma": 0.99,
+    "n_initial_samples": 20000,
+    "max_size": 1000000,
+    "batch_size": 32,
+    "n_simulations": 20,
+    "---- iDQNs ---": "-",
+    "n_epochs": 50,
+    "n_gradient_steps_per_epoch": 250000,
+    "sampling_steps_per_gradient_step": 4,
+    "head_behaviorial_policy": "uniform",
+    "starting_eps": 1,
+    "ending_eps": 0.01,
+    "duration_eps": 250000,
+    "n_gradient_steps_per_head_update": 8000,
+    "n_gradient_steps_per_target_update": 1,
+    "learning_rate": 5e-5,
+    "importance_iteration": "uniform"
+}
