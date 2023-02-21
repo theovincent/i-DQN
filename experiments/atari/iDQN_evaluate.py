@@ -27,7 +27,7 @@ def run_cli(argvs=sys.argv[1:]):
     from experiments.atari.utils import define_environment, define_multi_q
     from idqn.utils.params import load_params
 
-    env = define_environment(jax.random.PRNGKey(p["env_seed"]), 1)
+    env = define_environment(jax.random.PRNGKey(p["env_seed"]), args.experiment_name.split("/")[1], 1)
     q = define_multi_q(
         jnp.zeros(args.bellman_iterations_scope),
         (env.n_stacked_frames, env.state_height, env.state_width),
@@ -52,7 +52,9 @@ def run_cli(argvs=sys.argv[1:]):
                 params,
                 p["horizon"],
                 p["n_simulations"],
-                video_path=f"{args.experiment_name}/iDQN/K{args.bellman_iterations_scope}_{idx_epoch}_{args.seed}",
+                f"{args.experiment_name}/iDQN/K{args.bellman_iterations_scope}_{idx_epoch}_{args.seed}"
+                if idx_epoch % 3 == 0
+                else None,
             )
 
             np.save(

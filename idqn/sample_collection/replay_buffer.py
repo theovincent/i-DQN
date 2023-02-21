@@ -1,7 +1,7 @@
 from typing import Dict
 import numpy as np
-import jax.numpy as jnp
 import jax
+import jax.numpy as jnp
 
 
 class ReplayBuffer:
@@ -12,50 +12,49 @@ class ReplayBuffer:
 
     def set_first(
         self,
-        state: jnp.ndarray,
-        action: jnp.ndarray,
-        reward: jnp.ndarray,
-        next_state: jnp.ndarray,
-        absorbing: jnp.ndarray,
+        state: np.ndarray,
+        action: np.ndarray,
+        reward: np.ndarray,
+        next_state: np.ndarray,
+        absorbing: np.ndarray,
     ) -> None:
-        self.states = jnp.zeros((self.max_size,) + state.shape, dtype=state.dtype)
-        self.actions = jnp.zeros(self.max_size, dtype=action.dtype)
-        self.rewards = jnp.zeros(self.max_size, dtype=reward.dtype)
-        self.next_states = jnp.zeros((self.max_size,) + next_state.shape, dtype=next_state.dtype)
-        self.absorbings = jnp.zeros(self.max_size, dtype=absorbing.dtype)
+        self.states = np.zeros((self.max_size,) + state.shape, dtype=state.dtype)
+        self.actions = np.zeros(self.max_size, dtype=action.dtype)
+        self.rewards = np.zeros(self.max_size, dtype=reward.dtype)
+        self.next_states = np.zeros((self.max_size,) + next_state.shape, dtype=next_state.dtype)
+        self.absorbings = np.zeros(self.max_size, dtype=absorbing.dtype)
 
     def add_sample(
         self,
-        state: jnp.ndarray,
-        action: jnp.ndarray,
-        reward: jnp.ndarray,
-        next_state: jnp.ndarray,
-        absorbing: jnp.ndarray,
+        state: np.ndarray,
+        action: np.ndarray,
+        reward: np.ndarray,
+        next_state: np.ndarray,
+        absorbing: np.ndarray,
         idx: int,
     ) -> None:
-        self.states = self.states.at[idx].set(state)
-        self.actions = self.actions.at[idx].set(action)
-        self.rewards = self.rewards.at[idx].set(reward)
-        self.next_states = self.next_states.at[idx].set(next_state)
-        self.absorbings = self.absorbings.at[idx].set(absorbing)
+        self.states[idx] = state
+        self.actions[idx] = action
+        self.rewards[idx] = reward
+        self.next_states[idx] = next_state
+        self.absorbings[idx] = absorbing
 
     def add(
         self,
-        state: jnp.ndarray,
-        action: jnp.ndarray,
-        reward: jnp.ndarray,
-        next_state: jnp.ndarray,
-        absorbing: jnp.ndarray,
+        state: np.ndarray,
+        action: np.ndarray,
+        reward: np.ndarray,
+        next_state: np.ndarray,
+        absorbing: np.ndarray,
     ) -> None:
-        if self.idx >= self.max_size:
-            self.idx = 0
-
         if self.len == 0:
             self.set_first(state, action, reward, next_state, absorbing)
         self.add_sample(state, action, reward, next_state, absorbing, self.idx)
 
         self.idx += 1
         self.len = min(self.len + 1, self.max_size)
+        if self.idx >= self.max_size:
+            self.idx = 0
 
     def save(self, path: str) -> None:
         np.savez(
@@ -70,11 +69,11 @@ class ReplayBuffer:
     def load(self, path: str) -> None:
         dataset = np.load(path)
 
-        self.states = jnp.array(dataset["states"])
-        self.actions = jnp.array(dataset["actions"])
-        self.rewards = jnp.array(dataset["rewards"])
-        self.next_states = jnp.array(dataset["next_states"])
-        self.absorbings = jnp.array(dataset["absorbings"])
+        self.states = np.array(dataset["states"])
+        self.actions = np.array(dataset["actions"])
+        self.rewards = np.array(dataset["rewards"])
+        self.next_states = np.array(dataset["next_states"])
+        self.absorbings = np.array(dataset["absorbings"])
 
         self.len = self.states.shape[0]
 
@@ -82,9 +81,9 @@ class ReplayBuffer:
         idxs = jax.random.randint(sample_key, shape=(n_samples,), minval=0, maxval=self.len)
 
         return {
-            "state": self.states[idxs],
-            "action": self.actions[idxs],
-            "reward": self.rewards[idxs],
-            "next_state": self.next_states[idxs],
-            "absorbing": self.absorbings[idxs],
+            "state": jnp.array(self.states[idxs], dtype=jnp.float32),
+            "action": jnp.array(self.actions[idxs], dtype=jnp.int8),
+            "reward": jnp.array(self.rewards[idxs], dtype=jnp.float32),
+            "next_state": jnp.array(self.next_states[idxs], dtype=jnp.float32),
+            "absorbing": jnp.array(self.absorbings[idxs], dtype=jnp.bool_),
         }

@@ -34,7 +34,7 @@ def run_cli(argvs=sys.argv[1:]):
 
     sample_key, exploration_key, q_key = generate_keys(args.seed)
 
-    env = define_environment(jax.random.PRNGKey(p["env_seed"]), p["gamma"])
+    env = define_environment(jax.random.PRNGKey(p["env_seed"]), args.experiment_name.split("/")[1], p["gamma"])
     replay_buffer = ReplayBuffer(p["max_size"])
     collect_random_samples(env, sample_key, replay_buffer, p["n_initial_samples"], p["horizon"])
 

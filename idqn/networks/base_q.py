@@ -20,7 +20,7 @@ class BaseQ:
         self.gamma = gamma
         self.network = hk.without_apply_rng(hk.transform(network))
         self.network_key = network_key
-        self.params = self.network.init(rng=self.network_key, state=jnp.zeros(self.state_shape))
+        self.params = self.network.init(rng=self.network_key, state=jnp.zeros(self.state_shape, dtype=jnp.float32))
 
         self.loss_and_grad = jax.jit(jax.value_and_grad(self.loss))
 

@@ -11,8 +11,8 @@ from idqn.networks.learnable_multi_head_q import AtariMultiQ
 from idqn.sample_collection.replay_buffer import ReplayBuffer
 
 
-def define_environment(env_key: jax.random.PRNGKeyArray, gamma: float) -> AtariEnv:
-    env = AtariEnv(env_key, gamma)
+def define_environment(env_key: jax.random.PRNGKeyArray, name: str, gamma: float) -> AtariEnv:
+    env = AtariEnv(env_key, name, gamma)
 
     return env
 

@@ -44,7 +44,7 @@ class FullyConnectedMultiQNet(hk.Module):
             self.heads.append(hk.Sequential(head_, name=f"head_{idx_head}"))
 
     def __call__(self, state: jnp.ndarray) -> jnp.ndarray:
-        input = state
+        input = state / 255.0
         input = jnp.atleast_2d(input)
         output = jnp.zeros((input.shape[0], self.n_heads, self.n_actions))
 
@@ -163,8 +163,8 @@ class AtariMultiQNet(hk.Module):
                 ]
             )
             if idx_layer == 2:
-                shared_layers_first_head_.append(hk.Flatten)
-                shared_layers_other_heads_.append(hk.Flatten)
+                shared_layers_first_head_.append(hk.Flatten())
+                shared_layers_other_heads_.append(hk.Flatten())
 
         self.shared_layers_first_head = hk.Sequential(shared_layers_first_head_, name="shared_layers_first_head")
         self.shared_layers_other_heads = hk.Sequential(shared_layers_other_heads_, name="shared_layers_other_heads")
@@ -182,7 +182,7 @@ class AtariMultiQNet(hk.Module):
                     ]
                 )
                 if idx_layer == 2:
-                    head_.append(hk.Flatten)
+                    head_.append(hk.Flatten())
             head_.append(
                 architecture[-1][0](**architecture[-1][1], name=f"head_{idx_head}_layer_{len(architecture) - 1}")
             )
@@ -219,9 +219,7 @@ class AtariMultiQ(iQ):
         self.n_layers = 5
 
         def network(state: jnp.ndarray) -> jnp.ndarray:
-            return FullyConnectedMultiQNet(len(importance_iteration) + 1, n_shared_layers, zero_initializer, n_actions)(
-                state
-            )
+            return AtariMultiQNet(len(importance_iteration) + 1, n_shared_layers, zero_initializer, n_actions)(state)
 
         super().__init__(
             importance_iteration=importance_iteration,

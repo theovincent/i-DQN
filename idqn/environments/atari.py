@@ -7,8 +7,8 @@ import numpy as np
 import jax
 import jax.numpy as jnp
 import haiku as hk
-from PIL import Image
 from collections import deque
+import cv2
 
 from idqn.networks.base_q import BaseMultiHeadQ
 
@@ -21,70 +21,67 @@ class AtariEnv:
         self.state_height, self.state_width = (84, 84)
         self.n_stacked_frames = 4
         self.n_skipped_frames = 4
-        self.max_abs_reward = 1
+        self.max_no_op_actions = 30
 
-        self.env = gym.make(f"ALE/{self.name}", full_action_space=False, obs_type="grayscale", frameskip=1)
-        self.n_actions = self.self.env.env.observation_space._shape.env.env.action_space.n
-        self.original_state_height, self.original_state_width = self.env.env.env.observation_space._shape
+        self.env = gym.make(f"ALE/{self.name}", full_action_space=False, frameskip=1, render_mode="rgb_array")
+        self.n_actions = self.env.env.action_space.n
+        self.original_state_height, self.original_state_width, _ = self.env.env.observation_space._shape
 
         _, info = self.env.reset()
         self.n_lives = info["lives"]
 
-    def reset(self) -> jnp.ndarray:
+    def reset(self) -> np.ndarray:
         self.reset_key, key = jax.random.split(self.reset_key)
         frame, _ = self.env.reset(seed=int(key[0]))
 
-        state = Image.fromarray(frame).resize((self.state_width, self.state_height), Image.Resampling.BILINEAR)
-        self.state = jnp.array(np.repeat(state[None, ...], self.n_stacked_frames, axis=0), dtype=jnp.float32)
+        for _ in np.arange(jax.random.randint(key, (), 0, self.max_no_op_actions)):
+            frame = self.env.step(0)[0]
 
-        # deque(maxlen=self._num_frames)
+        self.stacked_frames = deque(
+            np.repeat(self.preprocess_frame(frame)[None, ...], self.n_stacked_frames, axis=0),
+            maxlen=self.n_stacked_frames,
+        )
+        self.state = np.array(self.stacked_frames)
 
         self.n_steps = 0
 
         return self.state
 
-    def step(self, action: float) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, dict]:
+    def step(self, action: jnp.int8) -> Tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
         absorbing = False
         n_steps = 0
-        frames = np.zeros((self.n_stacked_frames, self.original_state_height, self.original_state_width))
+        skipped_frames = np.zeros((self.n_skipped_frames, self.original_state_height, self.original_state_width, 3))
         reward = 0
 
-        while n_steps < self.n_stacked_frames and not absorbing:
-            frames[n_steps], reward_, absorbing_, _, info = self.env.step(int(action))
+        while n_steps < self.n_skipped_frames and not absorbing:
+            skipped_frames[n_steps], reward_, absorbing_, _, info = self.env.step(action)
 
             n_steps += 1
             absorbing = absorbing_ or (info["lives"] < self.n_lives)
             reward += reward_
 
-        for n_steps_ in np.arange(n_steps + 1, self.n_stacked_frames):
-            frames[n_steps_] = frames[n_steps]
+        # if there is less than n_skipped_frames frames, the max pooling eliminates the zeros
+        self.stacked_frames.append(self.preprocess_frame(np.max(skipped_frames, axis=0)))
+        self.state = np.array(self.stacked_frames)
 
-        pooled_frames = np.max(frames, axis=0)
-        self.state = jnp.array(
-            Image.fromarray(pooled_frames).resize((self.state_width, self.state_height), Image.Resampling.BILINEAR)
-            / 255.0,
-            dtype=jnp.float32,
-        )
+        self.n_steps += self.n_skipped_frames
 
-        self.n_steps += self.n_stacked_frames
+        return self.state, np.array(np.sign(reward), dtype=np.int8), np.array(absorbing, dtype=np.bool_), _
 
-        return (
-            self.state,
-            jnp.array(np.clip(reward, -self.max_abs_reward, self.max_abs_reward), dtype=jnp.float32),
-            jnp.array(absorbing, dtype=bool),
-            _,
-        )
+    def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
+        grayscaled_frame = cv2.cvtColor(np.array(frame, dtype=np.uint8), cv2.COLOR_RGB2GRAY)
+        return cv2.resize(grayscaled_frame, (self.state_width, self.state_height), interpolation=cv2.INTER_LINEAR)
 
     @partial(jax.jit, static_argnames=("self", "q"))
     def jitted_best_action_multi_head(
-        self, q: BaseMultiHeadQ, idx_head: int, q_params: hk.Params, state: jnp.ndarray
+        self, q: BaseMultiHeadQ, idx_head: int, q_params: hk.Params, state: np.ndarray
     ) -> jnp.ndarray:
-        return q(q_params, state)[0, idx_head].argmax()
+        return q(q_params, jnp.array(state, dtype=jnp.float32))[0, idx_head].argmax()
 
     def evaluate_(self, q: BaseMultiHeadQ, idx_head: int, q_params: hk.Params, horizon: int, video_path: str) -> float:
         if video_path is not None:
             video = video_recorder.VideoRecorder(
-                self.env, path=f"experiments/atari/figures/{self.name}/{video_path}.mp4", disable_logger=True
+                self.env, path=f"experiments/atari/figures/{video_path}.mp4", disable_logger=True
             )
         cumulative_reward = 0
         discount = 1
@@ -104,7 +101,7 @@ class AtariEnv:
 
         if video_path is not None:
             video.close()
-            os.remove(f"experiments/atari/figures/{self.name}/{video_path}.meta.json")
+            os.remove(f"experiments/atari/figures/{video_path}.meta.json")
 
         return cumulative_reward
 
