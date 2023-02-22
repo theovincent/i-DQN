@@ -51,7 +51,7 @@ def train(
                 replay_buffer,
                 q,
                 q.params,
-                p["sampling_steps_per_gradient_step"],
+                p["n_samples_per_gradient_step"],
                 p["horizon"],
                 epsilon_schedule,
                 head_behaviorial_probability,

@@ -4,7 +4,7 @@ import jax
 import jax.numpy as jnp
 
 from idqn.networks.base_q import iQ
-from idqn.utils.params import add_noise
+from idqn.utils.params import add_noise, set_params
 
 
 class FullyConnectedMultiQNet(hk.Module):
@@ -231,31 +231,21 @@ class AtariMultiQ(iQ):
             learning_rate=learning_rate,
         )
 
-    def move_forward(self, params: hk.Params) -> hk.Params:
-        random_params = self.random_init_params()
-
-        return self.move_forward_(params, random_params)
-
     @partial(jax.jit, static_argnames="self")
-    def move_forward_(self, params: hk.Params, random_params: hk.Params) -> hk.Params:
-        for idx_layer in range(self.n_shared_layers):
-            random_params[f"AtariNet/~/shared_first_head_layer_{idx_layer}"] = {"w": 0, "b": 0}
-        for idx_layer in range(self.n_shared_layers, self.n_layers):
-            random_params[f"AtariNet/~/head_0_layer_{idx_layer}"] = {"w": 0, "b": 0}
-
+    def move_forward(self, params: hk.Params) -> hk.Params:
         # The shared params of the first head takes the shared params of the other heads
         for idx_layer in range(self.n_shared_layers):
-            params[f"AtariNet/~/shared_first_head_layer_{idx_layer}"] = add_noise(
+            set_params(
+                params[f"AtariNet/~/shared_first_head_layer_{idx_layer}"],
                 params[f"AtariNet/~/shared_other_heads_layer_{idx_layer}"],
-                random_params[f"AtariNet/~/shared_first_head_layer_{idx_layer}"],
             )
 
         # Each head takes the params of the last head with some noise
         for idx_head in range(self.n_heads):
             for idx_layer in range(self.n_shared_layers, self.n_layers):
-                params[f"AtariNet/~/head_{idx_head}_layer_{idx_layer}"] = add_noise(
+                set_params(
+                    params[f"AtariNet/~/head_{idx_head}_layer_{idx_layer}"],
                     params[f"AtariNet/~/head_{self.n_heads - 1}_layer_{idx_layer}"],
-                    random_params[f"AtariNet/~/head_{idx_head}_layer_{idx_layer}"],
                 )
 
         return params

@@ -23,3 +23,9 @@ def add_noise(layers_param_1: dict, layers_param_2: dict, fading_factor: float =
         )
 
     return sum_params
+
+
+def set_params(layers_params: dict, new_layers_params: dict) -> None:
+    for key_weight_layer in layers_params.keys():
+        # copying seems to be faster when jitted
+        layers_params[key_weight_layer] = new_layers_params[key_weight_layer].copy()
