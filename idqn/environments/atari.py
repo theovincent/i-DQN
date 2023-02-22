@@ -73,10 +73,20 @@ class AtariEnv:
         return cv2.resize(grayscaled_frame, (self.state_width, self.state_height), interpolation=cv2.INTER_LINEAR)
 
     @partial(jax.jit, static_argnames=("self", "q"))
-    def jitted_best_action_multi_head(
+    def best_action_multi_head(
         self, q: BaseMultiHeadQ, idx_head: int, q_params: hk.Params, state: np.ndarray
-    ) -> jnp.ndarray:
+    ) -> jnp.int8:
         return q(q_params, jnp.array(state, dtype=jnp.float32))[0, idx_head].argmax()
+
+    @partial(jax.jit, static_argnames="self")
+    def random_action(self, key: jax.random.PRNGKeyArray) -> jnp.int8:
+        return jax.random.choice(key, jnp.arange(self.n_actions))
+
+    @partial(jax.jit, static_argnames=("self", "n_heads"))
+    def random_head(
+        self, key: jax.random.PRNGKeyArray, n_heads: int, head_behaviorial_probability: jnp.ndarray
+    ) -> jnp.int8:
+        return jax.random.choice(key, jnp.arange(n_heads), p=head_behaviorial_probability)
 
     def evaluate_(self, q: BaseMultiHeadQ, idx_head: int, q_params: hk.Params, horizon: int, video_path: str) -> float:
         if video_path is not None:
@@ -93,7 +103,7 @@ class AtariEnv:
                 self.env.render()
                 video.capture_frame()
 
-            action = self.jitted_best_action_multi_head(q, idx_head, q_params, self.state)
+            action = self.best_action_multi_head(q, idx_head, q_params, self.state)
             _, reward, absorbing, _ = self.step(action)
 
             cumulative_reward += discount * reward

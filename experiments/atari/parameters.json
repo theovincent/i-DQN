@@ -11,7 +11,7 @@
     "---- iDQNs ---": "-",
     "n_epochs": 200,
     "n_gradient_steps_per_epoch": 250000,
-    "sampling_steps_per_gradient_step": 1,
+    "n_samples_per_gradient_step": 1,
     "head_behaviorial_policy": "uniform",
     "starting_eps": 1,
     "ending_eps": 0.01,

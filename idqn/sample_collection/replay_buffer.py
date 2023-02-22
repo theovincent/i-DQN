@@ -1,4 +1,5 @@
 from typing import Dict
+from functools import partial
 import numpy as np
 import jax
 import jax.numpy as jnp
@@ -78,12 +79,26 @@ class ReplayBuffer:
         self.len = self.states.shape[0]
 
     def sample_random_batch(self, sample_key: jax.random.PRNGKeyArray, n_samples: int) -> Dict[str, jnp.ndarray]:
-        idxs = jax.random.randint(sample_key, shape=(n_samples,), minval=0, maxval=self.len)
+        idxs = self.get_sample_indexes(sample_key, n_samples, self.len)
 
+        return self.create_batch(
+            self.states[idxs], self.actions[idxs], self.rewards[idxs], self.next_states[idxs], self.absorbings[idxs]
+        )
+
+    @staticmethod
+    @partial(jax.jit, static_argnames="n_samples")
+    def get_sample_indexes(key: jax.random.PRNGKeyArray, n_samples: int, maxval: int) -> jnp.ndarray:
+        return jax.random.randint(key, shape=(n_samples,), minval=0, maxval=maxval)
+
+    @staticmethod
+    @jax.jit
+    def create_batch(
+        states: np.ndarray, actions: np.ndarray, rewards: np.ndarray, next_states: np.ndarray, absorbings: np.ndarray
+    ) -> Dict[str, jnp.ndarray]:
         return {
-            "state": jnp.array(self.states[idxs], dtype=jnp.float32),
-            "action": jnp.array(self.actions[idxs], dtype=jnp.int8),
-            "reward": jnp.array(self.rewards[idxs], dtype=jnp.float32),
-            "next_state": jnp.array(self.next_states[idxs], dtype=jnp.float32),
-            "absorbing": jnp.array(self.absorbings[idxs], dtype=jnp.bool_),
+            "state": jnp.array(states, dtype=jnp.float32),
+            "action": jnp.array(actions, dtype=jnp.int8),
+            "reward": jnp.array(rewards, dtype=jnp.float32),
+            "next_state": jnp.array(next_states, dtype=jnp.float32),
+            "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
         }

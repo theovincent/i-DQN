@@ -1,3 +1,4 @@
+from functools import partial
 import haiku as hk
 import jax
 import jax.numpy as jnp
@@ -44,7 +45,7 @@ class FullyConnectedMultiQNet(hk.Module):
             self.heads.append(hk.Sequential(head_, name=f"head_{idx_head}"))
 
     def __call__(self, state: jnp.ndarray) -> jnp.ndarray:
-        input = state / 255.0
+        input = state
         input = jnp.atleast_2d(input)
         output = jnp.zeros((input.shape[0], self.n_heads, self.n_actions))
 
@@ -90,18 +91,18 @@ class FullyConnectedMultiQ(iQ):
 
     def move_forward(self, params: hk.Params) -> hk.Params:
         # Get random params
-        randon_params = self.random_init_params()
+        random_params = self.random_init_params()
         for idx_layer in range(self.n_shared_layers):
-            randon_params[f"FullyConnectedNet/~/shared_first_head_linear_{idx_layer}"] = {"w": 0, "b": 0}
+            random_params[f"FullyConnectedNet/~/shared_first_head_linear_{idx_layer}"] = {"w": 0, "b": 0}
         for idx_layer in range(self.n_layers_head):
-            randon_params[f"FullyConnectedNet/~/head_0_linear_{idx_layer}"] = {"w": 0, "b": 0}
-        randon_params[f"FullyConnectedNet/~/head_0_linear_last"] = {"w": 0, "b": 0}
+            random_params[f"FullyConnectedNet/~/head_0_linear_{idx_layer}"] = {"w": 0, "b": 0}
+        random_params[f"FullyConnectedNet/~/head_0_linear_last"] = {"w": 0, "b": 0}
 
         # The shared params of the first head takes the shared params of the other heads
         for idx_layer in range(self.n_shared_layers):
             params[f"FullyConnectedNet/~/shared_first_head_linear_{idx_layer}"] = add_noise(
                 params[f"FullyConnectedNet/~/shared_other_heads_linear_{idx_layer}"],
-                randon_params[f"FullyConnectedNet/~/shared_first_head_linear_{idx_layer}"],
+                random_params[f"FullyConnectedNet/~/shared_first_head_linear_{idx_layer}"],
             )
 
         # Each head takes the params of the last head with some noise
@@ -109,11 +110,11 @@ class FullyConnectedMultiQ(iQ):
             for idx_layer in range(self.n_layers_head):
                 params[f"FullyConnectedNet/~/head_{idx_head}_linear_{idx_layer}"] = add_noise(
                     params[f"FullyConnectedNet/~/head_{self.n_heads - 1}_linear_{idx_layer}"],
-                    randon_params[f"FullyConnectedNet/~/head_{idx_head}_linear_{idx_layer}"],
+                    random_params[f"FullyConnectedNet/~/head_{idx_head}_linear_{idx_layer}"],
                 )
             params[f"FullyConnectedNet/~/head_{idx_head}_linear_last"] = add_noise(
                 params[f"FullyConnectedNet/~/head_{self.n_heads - 1}_linear_last"],
-                randon_params[f"FullyConnectedNet/~/head_{idx_head}_linear_last"],
+                random_params[f"FullyConnectedNet/~/head_{idx_head}_linear_last"],
             )
 
         return params
@@ -189,7 +190,7 @@ class AtariMultiQNet(hk.Module):
             self.heads.append(hk.Sequential(head_, name=f"head_{idx_head}"))
 
     def __call__(self, state: jnp.ndarray) -> jnp.ndarray:
-        input = state
+        input = state / 255.0
         input = jnp.atleast_2d(input)
         output = jnp.zeros((input.shape[0], self.n_heads, self.n_actions))
 
@@ -231,18 +232,22 @@ class AtariMultiQ(iQ):
         )
 
     def move_forward(self, params: hk.Params) -> hk.Params:
-        # Get random params
-        randon_params = self.random_init_params()
+        random_params = self.random_init_params()
+
+        return self.move_forward_(params, random_params)
+
+    @partial(jax.jit, static_argnames="self")
+    def move_forward_(self, params: hk.Params, random_params: hk.Params) -> hk.Params:
         for idx_layer in range(self.n_shared_layers):
-            randon_params[f"AtariNet/~/shared_first_head_layer_{idx_layer}"] = {"w": 0, "b": 0}
+            random_params[f"AtariNet/~/shared_first_head_layer_{idx_layer}"] = {"w": 0, "b": 0}
         for idx_layer in range(self.n_shared_layers, self.n_layers):
-            randon_params[f"AtariNet/~/head_0_layer_{idx_layer}"] = {"w": 0, "b": 0}
+            random_params[f"AtariNet/~/head_0_layer_{idx_layer}"] = {"w": 0, "b": 0}
 
         # The shared params of the first head takes the shared params of the other heads
         for idx_layer in range(self.n_shared_layers):
             params[f"AtariNet/~/shared_first_head_layer_{idx_layer}"] = add_noise(
                 params[f"AtariNet/~/shared_other_heads_layer_{idx_layer}"],
-                randon_params[f"AtariNet/~/shared_first_head_layer_{idx_layer}"],
+                random_params[f"AtariNet/~/shared_first_head_layer_{idx_layer}"],
             )
 
         # Each head takes the params of the last head with some noise
@@ -250,7 +255,7 @@ class AtariMultiQ(iQ):
             for idx_layer in range(self.n_shared_layers, self.n_layers):
                 params[f"AtariNet/~/head_{idx_head}_layer_{idx_layer}"] = add_noise(
                     params[f"AtariNet/~/head_{self.n_heads - 1}_layer_{idx_layer}"],
-                    randon_params[f"AtariNet/~/head_{idx_head}_layer_{idx_layer}"],
+                    random_params[f"AtariNet/~/head_{idx_head}_layer_{idx_layer}"],
                 )
 
         return params

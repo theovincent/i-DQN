@@ -74,12 +74,10 @@ def collect_samples_multi_head(
         state = env.state
 
         if exploration_schedule.explore():
-            action = jax.random.choice(exploration_schedule.key, jnp.arange(env.n_actions))
+            action = env.random_action(exploration_schedule.key)
         else:
-            idx_head = jax.random.choice(
-                exploration_schedule.key, jnp.arange(q.n_heads), p=head_behaviorial_probability
-            )
-            action = env.jitted_best_action_multi_head(q, idx_head, q_params, state)
+            idx_head = env.random_head(exploration_schedule.key, q.n_heads, head_behaviorial_probability)
+            action = env.best_action_multi_head(q, idx_head, q_params, state)
 
         next_state, reward, absorbing, _ = env.step(action)
 

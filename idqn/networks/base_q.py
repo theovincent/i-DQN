@@ -1,6 +1,4 @@
 from functools import partial
-
-import numpy as np
 import haiku as hk
 import optax
 import jax
@@ -29,9 +27,13 @@ class BaseQ:
             self.optimizer = optax.adam(self.learning_rate)
             self.optimizer_state = self.optimizer.init(self.params)
 
-    def random_init_params(self) -> jnp.ndarray:
+    def random_init_params(self) -> hk.Params:
         self.network_key, key = jax.random.split(self.network_key)
 
+        return self.random_init_params_(key)
+
+    @partial(jax.jit, static_argnames="self")
+    def random_init_params_(self, key: jax.random.PRNGKeyArray) -> hk.Params:
         return self.network.init(rng=key, state=jnp.zeros(self.state_shape))
 
     @partial(jax.jit, static_argnames="self")

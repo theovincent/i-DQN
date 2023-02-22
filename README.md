@@ -15,3 +15,6 @@ For GPU usage:
 ```Bash
 pip install -U jax[cuda11_cudnn82]==0.4.2 -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 ```
+
+conda install -c conda-forge cudatoolkit-dev=11.6
+conda install -c conda-forge cudnn=8.4
