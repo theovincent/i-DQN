@@ -23,7 +23,13 @@ class AtariEnv:
         self.n_skipped_frames = 4
         self.max_no_op_actions = 30
 
-        self.env = gym.make(f"ALE/{self.name}", full_action_space=False, frameskip=1, render_mode="rgb_array")
+        self.env = gym.make(
+            f"ALE/{self.name}",
+            full_action_space=False,
+            frameskip=1,
+            repeat_action_probability=0.25,
+            render_mode="rgb_array",
+        )
         self.n_actions = self.env.env.action_space.n
         self.original_state_height, self.original_state_width, _ = self.env.env.observation_space._shape
 
