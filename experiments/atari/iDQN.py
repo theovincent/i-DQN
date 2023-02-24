@@ -3,6 +3,7 @@ import argparse
 import json
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 from experiments.base.parser import addparse
 from experiments.base.print import print_info
@@ -35,7 +36,14 @@ def run_cli(argvs=sys.argv[1:]):
     sample_key, exploration_key, q_key = generate_keys(args.seed)
 
     env = define_environment(jax.random.PRNGKey(p["env_seed"]), args.experiment_name.split("/")[1], p["gamma"])
-    replay_buffer = ReplayBuffer(p["max_size"])
+    replay_buffer = ReplayBuffer(
+        p["max_size"],
+        f"experiments/atari/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_R_{args.seed}_1",
+        (env.n_stacked_frames, env.state_height, env.state_width),
+        np.uint8,
+        np.int8,
+        overwrite=True,
+    )
     collect_random_samples(env, sample_key, replay_buffer, p["n_initial_samples"], p["horizon"])
 
     if p["importance_iteration"] == "bound":

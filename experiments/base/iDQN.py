@@ -79,6 +79,10 @@ def train(
             q.params,
         )
 
+        # replay_buffer.save(
+        #     new_path=f"experiments/{environment_name}/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_R_{args.seed}_{idx_epoch + 1}"
+        # )
+
         np.save(
             f"experiments/{environment_name}/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_L_{args.seed}.npy",
             l2_losses,
