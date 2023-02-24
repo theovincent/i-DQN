@@ -1,4 +1,3 @@
-import shutil
 from typing import Dict, Type
 from functools import partial
 import numpy as np
@@ -19,18 +18,17 @@ class ReplayBuffer:
         self.reward_dtype = reward_dtype
         self.absorbing_dtype = np.bool_
 
-        self.load(overwrite, counters_loaded=False)
+        self.load(overwrite)
 
-    def load(self, overwrite: bool, counters_loaded: bool) -> None:
+    def load(self, overwrite: bool) -> None:
         if overwrite:
             mode = "w+"
             self.len = 0
             self.idx = 0
         else:
             mode = "r+"
-            if not counters_loaded:
-                self.len = np.load(self.path + "_len.npy")
-                self.idx = np.load(self.path + "_idx.npy")
+            self.len = np.load(self.path + "_len.npy")
+            self.idx = np.load(self.path + "_idx.npy")
 
         self.states = np.memmap(
             self.path + "_states", mode=mode, shape=(self.max_size,) + self.state_shape, dtype=self.state_dtype
@@ -63,7 +61,7 @@ class ReplayBuffer:
         if self.idx >= self.max_size:
             self.idx = 0
 
-    def save(self, new_path: str) -> None:
+    def save(self) -> None:
         np.save(self.path + "_len", self.len)
         np.save(self.path + "_idx", self.idx)
 
@@ -72,15 +70,6 @@ class ReplayBuffer:
         self.rewards.flush()
         self.next_states.flush()
         self.absorbings.flush()
-
-        shutil.copy(self.path + "_states", new_path + "_states")
-        shutil.copy(self.path + "_actions", new_path + "_actions")
-        shutil.copy(self.path + "_rewards", new_path + "_rewards")
-        shutil.copy(self.path + "_next_states", new_path + "_next_states")
-        shutil.copy(self.path + "_absorbings", new_path + "_absorbings")
-
-        self.path = new_path
-        self.load(overwrite=False, counters_loaded=True)
 
     def sample_random_batch(self, sample_key: jax.random.PRNGKeyArray, n_samples: int) -> Dict[str, jnp.ndarray]:
         idxs = self.get_sample_indexes(sample_key, n_samples, self.len)

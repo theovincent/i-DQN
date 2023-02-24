@@ -4,16 +4,23 @@ import optax
 
 
 class EpsilonGreedySchedule:
-    def __init__(self, starting_eps: float, ending_eps: float, duration_eps: int, key: jax.random.PRNGKeyArray) -> None:
+    def __init__(
+        self,
+        starting_eps: float,
+        ending_eps: float,
+        duration_eps: int,
+        key: jax.random.PRNGKeyArray,
+        current_exploration_step: int,
+    ) -> None:
         self.epsilon_schedule = optax.linear_schedule(starting_eps, ending_eps, duration_eps)
-        self.exploration_step = 0
+        self.current_exploration_step = current_exploration_step
         self.key = key
 
     def explore(self) -> bool:
-        self.exploration_step += 1
+        self.current_exploration_step += 1
         self.key, key = jax.random.split(self.key)
 
-        return self.explore_(key, self.exploration_step)
+        return self.explore_(key, self.current_exploration_step)
 
     @partial(jax.jit, static_argnames="self")
     def explore_(self, key, exploration_step):

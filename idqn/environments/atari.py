@@ -11,6 +11,7 @@ from collections import deque
 import cv2
 
 from idqn.networks.base_q import BaseMultiHeadQ
+from idqn.utils.pickle import save_pickled_data, load_pickled_data
 
 
 class AtariEnv:
@@ -77,6 +78,23 @@ class AtariEnv:
     def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         grayscaled_frame = cv2.cvtColor(np.array(frame, dtype=np.uint8), cv2.COLOR_RGB2GRAY)
         return cv2.resize(grayscaled_frame, (self.state_width, self.state_height), interpolation=cv2.INTER_LINEAR)
+
+    def get_ale_state(self):
+        return self.env.unwrapped.clone_state(include_rng=True)
+
+    def restore_ale_state(self, env_state) -> None:
+        self.env.unwrapped.restore_state(env_state)
+
+    def store(self, path: str) -> None:
+        save_pickled_data(path + "_ale_state", self.get_env_state())
+        save_pickled_data(path + "_frame_state", self.stacked_frames)
+        save_pickled_data(path + "_n_steps", self.n_steps)
+
+    def load(self, path: str) -> None:
+        self.restore_ale_state(load_pickled_data(path + "_ale_state"))
+        self.stacked_frames = load_pickled_data(path + "_frame_state")
+        self.state = np.array(self.stacked_frames)
+        self.n_steps = load_pickled_data(path + "_n_steps")
 
     @partial(jax.jit, static_argnames=("self", "q"))
     def best_action_multi_head(
