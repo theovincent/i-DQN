@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 import argparse
 import time
@@ -38,12 +39,20 @@ def run_cli(argvs=sys.argv[1:]):
     )
 
     js = np.nan * np.zeros(p["n_epochs"] + 1)
+    max_j = -float("inf")
+    argmax_j = None
     path_params = (
         f"experiments/atari/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_P_{args.seed}_"
     )
-    idx_epoch = 0
+    if args.restart_training:
+        idx_epoch = p["n_epochs"] // 2 + 1
+        last_epoch = p["n_epochs"]
+    else:
+        idx_epoch = 0
+        last_epoch = p["n_epochs"] // 2
+    list_idx_epoch_video = np.ceil(np.linspace(idx_epoch, last_epoch, 5))
 
-    while idx_epoch <= p["n_epochs"]:
+    while idx_epoch <= last_epoch:
         if os.path.exists(path_params + str(idx_epoch)):
             params = load_params(path_params + str(idx_epoch))
             js[idx_epoch] = env.evaluate(
@@ -52,16 +61,32 @@ def run_cli(argvs=sys.argv[1:]):
                 params,
                 p["horizon"],
                 p["n_simulations"],
-                f"{args.experiment_name}/iDQN/K{args.bellman_iterations_scope}_{idx_epoch}_{args.seed}"
-                if idx_epoch % 3 == 0
+                f"{args.experiment_name}/iDQN/K{args.bellman_iterations_scope}_{idx_epoch}_s{args.seed}"
+                if idx_epoch in list_idx_epoch_video
                 else None,
             )
+
+            if max_j < js[idx_epoch]:
+                if argmax_j is not None:
+                    os.remove(f"{path_params}{argmax_j}_best")
+
+                argmax_j = idx_epoch
+                max_j = js[idx_epoch]
+                shutil.copy(path_params + str(idx_epoch), f"{path_params}{argmax_j}_best")
 
             np.save(
                 f"experiments/atari/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_J_{args.seed}.npy",
                 js,
             )
+            os.remove(path_params + str(idx_epoch))
             print(f"Epoch {idx_epoch} done")
             idx_epoch += 1
         else:
+            print("Sleep")
             time.sleep(60)
+
+    if args.restart_training:
+        os.remove(path_params.replace("_P_", "_R_") + "*")
+        os.remove(path_params.replace("_P_", "_K_") + ".npy")
+        os.remove(path_params.replace("_P_", "_O_"))
+        os.remove(path_params.replace("_P_", "_E_"))

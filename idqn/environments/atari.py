@@ -22,6 +22,7 @@ class AtariEnv:
         self.state_height, self.state_width = (84, 84)
         self.n_stacked_frames = 4
         self.n_skipped_frames = 4
+        self.n_pooled_frames = 2
         self.max_no_op_actions = 30
 
         self.env = gym.make(
@@ -34,6 +35,7 @@ class AtariEnv:
         self.n_actions = self.env.env.action_space.n
         self.original_state_height, self.original_state_width, _ = self.env.env.observation_space._shape
 
+        self.start_with_fire = self.env.unwrapped.get_action_meanings()[1] == "FIRE"
         _, info = self.env.reset()
         self.n_lives = info["lives"]
 
@@ -41,8 +43,20 @@ class AtariEnv:
         self.reset_key, key = jax.random.split(self.reset_key)
         frame, _ = self.env.reset(seed=int(key[0]))
 
-        for _ in np.arange(jax.random.randint(key, (), 0, self.max_no_op_actions)):
-            frame = self.env.step(0)[0]
+        if self.start_with_fire:
+            frame, _, absorbing, _, _ = self.env.step(1)
+            if absorbing:
+                frame, _ = self.env.reset(seed=int(key[0]))
+            frame, _, absorbing, _, _ = self.env.step(2)
+            if absorbing:
+                frame, _ = self.env.reset(seed=int(key[0]))
+
+        for _ in np.arange(jax.random.randint(key, (), 1, self.max_no_op_actions + 1)):
+            frame, _, absorbing_, _, info = self.env.step(0)
+
+            if absorbing_ or (info["lives"] < self.n_lives):
+                self.reset_key, key = jax.random.split(self.reset_key)
+                frame, _ = self.env.reset(seed=int(key[0]))
 
         self.stacked_frames = deque(
             np.repeat(self.preprocess_frame(frame)[None, ...], self.n_stacked_frames, axis=0),
@@ -57,18 +71,18 @@ class AtariEnv:
     def step(self, action: jnp.int8) -> Tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
         absorbing = False
         n_steps = 0
-        skipped_frames = np.zeros((self.n_skipped_frames, self.original_state_height, self.original_state_width, 3))
+        pooled_frames = np.zeros((self.n_pooled_frames, self.original_state_height, self.original_state_width, 3))
         reward = 0
 
         while n_steps < self.n_skipped_frames and not absorbing:
-            skipped_frames[n_steps], reward_, absorbing_, _, info = self.env.step(action)
+            pooled_frames[n_steps % self.n_pooled_frames], reward_, absorbing_, _, info = self.env.step(action)
 
             n_steps += 1
             absorbing = absorbing_ or (info["lives"] < self.n_lives)
             reward += reward_
 
         # if there is less than n_skipped_frames frames, the max pooling eliminates the zeros
-        self.stacked_frames.append(self.preprocess_frame(np.max(skipped_frames, axis=0)))
+        self.stacked_frames.append(self.preprocess_frame(np.max(pooled_frames, axis=0)))
         self.state = np.array(self.stacked_frames)
 
         self.n_steps += self.n_skipped_frames
@@ -85,8 +99,8 @@ class AtariEnv:
     def restore_ale_state(self, env_state) -> None:
         self.env.unwrapped.restore_state(env_state)
 
-    def store(self, path: str) -> None:
-        save_pickled_data(path + "_ale_state", self.get_env_state())
+    def save(self, path: str) -> None:
+        save_pickled_data(path + "_ale_state", self.get_ale_state())
         save_pickled_data(path + "_frame_state", self.stacked_frames)
         save_pickled_data(path + "_n_steps", self.n_steps)
 
