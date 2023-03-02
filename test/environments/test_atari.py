@@ -66,10 +66,10 @@ class TestAtariEnv(unittest.TestCase):
             action_key, key = jax.random.split(action_key)
             env_to_store.step(jax.random.randint(key, shape=(), minval=0, maxval=env_to_store.n_actions))
 
-        env_to_store.save("test_store_load")
+        env_to_store.save("test/test_store_load")
 
         env_to_load = AtariEnv(self.key, self.name, self.gamma)
-        env_to_load.load("test_store_load")
+        env_to_load.load("test/test_store_load")
 
         self.assertEqual(np.linalg.norm(env_to_store.state - env_to_load.state), 0, f"random seed {self.random_seed}")
         self.assertEqual(env_to_store.n_steps, env_to_load.n_steps, f"random seed {self.random_seed}")
@@ -77,6 +77,6 @@ class TestAtariEnv(unittest.TestCase):
             np.linalg.norm(env_to_store.step(2)[0] - env_to_load.step(2)[0]), 0, f"random seed {self.random_seed}"
         )
 
-        os.remove("test_store_load_ale_state")
-        os.remove("test_store_load_frame_state")
-        os.remove("test_store_load_n_steps")
+        os.remove("test/test_store_load_ale_state")
+        os.remove("test/test_store_load_frame_state")
+        os.remove("test/test_store_load_n_steps")
