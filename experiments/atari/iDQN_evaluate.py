@@ -38,6 +38,7 @@ def run_cli(argvs=sys.argv[1:]):
         p["n_shared_layers"],
     )
 
+    exploration_key = jax.random.PRNGKey(p["env_seed"])
     js = np.nan * np.zeros(p["n_epochs"] + 1)
     max_j = -float("inf")
     argmax_j = None
@@ -55,18 +56,21 @@ def run_cli(argvs=sys.argv[1:]):
     while idx_epoch <= last_epoch:
         if os.path.exists(path_params + str(idx_epoch)):
             params = load_params(path_params + str(idx_epoch))
+            exploration_key, key = jax.random.split(exploration_key)
             js[idx_epoch] = env.evaluate(
                 q,
                 0,
                 params,
                 p["horizon"],
                 p["n_simulations"],
+                p["eps_eval"],
+                key,
                 f"{args.experiment_name}/iDQN/K{args.bellman_iterations_scope}_{idx_epoch}_s{args.seed}"
                 if idx_epoch in list_idx_epoch_video
                 else None,
             )
 
-            if max_j < js[idx_epoch]:
+            if js[idx_epoch] > max_j:
                 if argmax_j is not None:
                     os.remove(f"{path_params}{argmax_j}_best")
 

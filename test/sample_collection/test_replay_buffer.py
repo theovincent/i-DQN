@@ -6,7 +6,7 @@ import numpy as np
 from idqn.sample_collection.replay_buffer import ReplayBuffer
 
 
-class TestAtariEnv(unittest.TestCase):
+class TestReplayBuffer(unittest.TestCase):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.random_seed = np.random.randint(1000)

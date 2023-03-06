@@ -92,7 +92,8 @@ def train(
             if n_gradient_steps % p["n_gradient_steps_per_target_update"] == 0:
                 params_target = q.params
             if (
-                n_gradient_steps % (p["n_gradient_steps_per_head_update"] * jnp.ceil(args.bellman_iterations_scope / 2))
+                n_gradient_steps
+                % (jnp.ceil(p["n_gradient_steps_per_head_update"] * args.bellman_iterations_scope / p["speed"]))
                 == 0
             ):
                 q.params = q.move_forward(q.params)

@@ -15,25 +15,26 @@ from idqn.utils.pickle import save_pickled_data, load_pickled_data
 
 
 class AtariEnv:
-    def __init__(self, env_key: jax.random.PRNGKeyArray, name: str, gamma: float) -> None:
+    def __init__(self, env_key: jax.random.PRNGKeyArray, name: str, gamma: float, terminal_on_life_loss: bool) -> None:
         self.reset_key = env_key
         self.name = name
         self.gamma = gamma
+        self.terminal_on_life_loss = terminal_on_life_loss
         self.state_height, self.state_width = (84, 84)
         self.n_stacked_frames = 4
         self.n_skipped_frames = 4
         self.n_pooled_frames = 2
-        self.max_no_op_actions = 30
 
         self.env = gym.make(
             f"ALE/{self.name}",
             full_action_space=False,
             frameskip=1,
             repeat_action_probability=0.25,
+            obs_type="grayscale",
             render_mode="rgb_array",
         )
         self.n_actions = self.env.env.action_space.n
-        self.original_state_height, self.original_state_width, _ = self.env.env.observation_space._shape
+        self.original_state_height, self.original_state_width = self.env.env.observation_space._shape
 
         self.start_with_fire = self.env.unwrapped.get_action_meanings()[1] == "FIRE"
         _, info = self.env.reset()
@@ -42,21 +43,6 @@ class AtariEnv:
     def reset(self) -> np.ndarray:
         self.reset_key, key = jax.random.split(self.reset_key)
         frame, _ = self.env.reset(seed=int(key[0]))
-
-        if self.start_with_fire:
-            frame, _, absorbing, _, _ = self.env.step(1)
-            if absorbing:
-                frame, _ = self.env.reset(seed=int(key[0]))
-            frame, _, absorbing, _, _ = self.env.step(2)
-            if absorbing:
-                frame, _ = self.env.reset(seed=int(key[0]))
-
-        for _ in np.arange(jax.random.randint(key, (), 1, self.max_no_op_actions + 1)):
-            frame, _, absorbing_, _, info = self.env.step(0)
-
-            if absorbing_ or (info["lives"] < self.n_lives):
-                self.reset_key, key = jax.random.split(self.reset_key)
-                frame, _ = self.env.reset(seed=int(key[0]))
 
         self.stacked_frames = deque(
             np.repeat(self.preprocess_frame(frame)[None, ...], self.n_stacked_frames, axis=0),
@@ -68,30 +54,38 @@ class AtariEnv:
 
         return self.state
 
+    @partial(jax.jit, static_argnames="self")
+    def is_absorbing(self, absorbing_, info, n_lives):
+        if self.terminal_on_life_loss:
+            return absorbing_ or (info["lives"] < n_lives), info["lives"]
+        else:
+            return absorbing_, info["lives"]
+
     def step(self, action: jnp.int8) -> Tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
         absorbing = False
-        n_steps = 0
-        pooled_frames = np.zeros((self.n_pooled_frames, self.original_state_height, self.original_state_width, 3))
+        n_frames = 0
+        pooled_frames = np.zeros((self.n_pooled_frames, self.original_state_height, self.original_state_width))
         reward = 0
 
-        while n_steps < self.n_skipped_frames and not absorbing:
-            pooled_frames[n_steps % self.n_pooled_frames], reward_, absorbing_, _, info = self.env.step(action)
+        while n_frames < self.n_skipped_frames and not absorbing:
+            pooled_frames[n_frames % self.n_pooled_frames], reward_, absorbing_, _, info = self.env.step(action)
 
-            n_steps += 1
-            absorbing = absorbing_ or (info["lives"] < self.n_lives)
+            n_frames += 1
+            absorbing, self.n_lives = self.is_absorbing(absorbing_, info, self.n_lives)
             reward += reward_
 
         # if there is less than n_skipped_frames frames, the max pooling eliminates the zeros
         self.stacked_frames.append(self.preprocess_frame(np.max(pooled_frames, axis=0)))
         self.state = np.array(self.stacked_frames)
 
-        self.n_steps += self.n_skipped_frames
+        self.n_steps += 1
 
-        return self.state, np.array(np.sign(reward), dtype=np.int8), np.array(absorbing, dtype=np.bool_), _
+        return self.state, np.array(np.clip(reward, -1, 1), dtype=np.int8), np.array(absorbing, dtype=np.bool_), _
 
     def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
-        grayscaled_frame = cv2.cvtColor(np.array(frame, dtype=np.uint8), cv2.COLOR_RGB2GRAY)
-        return cv2.resize(grayscaled_frame, (self.state_width, self.state_height), interpolation=cv2.INTER_LINEAR)
+        return cv2.resize(
+            np.array(frame, dtype=np.uint8), (self.state_width, self.state_height), interpolation=cv2.INTER_LINEAR
+        )
 
     def get_ale_state(self):
         return self.env.unwrapped.clone_state(include_rng=True)
@@ -126,7 +120,16 @@ class AtariEnv:
     ) -> jnp.int8:
         return jax.random.choice(key, jnp.arange(n_heads), p=head_behaviorial_probability)
 
-    def evaluate_(self, q: BaseMultiHeadQ, idx_head: int, q_params: hk.Params, horizon: int, video_path: str) -> float:
+    def evaluate_(
+        self,
+        q: BaseMultiHeadQ,
+        idx_head: int,
+        q_params: hk.Params,
+        horizon: int,
+        eps_eval: float,
+        exploration_key: jax.random.PRNGKey,
+        video_path: str,
+    ) -> float:
         if video_path is not None:
             video = video_recorder.VideoRecorder(
                 self.env, path=f"experiments/atari/figures/{video_path}.mp4", disable_logger=True
@@ -141,7 +144,12 @@ class AtariEnv:
                 self.env.render()
                 video.capture_frame()
 
-            action = self.best_action_multi_head(q, idx_head, q_params, self.state)
+            exploration_key, key = jax.random.split(exploration_key)
+            if jax.random.uniform(key) < eps_eval:
+                action = self.random_action(key)
+            else:
+                action = self.best_action_multi_head(q, idx_head, q_params, self.state)
+
             _, reward, absorbing, _ = self.step(action)
 
             cumulative_reward += discount * reward
@@ -160,12 +168,14 @@ class AtariEnv:
         q_params: hk.Params,
         horizon: int,
         n_simulations: int,
+        eps_eval: float,
+        exploration_key: jax.random.PRNGKey,
         video_path: str,
     ) -> float:
         rewards = np.zeros(n_simulations)
 
-        rewards[0] = self.evaluate_(q, idx_head, q_params, horizon, video_path)
+        rewards[0] = self.evaluate_(q, idx_head, q_params, horizon, eps_eval, exploration_key, video_path)
         for idx_simulation in range(1, n_simulations):
-            rewards[idx_simulation] = self.evaluate_(q, idx_head, q_params, horizon, None)
+            rewards[idx_simulation] = self.evaluate_(q, idx_head, q_params, horizon, eps_eval, exploration_key, None)
 
         return rewards.mean()

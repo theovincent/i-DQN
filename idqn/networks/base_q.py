@@ -24,7 +24,7 @@ class BaseQ:
 
         if learning_rate is not None:
             self.learning_rate = learning_rate
-            self.optimizer = optax.adam(self.learning_rate)
+            self.optimizer = optax.adam(self.learning_rate, eps=0.0003125)
             self.optimizer_state = self.optimizer.init(self.params)
 
     def random_init_params(self) -> hk.Params:
@@ -109,15 +109,13 @@ class iQ(BaseMultiHeadQ):
         raise NotImplementedError
 
     @partial(jax.jit, static_argnames=("self", "ord"))
-    def loss(self, params: hk.Params, params_target: hk.Params, samples: dict, ord: str = "2") -> jnp.ndarray:
+    def loss(self, params: hk.Params, params_target: hk.Params, samples: dict, ord: str = "huber") -> jnp.ndarray:
         targets = self.compute_target(params_target, samples)[:, :-1]
         predictions = self(params, samples["state"])[jnp.arange(samples["state"].shape[0]), 1:, samples["action"]]
 
         error = (predictions - targets) * jnp.repeat(self.importance_iteration[None, :], targets.shape[0], axis=0)
-        if ord == "1":
-            return jnp.abs(error).mean()
-        elif ord == "2":
-            return jnp.square(error).mean()
+        if ord == "huber":
+            return optax.huber_loss(error, 0).mean()
         elif ord == "sum":
             return jnp.square(error).sum()
 
