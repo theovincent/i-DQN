@@ -26,7 +26,7 @@ class AtariEnv:
         self.n_pooled_frames = 2
 
         self.env = gym.make(
-            f"ALE/{self.name}",
+            f"ALE/{self.name}-v5",
             full_action_space=False,
             frameskip=1,
             repeat_action_probability=0.25,

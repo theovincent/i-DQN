@@ -28,6 +28,10 @@ function parse_arguments() {
                 shift
                 shift
                 ;;
+            -r | --restart_training)
+                RESTART_TRAINING=-r
+                shift
+                ;;
             -g | --gpu)
                 GPU=true
                 shift

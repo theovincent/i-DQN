@@ -1,4 +1,3 @@
-import os
 import unittest
 import jax
 import numpy as np
