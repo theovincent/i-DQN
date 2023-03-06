@@ -191,7 +191,7 @@ class AtariMultiQNet(hk.Module):
 
     def __call__(self, state: jnp.ndarray) -> jnp.ndarray:
         input = state / 255.0
-        input = jnp.atleast_2d(input)
+        input = jnp.array(input, copy=False, ndmin=4)
         output = jnp.zeros((input.shape[0], self.n_heads, self.n_actions))
 
         shared_input_first_head = self.shared_layers_first_head(input)

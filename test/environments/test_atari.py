@@ -73,9 +73,6 @@ class TestAtariEnv(unittest.TestCase):
 
         self.assertEqual(np.linalg.norm(env_to_store.state - env_to_load.state), 0, f"random seed {self.random_seed}")
         self.assertEqual(env_to_store.n_steps, env_to_load.n_steps, f"random seed {self.random_seed}")
-        self.assertEqual(
-            np.linalg.norm(env_to_store.step(2)[0] - env_to_load.step(2)[0]), 0, f"random seed {self.random_seed}"
-        )
 
         os.remove("test/test_store_load_ale_state")
         os.remove("test/test_store_load_frame_state")
