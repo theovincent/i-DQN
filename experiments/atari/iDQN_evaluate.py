@@ -1,4 +1,4 @@
-import os
+import os, glob
 import shutil
 import sys
 import argparse
@@ -82,15 +82,34 @@ def run_cli(argvs=sys.argv[1:]):
                 f"experiments/atari/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_J_{args.seed}.npy",
                 js,
             )
-            os.remove(path_params + str(idx_epoch))
+            # leave the last parameters of the first training to enable the last training to start
+            if idx_epoch != p["n_epochs"] // 2:
+                os.remove(path_params + str(idx_epoch))
             print(f"Epoch {idx_epoch} done")
             idx_epoch += 1
         else:
             print("Sleep")
             time.sleep(60)
 
+    best_params = load_params(f"{path_params}{argmax_j}_best")
+    exploration_key, key = jax.random.split(exploration_key)
+    env.evaluate(
+        q,
+        0,
+        best_params,
+        p["horizon"],
+        p["n_simulations"],
+        p["eps_eval"],
+        key,
+        f"{args.experiment_name}/iDQN/K{args.bellman_iterations_scope}_{argmax_j}_s{args.seed}_best",
+    )
+
     if args.restart_training:
-        os.remove(path_params.replace("_P_", "_R_") + "*")
-        os.remove(path_params.replace("_P_", "_K_") + ".npy")
-        os.remove(path_params.replace("_P_", "_O_"))
-        os.remove(path_params.replace("_P_", "_E_"))
+        os.remove(path_params + str(p["n_epochs"] // 2))
+
+        for replay_buffer_file in glob.glob(path_params.replace("_P_", "_R_") + "*"):
+            os.remove(replay_buffer_file)
+        os.remove(path_params.replace(f"_P_{args.seed}_", f"_K_{args.seed}") + ".npy")
+        os.remove(path_params.replace(f"_P_{args.seed}_", f"_O_{args.seed}"))
+        for environment_file in glob.glob(path_params.replace("_P_", "_E_") + "*"):
+            os.remove(environment_file)
