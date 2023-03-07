@@ -3,7 +3,7 @@
 source launch_job/parse_arguments.sh
 parse_arguments $@
 
-IFS=" " read -ra split_experiment_name <<< $EXPERIMENT_NAME
+IFS="/" read -ra split_experiment_name <<< $EXPERIMENT_NAME
 EXPERIMENT_GENERAL_NAME=${split_experiment_name[0]}
 
 [ -d out/atari/$EXPERIMENT_NAME ] || mkdir -p out/atari/$EXPERIMENT_NAME
