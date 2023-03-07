@@ -36,6 +36,10 @@ function parse_arguments() {
                 GPU=true
                 shift
                 ;;
+            -ns | --n_parallel_seeds)
+                N_PARALLEL_SEEDS=$2
+                shift
+                ;;
             -?*)
                 printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
                 shift
@@ -55,6 +59,11 @@ function parse_arguments() {
     elif ( [[ $FIRST_SEED != "" ]] && [[ $LAST_SEED = "" ]] ) || ( [[ $FIRST_SEED == "" ]] && [[ $LAST_SEED != "" ]] )
     then
         echo "you need to specify -fs and -ls, not only one" >&2
+        exit
+    fi
+    if [[ $N_PARALLEL_SEEDS == "" ]]
+    then
+        echo "the number of parallel seeds is missing, use -ns" >&2
         exit
     fi
     if [[ $GPU == "" ]]
