@@ -11,7 +11,7 @@ class TestAtariEnv(unittest.TestCase):
         super().__init__(*args, **kwargs)
         self.random_seed = np.random.randint(1000)
         self.key = jax.random.PRNGKey(self.random_seed)
-        self.name = "Breakout-v5"
+        self.name = "Breakout"
         self.gamma = jax.random.uniform(self.key)
 
     def test_reset(self) -> None:
