@@ -28,16 +28,17 @@ function parse_arguments() {
                 shift
                 shift
                 ;;
+            -ns | --n_parallel_seeds)
+                N_PARALLEL_SEEDS=$2
+                shift
+                shift
+                ;;
             -r | --restart_training)
                 RESTART_TRAINING=-r
                 shift
                 ;;
             -g | --gpu)
                 GPU=true
-                shift
-                ;;
-            -ns | --n_parallel_seeds)
-                N_PARALLEL_SEEDS=$2
                 shift
                 ;;
             -?*)

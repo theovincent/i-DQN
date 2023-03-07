@@ -35,8 +35,18 @@ def run_cli(argvs=sys.argv[1:]):
     )
     args = parser.parse_args(argvs)
 
+    import os
+
+    print(os.environ)
+    processes = []
+
     for dozen in range(1, args.n_parallel_seeds + 1):
         with open(f"{args.stdout}_{dozen}{args.seed}", "w") as stdout_file:
-            subprocess.Popen(
-                args.command + f" -s {dozen}{args.seed}", shell=True, stdout=stdout_file, stderr=stdout_file
+            processes.append(
+                subprocess.Popen(
+                    args.command + f" -s {dozen}{args.seed}", shell=True, stdout=stdout_file, stderr=stdout_file
+                )
             )
+
+    for process in processes:
+        process.communicate()
