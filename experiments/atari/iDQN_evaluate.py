@@ -1,4 +1,4 @@
-import os
+import os, glob
 import shutil
 import sys
 import argparse
@@ -89,8 +89,22 @@ def run_cli(argvs=sys.argv[1:]):
             print("Sleep")
             time.sleep(60)
 
+    best_params = load_params(f"{path_params}{argmax_j}_best")
+    exploration_key, key = jax.random.split(exploration_key)
+    env.evaluate(
+        q,
+        0,
+        best_params,
+        p["horizon"],
+        p["n_simulations"],
+        p["eps_eval"],
+        key,
+        f"{args.experiment_name}/iDQN/K{args.bellman_iterations_scope}_best_s{args.seed}",
+    )
+
     if args.restart_training:
-        os.remove(path_params.replace("_P_", "_R_") + "*")
+        for replay_buffer_file in glob.glob(path_params.replace("_P_", "_R_") + "*"):
+            os.remove(replay_buffer_file)
         os.remove(path_params.replace("_P_", "_K_") + ".npy")
         os.remove(path_params.replace("_P_", "_O_"))
         os.remove(path_params.replace("_P_", "_E_"))
