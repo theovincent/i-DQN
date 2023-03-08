@@ -35,9 +35,6 @@ def run_cli(argvs=sys.argv[1:]):
     )
     args = parser.parse_args(argvs)
 
-    import os
-
-    print(os.environ)
     processes = []
 
     for dozen in range(1, args.n_parallel_seeds + 1):
