@@ -5,7 +5,7 @@ parse_arguments $@
 
 source env_cpu/bin/activate
 
-if [[ $RESTART_TRAINING = true ]]
+if [[ $RESTART_TRAINING = "-r" ]]
 then
     training="last"
 else

@@ -41,7 +41,7 @@ def run_cli(argvs=sys.argv[1:]):
     processes = []
 
     for dozen in range(1, args.n_parallel_seeds + 1):
-        with open(f"{args.stdout}_{dozen}{args.seed}", "w") as stdout_file:
+        with open(f"{args.stdout}_{dozen}{args.seed}.out", "w") as stdout_file:
             processes.append(
                 subprocess.Popen(
                     args.command + f" -s {dozen}{args.seed}", shell=True, stdout=stdout_file, stderr=stdout_file
