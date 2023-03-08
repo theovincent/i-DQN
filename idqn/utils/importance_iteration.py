@@ -14,5 +14,6 @@ def importance_bound(gamma: float, n_bellman_iterations: int) -> jnp.ndarray:
         pow_gammas = pow_gammas.at[idx].set(pow_gamma)
         pow_gamma *= gamma
 
-    # multiply by n_bellman_iterations to avoid changing the learning rate
-    return ((1 - gamma) * (pow_gamma / gamma)) / ((1 - pow_gamma * gamma) * pow_gammas) * n_bellman_iterations
+    importance = ((1 - gamma) * (pow_gamma / gamma)) / ((1 - pow_gamma * gamma) * pow_gammas)
+
+    return importance / importance.sum() * n_bellman_iterations

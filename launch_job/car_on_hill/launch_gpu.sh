@@ -22,7 +22,7 @@ for bellman_iterations_scope in "${LIST_BELLMAN_ITERATIONS_SCOPE[@]}"
 do
     # iFQI
     echo "launch train ifqi"
-    submission_train_ifqi=$(sbatch -J C_train_ifqi --dependency=afterok:$submission_id_collect_sample --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=3 --mem-per-cpu=750Mc --time=3:30:00 --output=out/car_on_hill/$EXPERIMENT_NAME/$bellman_iterations_scope\_train_ifqi_%a.out -p amd,amd2,rtx,rtx2 launch_job/car_on_hill/train_ifqi.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope -g)
+    submission_train_ifqi=$(sbatch -J C_train_ifqi --dependency=afterok:$submission_id_collect_sample --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=3 --mem-per-cpu=750Mc --time=3:30:00 --output=out/car_on_hill/$EXPERIMENT_NAME/$bellman_iterations_scope\_train_ifqi_%a.out --gres=gpu:1 -p amd,amd2,rtx,rtx2 launch_job/car_on_hill/train_ifqi.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope -g)
 
     IFS=" " read -ra split_submission_train_ifqi <<< $submission_train_ifqi
     submission_id_train_ifqi=${split_submission_train_ifqi[-1]}

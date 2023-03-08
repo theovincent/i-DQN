@@ -34,7 +34,7 @@ class LunarLanderEnv:
         return jnp.array(self.state), jnp.array(reward), jnp.array(absorbing, dtype=bool), info
 
     @partial(jax.jit, static_argnames=("self", "q"))
-    def jitted_best_action_multi_head(
+    def best_action_multi_head(
         self, q: BaseMultiHeadQ, idx_head: int, q_params: hk.Params, state: jnp.ndarray
     ) -> jnp.ndarray:
         return q(q_params, state)[0, idx_head].argmax()
@@ -54,7 +54,7 @@ class LunarLanderEnv:
                 self.env.render()
                 video.capture_frame()
 
-            action = self.jitted_best_action_multi_head(q, idx_head, q_params, self.state)
+            action = self.best_action_multi_head(q, idx_head, q_params, self.state)
             _, reward, absorbing, _ = self.step(action)
 
             cumulative_reward += discount * reward

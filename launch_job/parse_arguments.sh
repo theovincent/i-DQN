@@ -28,6 +28,15 @@ function parse_arguments() {
                 shift
                 shift
                 ;;
+            -ns | --n_parallel_seeds)
+                N_PARALLEL_SEEDS=$2
+                shift
+                shift
+                ;;
+            -r | --restart_training)
+                RESTART_TRAINING=-r
+                shift
+                ;;
             -g | --gpu)
                 GPU=true
                 shift
@@ -51,6 +60,11 @@ function parse_arguments() {
     elif ( [[ $FIRST_SEED != "" ]] && [[ $LAST_SEED = "" ]] ) || ( [[ $FIRST_SEED == "" ]] && [[ $LAST_SEED != "" ]] )
     then
         echo "you need to specify -fs and -ls, not only one" >&2
+        exit
+    fi
+    if [[ $N_PARALLEL_SEEDS == "" ]]
+    then
+        echo "the number of parallel seeds is missing, use -ns" >&2
         exit
     fi
     if [[ $GPU == "" ]]
