@@ -19,7 +19,7 @@ fi
 
 if [[ $N_PARALLEL_SEEDS = 1 ]]
 then
-    export XLA_PYTHON_CLIENT_MEM_FRACTION=0.9
+    export XLA_PYTHON_CLIENT_MEM_FRACTION=0.89
 elif [[ $N_PARALLEL_SEEDS = 2 ]]
 then
     export XLA_PYTHON_CLIENT_MEM_FRACTION=0.44
