@@ -51,7 +51,7 @@ def run_cli(argvs=sys.argv[1:]):
     else:
         idx_epoch = 0
         last_epoch = p["n_epochs"] // 2
-    list_idx_epoch_video = np.ceil(np.linspace(idx_epoch, last_epoch, 5))
+    list_idx_epoch_video = np.ceil(np.linspace(idx_epoch + 1, last_epoch, 5))
 
     while idx_epoch <= last_epoch:
         if os.path.exists(path_params + str(idx_epoch)):
