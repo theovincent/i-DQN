@@ -37,12 +37,7 @@ def run_cli(argvs=sys.argv[1:]):
 
     env = define_environment(jax.random.PRNGKey(p["env_seed"]), args.experiment_name.split("/")[1], p["gamma"])
     replay_buffer = ReplayBuffer(
-        p["max_size"],
-        f"experiments/atari/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_R_{args.seed}",
-        (env.n_stacked_frames, env.state_height, env.state_width),
-        np.uint8,
-        np.int8,
-        overwrite=not args.restart_training,
+        p["max_size"], (env.n_stacked_frames, env.state_height, env.state_width), np.uint8, np.int8
     )
 
     if p["importance_iteration"] == "bound":

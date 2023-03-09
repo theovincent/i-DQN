@@ -29,6 +29,10 @@ def train(
     )
 
     if args.restart_training:
+        replay_buffer.load(
+            f"experiments/atari/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_R_{args.seed}"
+        )
+
         first_epoch = p["n_epochs"] // 2 + 1
         last_epoch = p["n_epochs"]
 
@@ -105,7 +109,9 @@ def train(
         )
 
         if idx_epoch == last_epoch:
-            replay_buffer.save()
+            replay_buffer.save(
+                f"experiments/atari/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_R_{args.seed}"
+            )
             np.save(f"{experiment_path}_K_{args.seed}", np.array([env.reset_key, epsilon_schedule.key, sample_key]))
             save_pickled_data(f"{experiment_path}_O_{args.seed}", q.optimizer_state)
             env.save(f"{experiment_path}_E_{args.seed}")
