@@ -17,7 +17,7 @@ for bellman_iterations_scope in "${LIST_BELLMAN_ITERATIONS_SCOPE[@]}"
 do
     # iDQN
     echo "launch train idqn 1/2"
-    submission_train_idqn_1=$(sbatch -J t_$EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=$(( 3 * $N_PARALLEL_SEEDS )) --mem-per-cpu=2Gc --time=3-00:00:00 --output=/dev/null --gres=gpu:1 -p amd,amd2,rtx,rtx2,dgx launch_job/atari/train_idqn.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope -g -ns $N_PARALLEL_SEEDS)
+    submission_train_idqn_1=$(sbatch -J t_$EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=$(( 3 * $N_PARALLEL_SEEDS )) --mem-per-cpu=20Gc --time=3-00:00:00 --output=/dev/null --gres=gpu:1 -p amd,amd2,rtx,rtx2 launch_job/atari/train_idqn.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope -g -ns $N_PARALLEL_SEEDS)
 
     IFS=" " read -ra split_submission_train_idqn_1 <<< $submission_train_idqn_1
     submission_id_train_idqn_1=${split_submission_train_idqn_1[-1]}
@@ -29,7 +29,7 @@ do
     submission_id_evaluate_idqn_1=${split_submission_evaluate_idqn_1[-1]}
 
     echo "launch train idqn 2/2"
-    submission_train_idqn_2=$(sbatch -J t_$EXPERIMENT_NAME --dependency=afterok:$submission_id_train_idqn_1 --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=$(( 3 * $N_PARALLEL_SEEDS )) --mem-per-cpu=2Gc --time=3-00:00:00 --output=/dev/null --gres=gpu:1 -p amd,amd2,rtx,rtx2,dgx launch_job/atari/train_idqn.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope -r -g -ns $N_PARALLEL_SEEDS)
+    submission_train_idqn_2=$(sbatch -J t_$EXPERIMENT_NAME --dependency=afterok:$submission_id_train_idqn_1 --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=$(( 3 * $N_PARALLEL_SEEDS )) --mem-per-cpu=20Gc --time=3-00:00:00 --output=/dev/null --gres=gpu:1 -p amd,amd2,rtx,rtx2 launch_job/atari/train_idqn.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope -r -g -ns $N_PARALLEL_SEEDS)
 
     IFS=" " read -ra split_submission_train_idqn_2 <<< $submission_train_idqn_2
     submission_id_train_idqn_2=${split_submission_train_idqn_2[-1]}

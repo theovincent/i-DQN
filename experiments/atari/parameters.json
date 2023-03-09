@@ -5,7 +5,7 @@
     "horizon": 27000,
     "gamma": 0.99,
     "n_initial_samples": 20000,
-    "max_size": 1000000,
+    "max_size": 500000,
     "batch_size": 32,
     "n_simulations": 100,
     "eps_eval": 0.001,
