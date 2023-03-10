@@ -43,13 +43,13 @@ class AtariEnv:
         )
         self.n_actions = self.env.env.action_space.n
         self.original_state_height, self.original_state_width = self.env.env.observation_space._shape
-
-        _, info = self.env.reset()
-        self.n_lives = info["lives"]
+        self.n_lives = 0
 
     def reset(self) -> np.ndarray:
-        self.reset_key, key = jax.random.split(self.reset_key)
-        frame, _ = self.env.reset(seed=int(key[0]))
+        if self.n_lives == 0:
+            self.reset_key, key = jax.random.split(self.reset_key)
+            frame, info = self.env.reset(seed=int(key[0]))
+            self.n_lives = info["lives"]
 
         if self.start_with_fire:
             frame = self.env.step(1)[0]
@@ -67,7 +67,10 @@ class AtariEnv:
     @partial(jax.jit, static_argnames="self")
     def is_absorbing(self, absorbing_, info, n_lives):
         if self.terminal_on_life_loss:
-            return absorbing_ or (info["lives"] < n_lives), info["lives"]
+            return (
+                absorbing_ or (info["lives"] < n_lives),
+                info["lives"],
+            )
         else:
             return absorbing_, info["lives"]
 
