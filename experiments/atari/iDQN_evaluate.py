@@ -39,18 +39,25 @@ def run_cli(argvs=sys.argv[1:]):
     )
 
     exploration_key = jax.random.PRNGKey(p["env_seed"])
-    js = np.nan * np.zeros(p["n_epochs"] + 1)
-    max_j = -float("inf")
-    argmax_j = None
     path_params = (
         f"experiments/atari/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_P_{args.seed}_"
     )
     if args.restart_training:
         idx_epoch = p["n_epochs"] // 2 + 1
         last_epoch = p["n_epochs"]
+
+        js = np.load(
+            f"experiments/atari/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_J_{args.seed}.npy"
+        )
+        max_j = np.max(js[:idx_epoch])
+        argmax_j = np.argmax(js[:idx_epoch])
     else:
         idx_epoch = 0
         last_epoch = p["n_epochs"] // 2
+
+        js = np.nan * np.zeros(p["n_epochs"] + 1)
+        max_j = -float("inf")
+        argmax_j = None
     list_idx_epoch_video = np.ceil(np.linspace(idx_epoch, last_epoch, 5))
 
     while idx_epoch <= last_epoch:
