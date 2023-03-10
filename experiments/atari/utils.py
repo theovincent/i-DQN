@@ -12,7 +12,7 @@ from idqn.sample_collection.replay_buffer import ReplayBuffer
 
 
 def define_environment(env_key: jax.random.PRNGKeyArray, name: str, gamma: float) -> AtariEnv:
-    env = AtariEnv(env_key, name, gamma, terminal_on_life_loss=False)
+    env = AtariEnv(env_key, name, gamma, start_with_fire=False, terminal_on_life_loss=False)
 
     return env
 

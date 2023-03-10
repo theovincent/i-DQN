@@ -15,10 +15,18 @@ from idqn.utils.pickle import save_pickled_data, load_pickled_data
 
 
 class AtariEnv:
-    def __init__(self, env_key: jax.random.PRNGKeyArray, name: str, gamma: float, terminal_on_life_loss: bool) -> None:
+    def __init__(
+        self,
+        env_key: jax.random.PRNGKeyArray,
+        name: str,
+        gamma: float,
+        start_with_fire: bool,
+        terminal_on_life_loss: bool,
+    ) -> None:
         self.reset_key = env_key
         self.name = name
         self.gamma = gamma
+        self.start_with_fire = start_with_fire
         self.terminal_on_life_loss = terminal_on_life_loss
         self.state_height, self.state_width = (84, 84)
         self.n_stacked_frames = 4
@@ -36,13 +44,15 @@ class AtariEnv:
         self.n_actions = self.env.env.action_space.n
         self.original_state_height, self.original_state_width = self.env.env.observation_space._shape
 
-        self.start_with_fire = self.env.unwrapped.get_action_meanings()[1] == "FIRE"
         _, info = self.env.reset()
         self.n_lives = info["lives"]
 
     def reset(self) -> np.ndarray:
         self.reset_key, key = jax.random.split(self.reset_key)
         frame, _ = self.env.reset(seed=int(key[0]))
+
+        if self.start_with_fire:
+            frame = self.env.step(1)[0]
 
         self.stacked_frames = deque(
             np.repeat(self.preprocess_frame(frame)[None, ...], self.n_stacked_frames, axis=0),
