@@ -43,16 +43,17 @@ class AtariEnv:
         )
         self.n_actions = self.env.env.action_space.n
         self.original_state_height, self.original_state_width = self.env.env.observation_space._shape
-        self.n_lives = 0
 
     def reset(self) -> np.ndarray:
-        if self.n_lives == 0:
+        if not self.env._has_reset or self.env.env.ale.game_over():
             self.reset_key, key = jax.random.split(self.reset_key)
-            frame, info = self.env.reset(seed=int(key[0]))
+            _, info = self.env.reset(seed=int(key[0]))
             self.n_lives = info["lives"]
 
         if self.start_with_fire:
-            frame = self.env.step(1)[0]
+            self.env.step(1)[0]
+
+        frame = self.env.env.ale.getScreenGrayscale()
 
         self.stacked_frames = deque(
             np.repeat(self.preprocess_frame(frame)[None, ...], self.n_stacked_frames, axis=0),
@@ -65,12 +66,9 @@ class AtariEnv:
         return self.state
 
     @partial(jax.jit, static_argnames="self")
-    def is_absorbing(self, absorbing_, info, n_lives):
+    def is_absorbing(self, absorbing_: bool, info: dict, n_lives: int) -> Tuple[bool, int]:
         if self.terminal_on_life_loss:
-            return (
-                absorbing_ or (info["lives"] < n_lives),
-                info["lives"],
-            )
+            return jnp.logical_or(absorbing_, (info["lives"] < n_lives)), info["lives"]
         else:
             return absorbing_, info["lives"]
 
