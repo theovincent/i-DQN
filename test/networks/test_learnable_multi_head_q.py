@@ -5,7 +5,7 @@ import numpy as np
 from idqn.networks.learnable_multi_head_q import AtariMultiQ
 
 
-class TestAtariEnv(unittest.TestCase):
+class TestAtariMultiQ(unittest.TestCase):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.random_seed = np.random.randint(1000)

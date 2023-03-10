@@ -46,11 +46,17 @@ class TestReplayBuffer(unittest.TestCase):
 
         replay_buffer.add(state, action, reward, next_state, absorbing)
 
-        self.assertEqual(np.linalg.norm(replay_buffer.states[0] - state), 0, f"random seed {self.random_seed}")
+        # Check if only the reference have been stored
+        state_copy = state.copy()
+        next_state_copy = next_state.copy()
+        state += 10
+        next_state += 10
+
+        self.assertEqual(np.linalg.norm(replay_buffer.states[0] - state_copy), 0, f"random seed {self.random_seed}")
         self.assertEqual(replay_buffer.actions[0], action, f"random seed {self.random_seed}")
         self.assertEqual(replay_buffer.rewards[0], reward, f"random seed {self.random_seed}")
         self.assertEqual(
-            np.linalg.norm(replay_buffer.next_states[0] - next_state), 0, f"random seed {self.random_seed}"
+            np.linalg.norm(replay_buffer.next_states[0] - next_state_copy), 0, f"random seed {self.random_seed}"
         )
         self.assertEqual(replay_buffer.absorbings[0], absorbing, f"random seed {self.random_seed}")
 
