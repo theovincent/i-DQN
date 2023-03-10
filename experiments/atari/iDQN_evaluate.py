@@ -58,7 +58,7 @@ def run_cli(argvs=sys.argv[1:]):
         js = np.nan * np.zeros(p["n_epochs"] + 1)
         max_j = -float("inf")
         argmax_j = None
-    list_idx_epoch_video = np.ceil(np.linspace(idx_epoch, last_epoch, 5))
+    list_idx_epoch_video = np.ceil(np.linspace(idx_epoch + 1, last_epoch, 5))
 
     while idx_epoch <= last_epoch:
         if os.path.exists(path_params + str(idx_epoch)):

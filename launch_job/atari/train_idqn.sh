@@ -17,6 +17,14 @@ else
     training="first"
 fi
 
-export XLA_PYTHON_CLIENT_MEM_FRACTION=$(echo "scale=2 ; 0.8 / $N_PARALLEL_SEEDS" | bc)
+if [[ $N_PARALLEL_SEEDS = 1 ]]
+then
+    export XLA_PYTHON_CLIENT_MEM_FRACTION=0.89
+elif [[ $N_PARALLEL_SEEDS = 2 ]]
+then
+    export XLA_PYTHON_CLIENT_MEM_FRACTION=0.44
+else
+    export XLA_PYTHON_CLIENT_MEM_FRACTION=0.275
+fi
 
 parallel_launcher -c "atari_idqn -e $EXPERIMENT_NAME -b $BELLMAN_ITERATIONS_SCOPE $RESTART_TRAINING" -s $SLURM_ARRAY_TASK_ID -ns $N_PARALLEL_SEEDS -o out/atari/$EXPERIMENT_NAME/$BELLMAN_ITERATIONS_SCOPE\_train_idqn_$training
