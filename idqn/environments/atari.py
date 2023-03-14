@@ -10,7 +10,7 @@ import haiku as hk
 from collections import deque
 import cv2
 
-from idqn.networks.base_q import BaseMultiHeadQ
+from idqn.networks.base_q import BaseQ
 from idqn.utils.pickle import save_pickled_data, load_pickled_data
 
 
@@ -44,11 +44,22 @@ class AtariEnv:
         self.n_actions = self.env.env.action_space.n
         self.original_state_height, self.original_state_width = self.env.env.observation_space._shape
 
-    def reset(self) -> np.ndarray:
-        if not self.env._has_reset or self.env.env.ale.game_over():
+    def reset(self, truncation: bool = False) -> np.ndarray:
+        # Avoid hard reset only when:
+        #    - the environment has been hard reset AND
+        #    - a terminal state is set at each life loss AND
+        #    - the game is not over AND
+        #    - no truncation wants to be done.
+        if self.env.has_reset and self.terminal_on_life_loss and not self.env.env.ale.game_over() and not truncation:
+            pass
+        else:
             self.reset_key, key = jax.random.split(self.reset_key)
             _, info = self.env.reset(seed=int(key[0]))
+            self.hard_reset = False
+
             self.n_lives = info["lives"]
+
+            self.n_steps = 0
 
         if self.start_with_fire:
             self.env.step(1)[0]
@@ -60,8 +71,6 @@ class AtariEnv:
             maxlen=self.n_stacked_frames,
         )
         self.state = np.array(self.stacked_frames)
-
-        self.n_steps = 0
 
         return self.state
 
@@ -99,10 +108,10 @@ class AtariEnv:
         )
 
     def get_ale_state(self):
-        return self.env.unwrapped.clone_state(include_rng=True)
+        return self.env.ale.cloneSystemState()
 
     def restore_ale_state(self, env_state) -> None:
-        self.env.unwrapped.restore_state(env_state)
+        self.env.ale.restoreSystemState(env_state)
 
     def save(self, path: str) -> None:
         save_pickled_data(path + "_ale_state", self.get_ale_state())
@@ -110,36 +119,21 @@ class AtariEnv:
         save_pickled_data(path + "_n_steps", self.n_steps)
 
     def load(self, path: str) -> None:
+        self.reset()
         self.restore_ale_state(load_pickled_data(path + "_ale_state"))
         self.stacked_frames = load_pickled_data(path + "_frame_state")
         self.state = np.array(self.stacked_frames)
         self.n_steps = load_pickled_data(path + "_n_steps")
 
-    @partial(jax.jit, static_argnames=("self", "q"))
-    def best_action_multi_head(
-        self, q: BaseMultiHeadQ, idx_head: int, q_params: hk.Params, state: np.ndarray
-    ) -> jnp.int8:
-        return q(q_params, jnp.array(state, dtype=jnp.float32))[0, idx_head].argmax()
-
-    @partial(jax.jit, static_argnames="self")
-    def random_action(self, key: jax.random.PRNGKeyArray) -> jnp.int8:
-        return jax.random.choice(key, jnp.arange(self.n_actions))
-
-    @partial(jax.jit, static_argnames=("self", "n_heads"))
-    def random_head(
-        self, key: jax.random.PRNGKeyArray, n_heads: int, head_behaviorial_probability: jnp.ndarray
-    ) -> jnp.int8:
-        return jax.random.choice(key, jnp.arange(n_heads), p=head_behaviorial_probability)
-
-    def evaluate_(
+    def evaluate_one_simulation(
         self,
-        q: BaseMultiHeadQ,
-        idx_head: int,
+        q: BaseQ,
         q_params: hk.Params,
         horizon: int,
         eps_eval: float,
         exploration_key: jax.random.PRNGKey,
         video_path: str,
+        idx_head: int,
     ) -> float:
         if video_path is not None:
             video = video_recorder.VideoRecorder(
@@ -157,9 +151,12 @@ class AtariEnv:
 
             exploration_key, key = jax.random.split(exploration_key)
             if jax.random.uniform(key) < eps_eval:
-                action = self.random_action(key)
+                action = q.random_action(key)
             else:
-                action = self.best_action_multi_head(q, idx_head, q_params, self.state)
+                if idx_head is None:
+                    action = q.best_actions(q_params, self.state)[0]
+                else:
+                    action = q.best_actions(q_params, idx_head, self.state)[0]
 
             _, reward, absorbing, _ = self.step(action)
 
@@ -174,19 +171,21 @@ class AtariEnv:
 
     def evaluate(
         self,
-        q: BaseMultiHeadQ,
-        idx_head: int,
+        q: BaseQ,
         q_params: hk.Params,
         horizon: int,
         n_simulations: int,
         eps_eval: float,
         exploration_key: jax.random.PRNGKey,
         video_path: str,
+        idx_head: int = None,
     ) -> float:
         rewards = np.zeros(n_simulations)
 
-        rewards[0] = self.evaluate_(q, idx_head, q_params, horizon, eps_eval, exploration_key, video_path)
+        rewards[0] = self.evaluate_one_simulation(q, q_params, horizon, eps_eval, exploration_key, video_path, idx_head)
         for idx_simulation in range(1, n_simulations):
-            rewards[idx_simulation] = self.evaluate_(q, idx_head, q_params, horizon, eps_eval, exploration_key, None)
+            rewards[idx_simulation] = self.evaluate_one_simulation(
+                q, q_params, horizon, eps_eval, exploration_key, None, idx_head
+            )
 
         return rewards.mean()

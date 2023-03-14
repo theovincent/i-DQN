@@ -12,27 +12,10 @@ class TestReplayBuffer(unittest.TestCase):
         self.random_seed = np.random.randint(1000)
         self.key = jax.random.PRNGKey(self.random_seed)
         self.max_size = jax.random.randint(self.key, (), minval=1, maxval=1000)
-        self.path = "test/replay_buffer"
         self.state_shape = (4, 84, 84)
         self.state_dtype = np.uint8
         self.reward_dtype = np.int8
-
-    def test_init(self) -> None:
-        replay_buffer = ReplayBuffer(self.max_size, self.state_shape, self.state_dtype, self.reward_dtype)
-
-        self.assertEqual(
-            replay_buffer.states.shape, (self.max_size,) + self.state_shape, f"random seed {self.random_seed}"
-        )
-        self.assertEqual(replay_buffer.actions.shape, (self.max_size,), f"random seed {self.random_seed}")
-        self.assertEqual(replay_buffer.rewards.shape, (self.max_size,), f"random seed {self.random_seed}")
-        self.assertEqual(
-            replay_buffer.next_states.shape, (self.max_size,) + self.state_shape, f"random seed {self.random_seed}"
-        )
-
-        self.assertEqual(replay_buffer.states.dtype, replay_buffer.state_dtype, f"random seed {self.random_seed}")
-        self.assertEqual(replay_buffer.actions.dtype, replay_buffer.action_dtype, f"random seed {self.random_seed}")
-        self.assertEqual(replay_buffer.rewards.dtype, replay_buffer.reward_dtype, f"random seed {self.random_seed}")
-        self.assertEqual(replay_buffer.next_states.dtype, replay_buffer.state_dtype, f"random seed {self.random_seed}")
+        self.path = "test/replay_buffer"
 
     def test_add(self) -> None:
         replay_buffer = ReplayBuffer(self.max_size, self.state_shape, self.state_dtype, self.reward_dtype)
@@ -69,10 +52,12 @@ class TestReplayBuffer(unittest.TestCase):
             replay_buffer.next_states.shape, (self.max_size,) + self.state_shape, f"random seed {self.random_seed}"
         )
 
-        self.assertEqual(replay_buffer.states.dtype, replay_buffer.state_dtype, f"random seed {self.random_seed}")
-        self.assertEqual(replay_buffer.actions.dtype, replay_buffer.action_dtype, f"random seed {self.random_seed}")
-        self.assertEqual(replay_buffer.rewards.dtype, replay_buffer.reward_dtype, f"random seed {self.random_seed}")
-        self.assertEqual(replay_buffer.next_states.dtype, replay_buffer.state_dtype, f"random seed {self.random_seed}")
+        self.assertEqual(replay_buffer.states[0].dtype, replay_buffer.state_dtype, f"random seed {self.random_seed}")
+        self.assertEqual(replay_buffer.actions[0].dtype, replay_buffer.action_dtype, f"random seed {self.random_seed}")
+        self.assertEqual(replay_buffer.rewards[0].dtype, replay_buffer.reward_dtype, f"random seed {self.random_seed}")
+        self.assertEqual(
+            replay_buffer.next_states[0].dtype, replay_buffer.state_dtype, f"random seed {self.random_seed}"
+        )
 
     def test_sample_batch(self) -> None:
         replay_buffer = ReplayBuffer(self.max_size, self.state_shape, self.state_dtype, self.reward_dtype)
