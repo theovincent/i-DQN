@@ -14,7 +14,6 @@ def addparse(parser: argparse.ArgumentParser) -> None:
         "--bellman_iterations_scope",
         help="Number of Bellman iterations taken into account at once.",
         type=int,
-        required=True,
     )
     parser.add_argument(
         "-s",

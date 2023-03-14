@@ -19,29 +19,25 @@ def train(
     env: AtariEnv,
     replay_buffer: ReplayBuffer,
 ) -> None:
-    experiment_path = (
-        f"experiments/{environment_name}/figures/{args.experiment_name}/DQN/{args.bellman_iterations_scope}"
-    )
+    experiment_path = f"experiments/{environment_name}/figures/{args.experiment_name}/DQN"
 
     if args.restart_training:
         first_epoch = p["n_epochs"] // 2 + 1
         last_epoch = p["n_epochs"]
 
-        env.reset_key, sample_key, exploration_key = np.load(f"{experiment_path}_K_{args.seed}.npy")
-        q.params = load_pickled_data(f"{experiment_path}_P_{args.seed}_{first_epoch - 1}")
-        q.optimizer_state = load_pickled_data(f"{experiment_path}_O_{args.seed}")
-        l2_losses = np.load(f"{experiment_path}_L_{args.seed}.npy")
-        env.load(f"{experiment_path}_E_{args.seed}")
+        env.reset_key, sample_key, exploration_key = np.load(f"{experiment_path}/K_{args.seed}.npy")
+        q.params = load_pickled_data(f"{experiment_path}/P_{args.seed}_{first_epoch - 1}", device_put=True)
+        q.optimizer_state = load_pickled_data(f"{experiment_path}/O_{args.seed}", device_put=True)
+        l2_losses = np.load(f"{experiment_path}/L_{args.seed}.npy")
+        env.load(f"{experiment_path}/E_{args.seed}")
 
-        replay_buffer.load(
-            f"experiments/atari/figures/{args.experiment_name}/DQN/{args.bellman_iterations_scope}_R_{args.seed}"
-        )
+        replay_buffer.load(f"{experiment_path}/R_{args.seed}")
     else:
         first_epoch = 1
         last_epoch = p["n_epochs"] // 2
 
         sample_key, exploration_key = jax.random.split(key)
-        save_pickled_data(f"{experiment_path}_P_{args.seed}_{first_epoch - 1}", q.params)
+        save_pickled_data(f"{experiment_path}/P_{args.seed}_{first_epoch - 1}", q.params)
         l2_losses = np.ones((p["n_epochs"], p["n_gradient_steps_per_epoch"])) * np.nan
 
         env.collect_random_samples(sample_key, replay_buffer, p["n_initial_samples"], p["horizon"])
@@ -75,17 +71,15 @@ def train(
                 params_target = q.params
 
         save_pickled_data(
-            f"{experiment_path}_P_{args.seed}_{idx_epoch}",
+            f"{experiment_path}/P_{args.seed}_{idx_epoch}",
             q.params,
         )
         np.save(
-            f"{experiment_path}_L_{args.seed}.npy",
+            f"{experiment_path}/L_{args.seed}.npy",
             l2_losses,
         )
 
-    replay_buffer.save(
-        f"experiments/atari/figures/{args.experiment_name}/DQN/{args.bellman_iterations_scope}_R_{args.seed}"
-    )
-    np.save(f"{experiment_path}_K_{args.seed}", np.array([env.reset_key, sample_key, epsilon_schedule.key]))
-    save_pickled_data(f"{experiment_path}_O_{args.seed}", q.optimizer_state)
-    env.save(f"{experiment_path}_E_{args.seed}")
+    replay_buffer.save(f"{experiment_path}/R_{args.seed}")
+    np.save(f"{experiment_path}/K_{args.seed}", np.array([env.reset_key, sample_key, epsilon_schedule.key]))
+    save_pickled_data(f"{experiment_path}/O_{args.seed}", q.optimizer_state)
+    env.save(f"{experiment_path}/E_{args.seed}")

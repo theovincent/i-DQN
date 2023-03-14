@@ -4,7 +4,6 @@ import jax
 import jax.numpy as jnp
 
 from idqn.networks.base_q import DQN, iDQN
-from idqn.utils.params import set_params
 
 
 class AtariQNet(hk.Module):
