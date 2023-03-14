@@ -9,8 +9,11 @@ import jax.numpy as jnp
 import haiku as hk
 from collections import deque
 import cv2
+from tqdm import tqdm
 
 from idqn.networks.base_q import BaseQ
+from idqn.sample_collection.replay_buffer import ReplayBuffer
+from idqn.sample_collection.exploration import EpsilonGreedySchedule
 from idqn.utils.pickle import save_pickled_data, load_pickled_data
 
 
@@ -124,6 +127,47 @@ class AtariEnv:
         self.stacked_frames = load_pickled_data(path + "_frame_state")
         self.state = np.array(self.stacked_frames)
         self.n_steps = load_pickled_data(path + "_n_steps")
+
+    def collect_random_samples(
+        self, sample_key: jax.random.PRNGKeyArray, replay_buffer: ReplayBuffer, n_samples: int, horizon: int
+    ) -> None:
+        self.reset()
+
+        for _ in tqdm(range(n_samples)):
+            state = self.state
+
+            sample_key, key = jax.random.split(sample_key)
+            action = jax.random.choice(key, jnp.arange(self.n_actions))
+            next_state, reward, absorbing, _ = self.step(action)
+
+            replay_buffer.add(state, action, reward, next_state, absorbing)
+
+            if absorbing or self.n_steps >= horizon:
+                self.reset(truncation=self.n_steps >= horizon)
+
+    def collect_samples(
+        self,
+        q: BaseQ,
+        q_params: hk.Params,
+        n_samples: int,
+        horizon: int,
+        replay_buffer: ReplayBuffer,
+        exploration_schedule: EpsilonGreedySchedule,
+    ) -> None:
+        for _ in range(n_samples):
+            state = self.state
+
+            if exploration_schedule.explore():
+                action = q.random_action(exploration_schedule.key)
+            else:
+                action = q.best_action(exploration_schedule.key, q_params, state)
+
+            next_state, reward, absorbing, _ = self.step(action)
+
+            replay_buffer.add(state, action, reward, next_state, absorbing)
+
+            if absorbing or self.n_steps >= horizon:
+                self.reset(truncation=self.n_steps >= horizon)
 
     def evaluate_one_simulation(
         self,

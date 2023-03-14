@@ -257,6 +257,7 @@ class AtariiDQN(iDQN):
         n_actions: int,
         gamma: float,
         network_key: jax.random.PRNGKeyArray,
+        head_behaviorial_probability: jnp.ndarray,
         n_shared_layers: int,
         zero_initializer: bool,
         learning_rate: float,
@@ -267,7 +268,16 @@ class AtariiDQN(iDQN):
         def network(state: jnp.ndarray) -> jnp.ndarray:
             return AtariMultiQNet(len(importance_iteration) + 1, n_shared_layers, zero_initializer, n_actions)(state)
 
-        super().__init__(importance_iteration, state_shape, n_actions, gamma, network, network_key, learning_rate)
+        super().__init__(
+            importance_iteration,
+            state_shape,
+            n_actions,
+            gamma,
+            network,
+            network_key,
+            head_behaviorial_probability,
+            learning_rate,
+        )
 
     # This should go to base_q
     @partial(jax.jit, static_argnames="self")

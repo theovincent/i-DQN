@@ -89,13 +89,12 @@ class TestAtariDQN(unittest.TestCase):
     def test_best_action(self) -> None:
         q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, self.zero_initializer, None)
 
-        states = jax.random.uniform(self.key, (10,) + self.state_shape)
+        state = jax.random.uniform(self.key, self.state_shape)
 
-        best_actions = q.best_actions(q.params, states)
+        computed_best_action = q.best_action(None, q.params, state)
 
-        for idx_sample in range(10):
-            best_action = jnp.argmax(q(q.params, states[idx_sample])[0]).astype(jnp.int8)
-            self.assertEqual(best_actions[idx_sample], best_action, msg=f"random seed {self.random_seed}")
+        best_action = jnp.argmax(q(q.params, state)[0]).astype(jnp.int8)
+        self.assertEqual(best_action, computed_best_action, msg=f"random seed {self.random_seed}")
 
 
 # class TestAtariiDQN(unittest.TestCase):

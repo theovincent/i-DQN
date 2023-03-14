@@ -62,6 +62,9 @@ class BaseQ:
     def random_action(self, key: jax.random.PRNGKeyArray) -> jnp.int8:
         return jax.random.choice(key, jnp.arange(self.n_actions)).astype(jnp.int8)
 
+    def best_action(self, key: jax.random.PRNGKey, q_params: hk.Params, state: jnp.ndarray) -> jnp.int8:
+        raise NotImplementedError
+
 
 class BaseSingleQ(BaseQ):
     def __init__(
@@ -80,9 +83,6 @@ class BaseSingleQ(BaseQ):
         return samples["reward"] + (1 - samples["absorbing"]) * self.gamma * self(params, samples["next_state"]).max(
             axis=1
         )
-
-    def best_actions(self, q_params: hk.Params, state: jnp.ndarray) -> jnp.ndarray:
-        raise NotImplementedError
 
 
 class DQN(BaseSingleQ):
@@ -114,8 +114,9 @@ class DQN(BaseSingleQ):
         return self.metric(error, ord="sum")
 
     @partial(jax.jit, static_argnames="self")
-    def best_actions(self, q_params: hk.Params, state: jnp.ndarray) -> jnp.ndarray:
-        return jnp.argmax(self(q_params, jnp.array(state, dtype=jnp.float32)), axis=1).astype(jnp.int8)
+    def best_action(self, key: jax.random.PRNGKey, q_params: hk.Params, state: jnp.ndarray) -> jnp.int8:
+        # key is not used here
+        return jnp.argmax(self(q_params, jnp.array(state, dtype=jnp.float32))[0]).astype(jnp.int8)
 
 
 class BaseMultiHeadQ(BaseQ):
@@ -139,11 +140,8 @@ class BaseMultiHeadQ(BaseQ):
         ) * self.gamma * self(params, samples["next_state"]).max(axis=2)
 
     @partial(jax.jit, static_argnames="self")
-    def random_head(self, key: jax.random.PRNGKeyArray, head_behaviorial_probability: jnp.ndarray) -> jnp.int8:
-        return jax.random.choice(key, jnp.arange(self.n_heads), p=head_behaviorial_probability)
-
-    def best_actions(self, q_params: hk.Params, idx_head: int, state: jnp.ndarray) -> jnp.ndarray:
-        raise NotImplementedError
+    def random_head(self, key: jax.random.PRNGKeyArray, head_probability: jnp.ndarray) -> jnp.int8:
+        return jax.random.choice(key, jnp.arange(self.n_heads), p=head_probability)
 
 
 class iDQN(BaseMultiHeadQ):
@@ -155,9 +153,11 @@ class iDQN(BaseMultiHeadQ):
         gamma: float,
         network: hk.Module,
         network_key: jax.random.PRNGKeyArray,
+        head_behaviorial_probability: jnp.ndarray,
         learning_rate: float,
     ) -> None:
         self.importance_iteration = importance_iteration
+        self.head_behaviorial_probability = head_behaviorial_probability
 
         super().__init__(
             len(importance_iteration) + 1, state_shape, n_actions, gamma, network, network_key, learning_rate
@@ -183,5 +183,7 @@ class iDQN(BaseMultiHeadQ):
         return self.metric(error, ord="sum")
 
     @partial(jax.jit, static_argnames="self")
-    def best_actions(self, q_params: hk.Params, idx_head: int, state: jnp.ndarray) -> jnp.ndarray:
-        return jnp.argmax(self(q_params, jnp.array(state, dtype=jnp.float32))[:, idx_head], axis=1).astype(jnp.int8)
+    def best_action(self, key: jax.random.PRNGKey, q_params: hk.Params, state: jnp.ndarray) -> jnp.int8:
+        idx_head = self.random_head(key, self.head_behaviorial_probability)
+
+        return jnp.argmax(self(q_params, jnp.array(state, dtype=jnp.float32))[0, idx_head]).astype(jnp.int8)
