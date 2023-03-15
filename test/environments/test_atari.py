@@ -14,28 +14,9 @@ class TestAtariEnv(unittest.TestCase):
         self.key = jax.random.PRNGKey(self.random_seed)
         self.name = "Breakout"
         self.gamma = jax.random.uniform(self.key)
-        self.start_with_fire = jax.random.randint(self.key, (), minval=0, maxval=2).astype(bool)
-        key, _ = jax.random.split(self.key)
-        self.terminal_on_life_loss = jax.random.randint(key, (), minval=0, maxval=2).astype(bool)
 
     def test_reset(self) -> None:
-        # Force hard reset
-        env = AtariEnv(
-            self.key, self.name, self.gamma, start_with_fire=True, terminal_on_life_loss=self.terminal_on_life_loss
-        )
-
-        env.reset()
-        for i in range(70):
-            state = env.step(i % 4)[0]
-
-        env.reset(truncation=True)
-        for i in range(70):
-            state_bis = env.step(i % 4)[0]
-
-        self.assertNotEqual(np.linalg.norm(state - state_bis), 0, f"random seed {self.random_seed}")
-
-        # Force hard reset
-        env = AtariEnv(self.key, self.name, self.gamma, start_with_fire=True, terminal_on_life_loss=False)
+        env = AtariEnv(self.name, self.gamma)
 
         env.reset()
         for i in range(70):
@@ -45,43 +26,10 @@ class TestAtariEnv(unittest.TestCase):
         for i in range(70):
             state_bis = env.step(i % 4)[0]
 
-        self.assertNotEqual(np.linalg.norm(state - state_bis), 0, f"random seed {self.random_seed}")
-
-        # Force soft reset
-        env = AtariEnv(self.key, self.name, self.gamma, start_with_fire=False, terminal_on_life_loss=True)
-
-        env.reset()
-        for i in range(70):
-            env.step(i % 4)
-
-        screen_buffer = env.env.ale.getScreenGrayscale()
-        state_bis = env.reset()
-        screen_buffer_bis = env.env.ale.getScreenGrayscale()
-
-        self.assertEqual(np.linalg.norm(screen_buffer - screen_buffer_bis), 0, f"random seed {self.random_seed}")
-
-    def test_step_deterministic_stochasticity(self) -> None:
-        env = AtariEnv(self.key, self.name, self.gamma, self.start_with_fire, self.terminal_on_life_loss)
-        state = env.reset()
-        successive_states = np.zeros(((10,) + state.shape))
-        successive_actions = jax.random.randint(self.key, (10,), 0, env.n_actions)
-
-        for step in range(10):
-            successive_states[step] = env.step(successive_actions[step])[0]
-
-        env_bis = AtariEnv(self.key, self.name, self.gamma, self.start_with_fire, self.terminal_on_life_loss)
-        state_bis = env_bis.reset()
-        successive_states_bis = np.zeros(((10,) + state_bis.shape))
-
-        for step in range(10):
-            successive_states_bis[step] = env_bis.step(successive_actions[step])[0]
-
-        self.assertAlmostEqual(
-            np.linalg.norm(successive_states - successive_states_bis), 0, f"random seed {self.random_seed}"
-        )
+        self.assertNotEqual(np.linalg.norm(state - state_bis), 0)
 
     def test_step_frame_stacking(self) -> None:
-        env = AtariEnv(self.key, self.name, self.gamma, self.start_with_fire, self.terminal_on_life_loss)
+        env = AtariEnv(self.name, self.gamma)
         action_key = self.key
         env.reset()
         absorbing = False
@@ -93,25 +41,16 @@ class TestAtariEnv(unittest.TestCase):
 
             self.assertEqual(state.shape[0], env.n_stacked_frames, f"random seed {self.random_seed}")
 
-        self.assertEqual(
-            env.env.unwrapped.ale.lives(), 4 if self.terminal_on_life_loss else 0, f"random seed {self.random_seed}"
-        )
+        self.assertEqual(env.env.unwrapped.ale.lives(), 0, f"random seed {self.random_seed}")
 
     def test_store_load(self) -> None:
         # Need to remove stochastic actions
-        env_to_store = AtariEnv(
-            self.key,
-            self.name,
-            self.gamma,
-            start_with_fire=self.start_with_fire,
-            terminal_on_life_loss=self.terminal_on_life_loss,
-        )
+        env_to_store = AtariEnv(self.name, self.gamma)
         env_to_store.env = gym.make(
             f"ALE/{self.name}-v5",
             full_action_space=False,
             frameskip=1,
             repeat_action_probability=0,
-            obs_type="grayscale",
             render_mode="rgb_array",
         )
         action_key = self.key
@@ -123,19 +62,12 @@ class TestAtariEnv(unittest.TestCase):
 
         env_to_store.save("test/test_store_load")
 
-        env_to_load = AtariEnv(
-            self.key,
-            self.name,
-            self.gamma,
-            start_with_fire=self.start_with_fire,
-            terminal_on_life_loss=self.terminal_on_life_loss,
-        )
+        env_to_load = AtariEnv(self.name, self.gamma)
         env_to_load.env = gym.make(
             f"ALE/{self.name}-v5",
             full_action_space=False,
             frameskip=1,
             repeat_action_probability=0,
-            obs_type="grayscale",
             render_mode="rgb_array",
         )
         env_to_load.load("test/test_store_load")
