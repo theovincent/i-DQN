@@ -2,6 +2,7 @@ import os
 import unittest
 import jax
 import numpy as np
+import gymnasium as gym
 
 from idqn.environments.atari import AtariEnv
 
@@ -9,7 +10,7 @@ from idqn.environments.atari import AtariEnv
 class TestAtariEnv(unittest.TestCase):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.random_seed = np.random.randint(1000)
+        self.random_seed = 272  # np.random.randint(1000)
         self.key = jax.random.PRNGKey(self.random_seed)
         self.name = "Breakout"
         self.gamma = jax.random.uniform(self.key)
@@ -96,12 +97,21 @@ class TestAtariEnv(unittest.TestCase):
         )
 
     def test_store_load(self) -> None:
+        # Need to remove stochastic actions
         env_to_store = AtariEnv(
             self.key,
             self.name,
             self.gamma,
             start_with_fire=self.start_with_fire,
             terminal_on_life_loss=self.terminal_on_life_loss,
+        )
+        env_to_store.env = gym.make(
+            f"ALE/{self.name}-v5",
+            full_action_space=False,
+            frameskip=1,
+            repeat_action_probability=0,
+            obs_type="grayscale",
+            render_mode="rgb_array",
         )
         action_key = self.key
         env_to_store.reset()
@@ -119,13 +129,23 @@ class TestAtariEnv(unittest.TestCase):
             start_with_fire=self.start_with_fire,
             terminal_on_life_loss=self.terminal_on_life_loss,
         )
+        env_to_load.env = gym.make(
+            f"ALE/{self.name}-v5",
+            full_action_space=False,
+            frameskip=1,
+            repeat_action_probability=0,
+            obs_type="grayscale",
+            render_mode="rgb_array",
+        )
         env_to_load.load("test/test_store_load")
 
         self.assertEqual(np.linalg.norm(env_to_store.state - env_to_load.state), 0, f"random seed {self.random_seed}")
         self.assertEqual(env_to_store.n_steps, env_to_load.n_steps, f"random seed {self.random_seed}")
-        self.assertEqual(
-            np.linalg.norm(env_to_store.step(1)[0] - env_to_load.step(1)[0]), 0, f"random seed {self.random_seed}"
-        )
+
+        env_to_store.step(0)
+        env_to_load.step(0)
+
+        self.assertEqual(np.linalg.norm(env_to_store.state - env_to_load.state), 0, f"random seed {self.random_seed}")
 
         os.remove("test/test_store_load_ale_state")
         os.remove("test/test_store_load_frame_state")

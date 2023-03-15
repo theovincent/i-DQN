@@ -18,10 +18,14 @@ class AtariQNet(hk.Module):
         self.network = hk.Sequential(
             [
                 hk.Conv2D(output_channels=32, kernel_shape=[8, 8], stride=4),
+                jax.nn.relu,
                 hk.Conv2D(output_channels=64, kernel_shape=[4, 4], stride=2),
+                jax.nn.relu,
                 hk.Conv2D(output_channels=64, kernel_shape=[3, 3], stride=1),
+                jax.nn.relu,
                 hk.Flatten(),
                 hk.Linear(output_size=512),
+                jax.nn.relu,
                 hk.Linear(output_size=n_actions, w_init=self.initializer),
             ],
             name="network",

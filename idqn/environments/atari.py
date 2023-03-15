@@ -58,10 +58,8 @@ class AtariEnv:
         else:
             self.reset_key, key = jax.random.split(self.reset_key)
             _, info = self.env.reset(seed=int(key[0]))
-            self.hard_reset = False
 
             self.n_lives = info["lives"]
-
             self.n_steps = 0
 
         if self.start_with_fire:
