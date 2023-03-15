@@ -10,7 +10,7 @@ from idqn.environments.atari import AtariEnv
 class TestAtariEnv(unittest.TestCase):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.random_seed = 272  # np.random.randint(1000)
+        self.random_seed = np.random.randint(1000)
         self.key = jax.random.PRNGKey(self.random_seed)
         self.name = "Breakout"
         self.gamma = jax.random.uniform(self.key)
@@ -25,11 +25,11 @@ class TestAtariEnv(unittest.TestCase):
         )
 
         env.reset()
-        for i in range(7):
+        for i in range(70):
             state = env.step(i % 4)[0]
 
         env.reset(truncation=True)
-        for i in range(7):
+        for i in range(70):
             state_bis = env.step(i % 4)[0]
 
         self.assertNotEqual(np.linalg.norm(state - state_bis), 0, f"random seed {self.random_seed}")
@@ -38,26 +38,27 @@ class TestAtariEnv(unittest.TestCase):
         env = AtariEnv(self.key, self.name, self.gamma, start_with_fire=True, terminal_on_life_loss=False)
 
         env.reset()
-        for i in range(7):
+        for i in range(70):
             state = env.step(i % 4)[0]
 
         env.reset()
-        for i in range(7):
+        for i in range(70):
             state_bis = env.step(i % 4)[0]
 
         self.assertNotEqual(np.linalg.norm(state - state_bis), 0, f"random seed {self.random_seed}")
 
         # Force soft reset
         env = AtariEnv(self.key, self.name, self.gamma, start_with_fire=False, terminal_on_life_loss=True)
-        env.n_pooled_frames = 1
 
         env.reset()
-        for i in range(7):
-            state = env.step(i % 4)[0]
+        for i in range(70):
+            env.step(i % 4)
 
+        screen_buffer = env.env.ale.getScreenGrayscale()
         state_bis = env.reset()
+        screen_buffer_bis = env.env.ale.getScreenGrayscale()
 
-        self.assertEqual(np.linalg.norm(state[-1] - state_bis[-1]), 0, f"random seed {self.random_seed}")
+        self.assertEqual(np.linalg.norm(screen_buffer - screen_buffer_bis), 0, f"random seed {self.random_seed}")
 
     def test_step_deterministic_stochasticity(self) -> None:
         env = AtariEnv(self.key, self.name, self.gamma, self.start_with_fire, self.terminal_on_life_loss)

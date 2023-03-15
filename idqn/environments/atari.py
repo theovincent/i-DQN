@@ -1,3 +1,6 @@
+"""
+The environment is inspired from https://github.com/google/dopamine/blob/master/dopamine/discrete_domains/atari_lib.py
+"""
 import os
 from typing import Tuple
 from functools import partial
@@ -34,7 +37,6 @@ class AtariEnv:
         self.state_height, self.state_width = (84, 84)
         self.n_stacked_frames = 4
         self.n_skipped_frames = 4
-        self.n_pooled_frames = 2
 
         self.env = gym.make(
             f"ALE/{self.name}-v5",
@@ -43,9 +45,15 @@ class AtariEnv:
             repeat_action_probability=0.25,
             obs_type="grayscale",
             render_mode="rgb_array",
-        )
-        self.n_actions = self.env.env.action_space.n
-        self.original_state_height, self.original_state_width = self.env.env.observation_space._shape
+        ).env
+        self.has_reset = False
+
+        self.n_actions = self.env.action_space.n
+        self.original_state_height, self.original_state_width = self.env.observation_space._shape
+        self.screen_buffer = [
+            np.empty((self.original_state_height, self.original_state_width), dtype=np.uint8),
+            np.empty((self.original_state_height, self.original_state_width), dtype=np.uint8),
+        ]
 
     def reset(self, truncation: bool = False) -> np.ndarray:
         # Avoid hard reset only when:
@@ -53,22 +61,24 @@ class AtariEnv:
         #    - a terminal state is set at each life loss AND
         #    - the game is not over AND
         #    - no truncation wants to be done.
-        if self.env.has_reset and self.terminal_on_life_loss and not self.env.env.ale.game_over() and not truncation:
+        if self.has_reset and self.terminal_on_life_loss and not self.env.ale.game_over() and not truncation:
             pass
         else:
             self.reset_key, key = jax.random.split(self.reset_key)
             _, info = self.env.reset(seed=int(key[0]))
+            self.has_reset = True
 
             self.n_lives = info["lives"]
             self.n_steps = 0
 
         if self.start_with_fire:
-            self.env.step(1)[0]
+            self.env.step(1)
 
-        frame = self.env.env.ale.getScreenGrayscale()
+        self.env.ale.getScreenGrayscale(self.screen_buffer[0])
+        self.screen_buffer[1].fill(0)
 
         self.stacked_frames = deque(
-            np.repeat(self.preprocess_frame(frame)[None, ...], self.n_stacked_frames, axis=0),
+            np.repeat(self.pool_and_resize()[None, ...], self.n_stacked_frames, axis=0),
             maxlen=self.n_stacked_frames,
         )
         self.state = np.array(self.stacked_frames)
@@ -83,30 +93,34 @@ class AtariEnv:
             return absorbing_, info["lives"]
 
     def step(self, action: jnp.int8) -> Tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
-        absorbing = False
-        n_frames = 0
-        pooled_frames = np.zeros((self.n_pooled_frames, self.original_state_height, self.original_state_width))
         reward = 0
 
-        while n_frames < self.n_skipped_frames and not absorbing:
-            pooled_frames[n_frames % self.n_pooled_frames], reward_, absorbing_, _, info = self.env.step(action)
+        for idx_frame in range(self.n_skipped_frames):
+            _, reward_, absorbing_, _, info = self.env.step(action)
 
-            n_frames += 1
-            absorbing, self.n_lives = self.is_absorbing(absorbing_, info, self.n_lives)
             reward += reward_
+            absorbing, self.n_lives = self.is_absorbing(absorbing_, info, self.n_lives)
 
-        # if there is less than n_skipped_frames frames, the max pooling eliminates the zeros
-        self.stacked_frames.append(self.preprocess_frame(np.max(pooled_frames, axis=0)))
+            if idx_frame >= self.n_skipped_frames - 2:
+                t = idx_frame - (self.n_skipped_frames - 2)
+                self.env.ale.getScreenGrayscale(self.screen_buffer[t])
+
+            if absorbing:
+                break
+
+        self.stacked_frames.append(self.pool_and_resize())
         self.state = np.array(self.stacked_frames)
 
         self.n_steps += 1
 
         return self.state, np.array(np.clip(reward, -1, 1), dtype=np.int8), np.array(absorbing, dtype=np.bool_), _
 
-    def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
+    def pool_and_resize(self) -> np.ndarray:
+        np.maximum(self.screen_buffer[0], self.screen_buffer[1], out=self.screen_buffer[0])
+
         return cv2.resize(
-            np.array(frame, dtype=np.uint8), (self.state_width, self.state_height), interpolation=cv2.INTER_LINEAR
-        )
+            self.screen_buffer[0], (self.state_width, self.state_height), interpolation=cv2.INTER_AREA
+        ).astype(np.uint8)
 
     def get_ale_state(self):
         return self.env.ale.cloneSystemState()
