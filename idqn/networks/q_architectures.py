@@ -48,13 +48,16 @@ class AtariDQN(DQN):
         network_key: jax.random.PRNGKeyArray,
         zero_initializer: bool,
         learning_rate: float,
+        n_gradient_steps_per_target_update: int,
     ) -> None:
         self.n_layers = 5
 
         def network(state: jnp.ndarray) -> jnp.ndarray:
             return AtariQNet(zero_initializer, n_actions)(state)
 
-        super().__init__(state_shape, n_actions, gamma, network, network_key, learning_rate)
+        super().__init__(
+            state_shape, n_actions, gamma, network, network_key, learning_rate, n_gradient_steps_per_target_update
+        )
 
 
 class FullyConnectedMultiQNet(hk.Module):

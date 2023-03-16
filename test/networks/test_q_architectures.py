@@ -17,7 +17,7 @@ class TestAtariDQN(unittest.TestCase):
         self.zero_initializer = bool(jax.random.randint(self.key, (), minval=0, maxval=2))
 
     def test_output(self) -> None:
-        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, self.zero_initializer, None)
+        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, self.zero_initializer, None, None)
 
         output = q(q.params, jax.random.uniform(self.key, self.state_shape))
         output_batch = q(q.params, jax.random.uniform(self.key, (50,) + self.state_shape))
@@ -33,7 +33,7 @@ class TestAtariDQN(unittest.TestCase):
         self.assertEqual(output_batch.shape, (50, self.n_actions), f"random seed {self.random_seed}")
 
     def test_compute_target(self) -> None:
-        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, self.zero_initializer, None)
+        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, self.zero_initializer, None, None)
 
         rewards = jax.random.uniform(self.key, (10,))
         absorbings = jax.random.randint(self.key, (10,), 0, 2)
@@ -53,7 +53,7 @@ class TestAtariDQN(unittest.TestCase):
             self.assertAlmostEqual(computed_targets[idx_sample], target, msg=f"random seed {self.random_seed}")
 
     def test_loss(self) -> None:
-        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, self.zero_initializer, None)
+        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, self.zero_initializer, None, None)
 
         states = jax.random.uniform(self.key, (10,) + self.state_shape)
         actions = jax.random.uniform(self.key, (10,))
@@ -82,12 +82,12 @@ class TestAtariDQN(unittest.TestCase):
         )
 
     def test_random_action(self) -> None:
-        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, self.zero_initializer, None)
+        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, self.zero_initializer, None, None)
 
         self.assertEqual(q.random_action(self.key).dtype, jnp.int8, msg=f"random seed {self.random_seed}")
 
     def test_best_action(self) -> None:
-        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, self.zero_initializer, None)
+        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, self.zero_initializer, None, None)
 
         state = jax.random.uniform(self.key, self.state_shape)
 

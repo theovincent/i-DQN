@@ -1,21 +1,15 @@
 {
     "---- Shared parameters ---": "----------------",
-    "env_seed": 0,
     "gamma": 0.99,
-    "start_with_fire": false,
-    "terminal_on_life_loss": false,
     "replay_buffer_size": 500000,
     "n_initial_samples": 20000,
     "n_epochs": 200,
     "n_gradient_steps_per_epoch": 250000,
-    "n_samples_per_gradient_step": 1,
     "horizon": 27000,
     "starting_eps": 1,
     "ending_eps": 0.01,
     "duration_eps": 250000,
     "batch_size": 32,
-    "n_simulations": 100,
-    "eps_eval": 0.001,
     "---- iDQNs ---": "----------------------------",
     "idqn_n_shared_layers": 3,
     "idqn_head_behaviorial_policy": "uniform",
@@ -26,5 +20,5 @@
     "idqn_importance_iteration": "uniform",
     "---- DQNs ---": "-----------------------------",
     "dqn_learning_rate": 1000,
-    "dqn_n_gradient_steps_per_head_update": 8000
+    "dqn_n_gradient_steps_per_target_update": 8000
 }

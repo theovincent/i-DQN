@@ -14,15 +14,15 @@ class TestReplayBuffer(unittest.TestCase):
         self.max_size = jax.random.randint(self.key, (), minval=1, maxval=1000)
         self.state_shape = (4, 84, 84)
         self.state_dtype = np.uint8
-        self.reward_dtype = np.int8
         self.path = "test/replay_buffer"
+        self.identity = lambda x: x
 
     def test_add(self) -> None:
-        replay_buffer = ReplayBuffer(self.max_size, self.state_shape, self.state_dtype, self.reward_dtype)
+        replay_buffer = ReplayBuffer(self.max_size, self.state_shape, self.state_dtype, self.identity)
 
         state = np.array(jax.random.randint(self.key, replay_buffer.state_shape, 0, 256, replay_buffer.state_dtype))
         action = np.array(jax.random.randint(self.key, (), 0, 10, replay_buffer.action_dtype))
-        reward = np.array(jax.random.randint(self.key, (), 0, 1000, replay_buffer.reward_dtype))
+        reward = np.array(jax.random.uniform(self.key, (), replay_buffer.reward_dtype, 0, 1000))
         absorbing = np.array(jax.random.randint(self.key, (), 0, 2), dtype=replay_buffer.absorbing_dtype)
         key, _ = jax.random.split(self.key)
         next_state = np.array(jax.random.randint(key, replay_buffer.state_shape, 0, 256, replay_buffer.state_dtype))
@@ -60,7 +60,7 @@ class TestReplayBuffer(unittest.TestCase):
         )
 
     def test_sample_batch(self) -> None:
-        replay_buffer = ReplayBuffer(self.max_size, self.state_shape, self.state_dtype, self.reward_dtype)
+        replay_buffer = ReplayBuffer(self.max_size, self.state_shape, self.state_dtype, self.identity)
         batch_size = jax.random.randint(self.key, (), 1, self.max_size + 1)
         key = self.key
 
@@ -68,7 +68,7 @@ class TestReplayBuffer(unittest.TestCase):
             key, _ = jax.random.split(key)
             state = np.array(jax.random.randint(key, replay_buffer.state_shape, 1, 256, replay_buffer.state_dtype))
             action = np.array(jax.random.randint(key, (), 0, 10, replay_buffer.action_dtype))
-            reward = np.array(jax.random.randint(key, (), 0, 1000, replay_buffer.reward_dtype))
+            reward = np.array(jax.random.uniform(self.key, (), replay_buffer.reward_dtype, 0, 1000))
             absorbing = np.array(jax.random.randint(key, (), 0, 2), dtype=replay_buffer.absorbing_dtype)
             key, _ = jax.random.split(key)
             next_state = np.array(jax.random.randint(key, replay_buffer.state_shape, 1, 256, replay_buffer.state_dtype))
@@ -89,14 +89,14 @@ class TestReplayBuffer(unittest.TestCase):
             self.assertNotEqual(np.linalg.norm(batch["state"][idx_in_batch]), 0, f"random seed {self.random_seed}")
 
     def test_save_load(self) -> None:
-        replay_buffer = ReplayBuffer(self.max_size, self.state_shape, self.state_dtype, self.reward_dtype)
+        replay_buffer = ReplayBuffer(self.max_size, self.state_shape, self.state_dtype, self.identity)
         key = self.key
 
         for _ in range(10):
             key, _ = jax.random.split(key)
             state = np.array(jax.random.randint(key, replay_buffer.state_shape, 1, 256, replay_buffer.state_dtype))
             action = np.array(jax.random.randint(key, (), 0, 10, replay_buffer.action_dtype))
-            reward = np.array(jax.random.randint(key, (), 0, 1000, replay_buffer.reward_dtype))
+            reward = np.array(jax.random.uniform(self.key, (), replay_buffer.reward_dtype, 0, 1000))
             absorbing = np.array(jax.random.randint(key, (), 0, 2), dtype=replay_buffer.absorbing_dtype)
             key, _ = jax.random.split(key)
             next_state = np.array(jax.random.randint(key, replay_buffer.state_shape, 1, 256, replay_buffer.state_dtype))
@@ -105,7 +105,7 @@ class TestReplayBuffer(unittest.TestCase):
 
         replay_buffer.save(self.path)
 
-        replay_buffer_bis = ReplayBuffer(self.max_size, self.state_shape, self.state_dtype, self.reward_dtype)
+        replay_buffer_bis = ReplayBuffer(self.max_size, self.state_shape, self.state_dtype, self.identity)
         replay_buffer_bis.load(self.path)
 
         self.assertEqual(

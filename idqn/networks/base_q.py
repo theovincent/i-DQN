@@ -22,6 +22,7 @@ class BaseQ:
         self.network = hk.without_apply_rng(hk.transform(network))
         self.network_key = network_key
         self.params = self.network.init(rng=self.network_key, state=jnp.zeros(self.state_shape, dtype=jnp.float32))
+        self.target_params = self.params
 
         self.loss_and_grad = jax.jit(jax.value_and_grad(self.loss))
 
@@ -65,6 +66,9 @@ class BaseQ:
     def best_action(self, key: jax.random.PRNGKey, q_params: hk.Params, state: jnp.ndarray) -> jnp.int8:
         raise NotImplementedError
 
+    def update_target_params(self, step: int) -> None:
+        raise NotImplementedError
+
 
 class BaseSingleQ(BaseQ):
     def __init__(
@@ -94,8 +98,10 @@ class DQN(BaseSingleQ):
         network: hk.Module,
         network_key: jax.random.PRNGKeyArray,
         learning_rate: float,
+        n_gradient_steps_per_target_update: int,
     ) -> None:
         super().__init__(state_shape, n_actions, gamma, network, network_key, learning_rate)
+        self.n_gradient_steps_per_target_update = n_gradient_steps_per_target_update
 
     @partial(jax.jit, static_argnames="self")
     def loss(self, params: hk.Params, params_target: hk.Params, samples: dict) -> jnp.float32:
@@ -117,6 +123,10 @@ class DQN(BaseSingleQ):
     def best_action(self, key: jax.random.PRNGKey, q_params: hk.Params, state: jnp.ndarray) -> jnp.int8:
         # key is not used here
         return jnp.argmax(self(q_params, jnp.array(state, dtype=jnp.float32))[0]).astype(jnp.int8)
+
+    def update_target_params(self, step: int) -> None:
+        if step % self.n_gradient_steps_per_target_update == 0:
+            self.target_params = self.params
 
 
 class BaseMultiHeadQ(BaseQ):

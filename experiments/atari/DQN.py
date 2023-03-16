@@ -1,7 +1,6 @@
 import sys
 import argparse
 import json
-import jax
 import numpy as np
 
 from experiments.base.parser import addparse
@@ -29,16 +28,13 @@ def run_cli(argvs=sys.argv[1:]):
 
     q_key, train_key = generate_keys(args.seed)
 
-    env = AtariEnv(
-        jax.random.PRNGKey(p["env_seed"]),
-        args.experiment_name.split("/")[1],
-        p["gamma"],
-        p["start_with_fire"],
-        p["terminal_on_life_loss"],
-    )
+    env = AtariEnv(args.experiment_name.split("/")[1], p["gamma"])
 
     replay_buffer = ReplayBuffer(
-        p["replay_buffer_size"], (env.n_stacked_frames, env.state_height, env.state_width), np.uint8, np.int8
+        p["replay_buffer_size"],
+        (env.n_stacked_frames, env.state_height, env.state_width),
+        np.uint8,
+        lambda x: np.clip(x, -1, 1),
     )
 
     q = AtariDQN(
@@ -48,6 +44,7 @@ def run_cli(argvs=sys.argv[1:]):
         q_key,
         True,
         p["dqn_learning_rate"],
+        p["dqn_n_gradient_steps_per_target_update"],
     )
 
     train(train_key, "atari", args, p, q, env, replay_buffer)

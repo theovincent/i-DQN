@@ -46,7 +46,6 @@ class AtariEnv:
             np.empty((self.original_state_height, self.original_state_width), dtype=np.uint8),
             np.empty((self.original_state_height, self.original_state_width), dtype=np.uint8),
         ]
-        self.game_over = False
 
     def reset(self) -> np.ndarray:
         self.env.reset()
@@ -79,14 +78,12 @@ class AtariEnv:
             if absorbing:
                 break
 
-        self.game_over = absorbing
-
         self.stacked_frames.append(self.pool_and_resize())
         self.state = np.array(self.stacked_frames)
 
         self.n_steps += 1
 
-        return self.state, np.array(np.clip(reward, -1, 1), dtype=np.int8), np.array(absorbing, dtype=np.bool_), _
+        return self.state, reward, absorbing, _
 
     def pool_and_resize(self) -> np.ndarray:
         np.maximum(self.screen_buffer[0], self.screen_buffer[1], out=self.screen_buffer[0])
@@ -132,31 +129,31 @@ class AtariEnv:
             replay_buffer.add(state, action, reward, next_state, absorbing)
 
             if absorbing or self.n_steps >= horizon:
-                self.reset(truncation=self.n_steps >= horizon)
+                self.reset()
 
-    def collect_samples(
+    def collect_one_sample(
         self,
         q: BaseQ,
         q_params: hk.Params,
-        n_samples: int,
         horizon: int,
         replay_buffer: ReplayBuffer,
         exploration_schedule: EpsilonGreedySchedule,
-    ) -> None:
-        for _ in range(n_samples):
-            state = self.state
+    ) -> bool:
+        state = self.state
 
-            if exploration_schedule.explore():
-                action = q.random_action(exploration_schedule.key)
-            else:
-                action = q.best_action(exploration_schedule.key, q_params, state)
+        if exploration_schedule.explore():
+            action = q.random_action(exploration_schedule.key)
+        else:
+            action = q.best_action(exploration_schedule.key, q_params, state)
 
-            next_state, reward, absorbing, _ = self.step(action)
+        next_state, reward, absorbing, _ = self.step(action)
 
-            replay_buffer.add(state, action, reward, next_state, absorbing)
+        replay_buffer.add(state, action, reward, next_state, absorbing)
 
-            if absorbing or self.n_steps >= horizon:
-                self.reset(truncation=self.n_steps >= horizon)
+        if absorbing or self.n_steps >= horizon:
+            self.reset()
+
+        return reward, absorbing
 
     def evaluate_one_simulation(
         self,

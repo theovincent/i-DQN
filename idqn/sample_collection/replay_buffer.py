@@ -6,13 +6,14 @@ import jax.numpy as jnp
 
 
 class ReplayBuffer:
-    def __init__(self, max_size: int, state_shape: list, state_dtype: Type, reward_dtype: Type) -> None:
+    def __init__(self, max_size: int, state_shape: list, state_dtype: Type, clipping) -> None:
         self.max_size = max_size
         self.state_shape = state_shape
         self.state_dtype = state_dtype
         self.action_dtype = np.int8
-        self.reward_dtype = reward_dtype
+        self.reward_dtype = np.float32
         self.absorbing_dtype = np.bool_
+        self.clipping = clipping
 
         self.states = np.zeros((self.max_size,) + self.state_shape, dtype=self.state_dtype)
         self.actions = np.zeros(self.max_size, dtype=self.action_dtype)
@@ -33,7 +34,7 @@ class ReplayBuffer:
     ) -> None:
         self.states[self.idx] = state
         self.actions[self.idx] = action
-        self.rewards[self.idx] = reward
+        self.rewards[self.idx] = self.clipping(reward)
         self.next_states[self.idx] = next_state
         self.absorbings[self.idx] = absorbing
 
