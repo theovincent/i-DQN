@@ -32,6 +32,7 @@ def run_cli(argvs=sys.argv[1:]):
 
     replay_buffer = ReplayBuffer(
         p["replay_buffer_size"],
+        p["batch_size"],
         (env.n_stacked_frames, env.state_height, env.state_width),
         np.uint8,
         lambda x: np.clip(x, -1, 1),
@@ -42,9 +43,9 @@ def run_cli(argvs=sys.argv[1:]):
         env.n_actions,
         p["gamma"],
         q_key,
-        True,
         p["dqn_learning_rate"],
-        p["dqn_n_gradient_steps_per_target_update"],
+        p["n_training_steps_per_online_update"],
+        p["dqn_n_training_steps_per_target_update"],
     )
 
     train(train_key, "atari", args, p, q, env, replay_buffer)

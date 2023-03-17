@@ -12,13 +12,14 @@ class TestReplayBuffer(unittest.TestCase):
         self.random_seed = np.random.randint(1000)
         self.key = jax.random.PRNGKey(self.random_seed)
         self.max_size = jax.random.randint(self.key, (), minval=1, maxval=1000)
+        self.batch_size = jax.random.randint(self.key, (), minval=1, maxval=self.max_size)
         self.state_shape = (4, 84, 84)
         self.state_dtype = np.uint8
         self.path = "test/replay_buffer"
         self.identity = lambda x: x
 
     def test_add(self) -> None:
-        replay_buffer = ReplayBuffer(self.max_size, self.state_shape, self.state_dtype, self.identity)
+        replay_buffer = ReplayBuffer(self.max_size, self.batch_size, self.state_shape, self.state_dtype, self.identity)
 
         state = np.array(jax.random.randint(self.key, replay_buffer.state_shape, 0, 256, replay_buffer.state_dtype))
         action = np.array(jax.random.randint(self.key, (), 0, 10, replay_buffer.action_dtype))
@@ -60,8 +61,7 @@ class TestReplayBuffer(unittest.TestCase):
         )
 
     def test_sample_batch(self) -> None:
-        replay_buffer = ReplayBuffer(self.max_size, self.state_shape, self.state_dtype, self.identity)
-        batch_size = jax.random.randint(self.key, (), 1, self.max_size + 1)
+        replay_buffer = ReplayBuffer(self.max_size, self.batch_size, self.state_shape, self.state_dtype, self.identity)
         key = self.key
 
         for _ in range(10):
@@ -75,9 +75,9 @@ class TestReplayBuffer(unittest.TestCase):
 
             replay_buffer.add(state, action, reward, next_state, absorbing)
 
-        batch = replay_buffer.sample_random_batch(self.key, 5)
+        batch = replay_buffer.sample_random_batch(self.key)
 
-        for idx_in_batch in range(batch_size):
+        for idx_in_batch in range(self.batch_size):
             self.assertIn(batch["state"][idx_in_batch], replay_buffer.states, f"random seed {self.random_seed}")
             self.assertIn(batch["action"][idx_in_batch], replay_buffer.actions, f"random seed {self.random_seed}")
             self.assertIn(batch["reward"][idx_in_batch], replay_buffer.rewards, f"random seed {self.random_seed}")
@@ -89,7 +89,7 @@ class TestReplayBuffer(unittest.TestCase):
             self.assertNotEqual(np.linalg.norm(batch["state"][idx_in_batch]), 0, f"random seed {self.random_seed}")
 
     def test_save_load(self) -> None:
-        replay_buffer = ReplayBuffer(self.max_size, self.state_shape, self.state_dtype, self.identity)
+        replay_buffer = ReplayBuffer(self.max_size, self.batch_size, self.state_shape, self.state_dtype, self.identity)
         key = self.key
 
         for _ in range(10):
@@ -105,7 +105,9 @@ class TestReplayBuffer(unittest.TestCase):
 
         replay_buffer.save(self.path)
 
-        replay_buffer_bis = ReplayBuffer(self.max_size, self.state_shape, self.state_dtype, self.identity)
+        replay_buffer_bis = ReplayBuffer(
+            self.max_size, self.batch_size, self.state_shape, self.state_dtype, self.identity
+        )
         replay_buffer_bis.load(self.path)
 
         self.assertEqual(

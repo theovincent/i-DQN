@@ -4,7 +4,8 @@
     "replay_buffer_size": 500000,
     "n_initial_samples": 20000,
     "n_epochs": 200,
-    "n_gradient_steps_per_epoch": 250000,
+    "n_training_steps_per_epoch": 250000,
+    "n_training_steps_per_online_update": 4,
     "horizon": 27000,
     "starting_eps": 1,
     "ending_eps": 0.01,
@@ -16,9 +17,9 @@
     "idqn_learning_rate": 1e-4,
     "idqn_n_gradient_steps_per_head_update": 8000,
     "idqn_speed": 1,
-    "idqn_n_gradient_steps_per_target_update": 1,
+    "idqn_n_training_steps_per_target_update": 1,
     "idqn_importance_iteration": "uniform",
     "---- DQNs ---": "-----------------------------",
-    "dqn_learning_rate": 1000,
-    "dqn_n_gradient_steps_per_target_update": 8000
+    "dqn_learning_rate": 6.25e-5,
+    "dqn_n_training_steps_per_target_update": 8000
 }

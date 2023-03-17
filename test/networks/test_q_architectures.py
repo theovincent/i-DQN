@@ -3,7 +3,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from idqn.networks.q_architectures import AtariDQN, AtariiDQN
+from idqn.networks.q_architectures import AtariDQN  # , AtariiDQN
 
 
 class TestAtariDQN(unittest.TestCase):
@@ -14,26 +14,21 @@ class TestAtariDQN(unittest.TestCase):
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.state_shape = (4, 84, 84)
         self.gamma = jax.random.uniform(self.key)
-        self.zero_initializer = bool(jax.random.randint(self.key, (), minval=0, maxval=2))
 
     def test_output(self) -> None:
-        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, self.zero_initializer, None, None)
+        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
 
         output = q(q.params, jax.random.uniform(self.key, self.state_shape))
         output_batch = q(q.params, jax.random.uniform(self.key, (50,) + self.state_shape))
 
-        if self.zero_initializer:
-            self.assertEqual(np.linalg.norm(output), 0, f"random seed {self.random_seed}")
-            self.assertEqual(np.linalg.norm(output_batch), 0, f"random seed {self.random_seed}")
-        else:
-            self.assertGreater(np.linalg.norm(output), 0, f"random seed {self.random_seed}")
-            self.assertGreater(np.linalg.norm(output_batch), 0, f"random seed {self.random_seed}")
+        self.assertGreater(np.linalg.norm(output), 0, f"random seed {self.random_seed}")
+        self.assertGreater(np.linalg.norm(output_batch), 0, f"random seed {self.random_seed}")
 
         self.assertEqual(output.shape, (1, self.n_actions), f"random seed {self.random_seed}")
         self.assertEqual(output_batch.shape, (50, self.n_actions), f"random seed {self.random_seed}")
 
     def test_compute_target(self) -> None:
-        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, self.zero_initializer, None, None)
+        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
 
         rewards = jax.random.uniform(self.key, (10,))
         absorbings = jax.random.randint(self.key, (10,), 0, 2)
@@ -53,7 +48,7 @@ class TestAtariDQN(unittest.TestCase):
             self.assertAlmostEqual(computed_targets[idx_sample], target, msg=f"random seed {self.random_seed}")
 
     def test_loss(self) -> None:
-        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, self.zero_initializer, None, None)
+        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
 
         states = jax.random.uniform(self.key, (10,) + self.state_shape)
         actions = jax.random.uniform(self.key, (10,))
@@ -82,12 +77,12 @@ class TestAtariDQN(unittest.TestCase):
         )
 
     def test_random_action(self) -> None:
-        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, self.zero_initializer, None, None)
+        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
 
         self.assertEqual(q.random_action(self.key).dtype, jnp.int8, msg=f"random seed {self.random_seed}")
 
     def test_best_action(self) -> None:
-        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, self.zero_initializer, None, None)
+        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
 
         state = jax.random.uniform(self.key, self.state_shape)
 

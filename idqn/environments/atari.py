@@ -3,7 +3,6 @@ The environment is inspired from https://github.com/google/dopamine/blob/master/
 """
 import os
 from typing import Tuple
-from functools import partial
 from gymnasium.wrappers.monitoring import video_recorder
 import gymnasium as gym
 import numpy as np
