@@ -23,10 +23,8 @@ class AtariEnv:
     def __init__(
         self,
         name: str,
-        gamma: float,
     ) -> None:
         self.name = name
-        self.gamma = gamma
         self.state_height, self.state_width = (84, 84)
         self.n_stacked_frames = 4
         self.n_skipped_frames = 4
@@ -143,7 +141,7 @@ class AtariEnv:
         if exploration_schedule.explore():
             action = q.random_action(exploration_schedule.key)
         else:
-            action = q.best_action(exploration_schedule.key, q_params, state)
+            action = q.best_action(exploration_schedule.key, q_params, self.state)
 
         next_state, reward, absorbing, _ = self.step(action)
 
@@ -162,59 +160,29 @@ class AtariEnv:
         eps_eval: float,
         exploration_key: jax.random.PRNGKey,
         video_path: str,
-        idx_head: int,
     ) -> float:
-        if video_path is not None:
-            video = video_recorder.VideoRecorder(
-                self.env, path=f"experiments/atari/figures/{video_path}.mp4", disable_logger=True
-            )
-        cumulative_reward = 0
-        discount = 1
+        video = video_recorder.VideoRecorder(
+            self.env, path=f"experiments/atari/figures/{video_path}.mp4", disable_logger=True
+        )
+        sun_reward = 0
         absorbing = False
         self.reset()
 
         while not absorbing and self.n_steps < horizon:
-            if video_path is not None:
-                self.env.render()
-                video.capture_frame()
+            self.env.render()
+            video.capture_frame()
 
             exploration_key, key = jax.random.split(exploration_key)
             if jax.random.uniform(key) < eps_eval:
                 action = q.random_action(key)
             else:
-                if idx_head is None:
-                    action = q.best_actions(q_params, self.state)[0]
-                else:
-                    action = q.best_actions(q_params, idx_head, self.state)[0]
+                action = q.best_action(key, q_params, self.state)
 
             _, reward, absorbing, _ = self.step(action)
 
-            cumulative_reward += discount * reward
-            discount *= self.gamma
+            sun_reward += reward
 
-        if video_path is not None:
-            video.close()
-            os.remove(f"experiments/atari/figures/{video_path}.meta.json")
+        video.close()
+        os.remove(f"experiments/atari/figures/{video_path}.meta.json")
 
-        return cumulative_reward
-
-    def evaluate(
-        self,
-        q: BaseQ,
-        q_params: hk.Params,
-        horizon: int,
-        n_simulations: int,
-        eps_eval: float,
-        exploration_key: jax.random.PRNGKey,
-        video_path: str,
-        idx_head: int = None,
-    ) -> float:
-        rewards = np.zeros(n_simulations)
-
-        rewards[0] = self.evaluate_one_simulation(q, q_params, horizon, eps_eval, exploration_key, video_path, idx_head)
-        for idx_simulation in range(1, n_simulations):
-            rewards[idx_simulation] = self.evaluate_one_simulation(
-                q, q_params, horizon, eps_eval, exploration_key, None, idx_head
-            )
-
-        return rewards.mean()
+        return sun_reward

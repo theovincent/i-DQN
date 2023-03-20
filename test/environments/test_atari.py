@@ -13,10 +13,9 @@ class TestAtariEnv(unittest.TestCase):
         self.random_seed = np.random.randint(1000)
         self.key = jax.random.PRNGKey(self.random_seed)
         self.name = "Breakout"
-        self.gamma = jax.random.uniform(self.key)
 
     def test_reset(self) -> None:
-        env = AtariEnv(self.name, self.gamma)
+        env = AtariEnv(self.name)
 
         env.reset()
         for i in range(70):
@@ -29,7 +28,7 @@ class TestAtariEnv(unittest.TestCase):
         self.assertNotEqual(np.linalg.norm(state - state_bis), 0)
 
     def test_step_frame_stacking(self) -> None:
-        env = AtariEnv(self.name, self.gamma)
+        env = AtariEnv(self.name)
         action_key = self.key
         env.reset()
         absorbing = False
@@ -45,7 +44,7 @@ class TestAtariEnv(unittest.TestCase):
 
     def test_store_load(self) -> None:
         # Need to remove stochastic actions
-        env_to_store = AtariEnv(self.name, self.gamma)
+        env_to_store = AtariEnv(self.name)
         env_to_store.env = gym.make(
             f"ALE/{self.name}-v5",
             full_action_space=False,
@@ -62,7 +61,7 @@ class TestAtariEnv(unittest.TestCase):
 
         env_to_store.save("test/test_store_load")
 
-        env_to_load = AtariEnv(self.name, self.gamma)
+        env_to_load = AtariEnv(self.name)
         env_to_load.env = gym.make(
             f"ALE/{self.name}-v5",
             full_action_space=False,

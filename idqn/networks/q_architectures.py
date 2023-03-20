@@ -15,11 +15,17 @@ class AtariQNet(hk.Module):
 
         self.network = hk.Sequential(
             [
-                hk.Conv2D(output_channels=32, kernel_shape=[8, 8], stride=4, w_init=self.initializer),
+                hk.Conv2D(
+                    output_channels=32, kernel_shape=[8, 8], stride=4, w_init=self.initializer, data_format="NCHW"
+                ),
                 jax.nn.relu,
-                hk.Conv2D(output_channels=64, kernel_shape=[4, 4], stride=2, w_init=self.initializer),
+                hk.Conv2D(
+                    output_channels=64, kernel_shape=[4, 4], stride=2, w_init=self.initializer, data_format="NCHW"
+                ),
                 jax.nn.relu,
-                hk.Conv2D(output_channels=64, kernel_shape=[3, 3], stride=1, w_init=self.initializer),
+                hk.Conv2D(
+                    output_channels=64, kernel_shape=[3, 3], stride=1, w_init=self.initializer, data_format="NCHW"
+                ),
                 jax.nn.relu,
                 hk.Flatten(),
                 hk.Linear(output_size=512, w_init=self.initializer),

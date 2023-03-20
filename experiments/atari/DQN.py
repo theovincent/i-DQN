@@ -28,7 +28,7 @@ def run_cli(argvs=sys.argv[1:]):
 
     q_key, train_key = generate_keys(args.seed)
 
-    env = AtariEnv(args.experiment_name.split("/")[1], p["gamma"])
+    env = AtariEnv(args.experiment_name.split("/")[1])
 
     replay_buffer = ReplayBuffer(
         p["replay_buffer_size"],

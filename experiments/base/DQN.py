@@ -84,7 +84,7 @@ def train(
 
     if not args.restart_training:
         np.save(f"{experiment_path}/K_{args.seed}", np.array([sample_key, epsilon_schedule.key]))
+        q.save(f"{experiment_path}/Q_{args.seed}_{last_epoch - 1}")
         env.save(f"{experiment_path}/E_{args.seed}")
         replay_buffer.save(f"{experiment_path}/R_{args.seed}")
-        q.save(f"{experiment_path}/Q_{args.seed}_{last_epoch - 1}")
         np.save(f"{experiment_path}/N_{args.seed}", np.array(n_training_steps))
