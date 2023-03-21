@@ -1,46 +1,30 @@
-from functools import partial
-import haiku as hk
+import flax.linen as nn
 import jax
 import jax.numpy as jnp
 
-from idqn.networks.base_q import DQN  # , iDQN
+from idqn.networks.base_q import DQN
 
 
-class AtariQNet(hk.Module):
-    def __init__(self, n_actions: int) -> None:
-        super().__init__(name="AtariQNet")
-        # xavier uniform
-        self.initializer = hk.initializers.VarianceScaling(1.0, "fan_avg", "uniform")
-        self.n_actions = n_actions
+class AtariQNet(nn.Module):
+    n_actions: int
+    initializer = nn.initializers.xavier_uniform()
 
-        self.network = hk.Sequential(
-            [
-                hk.Conv2D(
-                    output_channels=32, kernel_shape=[8, 8], stride=4, w_init=self.initializer, data_format="NCHW"
-                ),
-                jax.nn.relu,
-                hk.Conv2D(
-                    output_channels=64, kernel_shape=[4, 4], stride=2, w_init=self.initializer, data_format="NCHW"
-                ),
-                jax.nn.relu,
-                hk.Conv2D(
-                    output_channels=64, kernel_shape=[3, 3], stride=1, w_init=self.initializer, data_format="NCHW"
-                ),
-                jax.nn.relu,
-                hk.Flatten(),
-                hk.Linear(output_size=512, w_init=self.initializer),
-                jax.nn.relu,
-                hk.Linear(output_size=n_actions, w_init=self.initializer),
-            ],
-            name="network",
-        )
+    @nn.compact
+    def __call__(self, state):
+        initializer = nn.initializers.xavier_uniform()
+        # Convert to channel last
+        x = jnp.transpose(state / 255.0, (1, 2, 0))
+        x = nn.Conv(features=32, kernel_size=(8, 8), strides=(4, 4), kernel_init=initializer)(x)
+        x = nn.relu(x)
+        x = nn.Conv(features=64, kernel_size=(4, 4), strides=(2, 2), kernel_init=initializer)(x)
+        x = nn.relu(x)
+        x = nn.Conv(features=64, kernel_size=(3, 3), strides=(1, 1), kernel_init=initializer)(x)
+        x = nn.relu(x)
+        x = x.reshape((-1))  # flatten
+        x = nn.Dense(features=512, kernel_init=initializer)(x)
+        x = nn.relu(x)
 
-    def __call__(self, state: jnp.ndarray) -> jnp.ndarray:
-        input = state / 255.0
-        # "jnp.atleast4d"
-        input = jnp.array(input, copy=False, ndmin=4)
-
-        return self.network(input)
+        return nn.Dense(features=self.n_actions, kernel_init=initializer)(x)
 
 
 class AtariDQN(DQN):
@@ -54,16 +38,11 @@ class AtariDQN(DQN):
         n_training_steps_per_online_update: int,
         n_training_steps_per_target_update: int,
     ) -> None:
-        self.n_layers = 5
-
-        def network(state: jnp.ndarray) -> jnp.ndarray:
-            return AtariQNet(n_actions)(state)
-
         super().__init__(
             state_shape,
             n_actions,
             gamma,
-            network,
+            AtariQNet(n_actions),
             network_key,
             learning_rate,
             n_training_steps_per_online_update,

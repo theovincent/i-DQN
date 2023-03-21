@@ -1,3 +1,4 @@
+import os
 import unittest
 import jax
 import jax.numpy as jnp
@@ -9,7 +10,8 @@ from idqn.networks.q_architectures import AtariDQN  # , AtariiDQN
 class TestAtariDQN(unittest.TestCase):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.random_seed = 10  # np.random.randint(1000)
+        self.random_seed = np.random.randint(1000)
+        print(f"random seed {self.random_seed}")
         self.key = jax.random.PRNGKey(self.random_seed)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.state_shape = (4, 84, 84)
@@ -21,11 +23,11 @@ class TestAtariDQN(unittest.TestCase):
         output = q(q.params, jax.random.uniform(self.key, self.state_shape))
         output_batch = q(q.params, jax.random.uniform(self.key, (50,) + self.state_shape))
 
-        self.assertGreater(np.linalg.norm(output), 0, f"random seed {self.random_seed}")
-        self.assertGreater(np.linalg.norm(output_batch), 0, f"random seed {self.random_seed}")
+        self.assertGreater(np.linalg.norm(output), 0)
+        self.assertGreater(np.linalg.norm(output_batch), 0)
 
-        self.assertEqual(output.shape, (1, self.n_actions), f"random seed {self.random_seed}")
-        self.assertEqual(output_batch.shape, (50, self.n_actions), f"random seed {self.random_seed}")
+        self.assertEqual(output.shape, (1, self.n_actions))
+        self.assertEqual(output_batch.shape, (50, self.n_actions))
 
     def test_compute_target(self) -> None:
         q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
@@ -45,7 +47,7 @@ class TestAtariDQN(unittest.TestCase):
             target = rewards[idx_sample] + (1 - absorbings[idx_sample]) * self.gamma * jnp.max(
                 q(q.params, next_states[idx_sample])
             )
-            self.assertAlmostEqual(computed_targets[idx_sample], target, msg=f"random seed {self.random_seed}")
+            self.assertAlmostEqual(computed_targets[idx_sample], target)
 
     def test_loss(self) -> None:
         q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
@@ -72,14 +74,12 @@ class TestAtariDQN(unittest.TestCase):
         for idx_sample in range(10):
             predictions[idx_sample] = q(q.params, states[idx_sample])[0, actions.astype(jnp.int8)[idx_sample]]
 
-        self.assertAlmostEqual(
-            computed_loss, np.square(targets - predictions).mean(), msg=f"random seed {self.random_seed}"
-        )
+        self.assertAlmostEqual(computed_loss, np.square(targets - predictions).mean(), places=6)
 
     def test_random_action(self) -> None:
         q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
 
-        self.assertEqual(q.random_action(self.key).dtype, jnp.int8, msg=f"random seed {self.random_seed}")
+        self.assertEqual(q.random_action(self.key).dtype, jnp.int8)
 
     def test_best_action(self) -> None:
         q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
@@ -89,7 +89,30 @@ class TestAtariDQN(unittest.TestCase):
         computed_best_action = q.best_action(None, q.params, state)
 
         best_action = jnp.argmax(q(q.params, state)[0]).astype(jnp.int8)
-        self.assertEqual(best_action, computed_best_action, msg=f"random seed {self.random_seed}")
+        self.assertEqual(best_action, computed_best_action)
+
+    def test_save_load(self) -> None:
+        q_to_save = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, 1, None, None)
+        q_to_save.save("tests/Q")
+
+        key, _ = jax.random.split(self.key)
+        q_to_load = AtariDQN(self.state_shape, self.n_actions, self.gamma, key, 1, None, None)
+        q_to_load.load("tests/Q")
+
+        for idx_layers, layers in q_to_save.params["params"].items():
+            for idx_weights, weights in layers.items():
+                self.assertEqual(np.linalg.norm(weights - q_to_load.params["params"][idx_layers][idx_weights]), 0)
+                self.assertEqual(
+                    np.linalg.norm(
+                        q_to_save.target_params["params"][idx_layers][idx_weights]
+                        - q_to_load.target_params["params"][idx_layers][idx_weights]
+                    ),
+                    0,
+                )
+
+        os.remove("tests/Q_online_params")
+        os.remove("tests/Q_target_params")
+        os.remove("tests/Q_optimizer")
 
 
 # class TestAtariiDQN(unittest.TestCase):
@@ -121,14 +144,14 @@ class TestAtariDQN(unittest.TestCase):
 #         output_batch = q(q.params, jax.random.uniform(self.key, (50,) + self.state_shape))
 
 #         if self.zero_initializer:
-#             self.assertEqual(np.linalg.norm(output), 0, f"random seed {self.random_seed}")
-#             self.assertEqual(np.linalg.norm(output_batch), 0, f"random seed {self.random_seed}")
+#             self.assertEqual(np.linalg.norm(output), 0)
+#             self.assertEqual(np.linalg.norm(output_batch), 0)
 #         else:
-#             self.assertGreater(np.linalg.norm(output), 0, f"random seed {self.random_seed}")
-#             self.assertGreater(np.linalg.norm(output_batch), 0, f"random seed {self.random_seed}")
+#             self.assertGreater(np.linalg.norm(output), 0)
+#             self.assertGreater(np.linalg.norm(output_batch), 0)
 
-#         self.assertEqual(output.shape, (1, self.n_heads + 1, self.n_actions), f"random seed {self.random_seed}")
-#         self.assertEqual(output_batch.shape, (50, self.n_heads + 1, self.n_actions), f"random seed {self.random_seed}")
+#         self.assertEqual(output.shape, (1, self.n_heads + 1, self.n_actions))
+#         self.assertEqual(output_batch.shape, (50, self.n_heads + 1, self.n_actions))
 
 # def test_n_share_layers(self) -> None:
 #     q = AtariiDQN(
@@ -165,9 +188,9 @@ class TestAtariDQN(unittest.TestCase):
 #         f"random seed {self.random_seed}",
 #     )
 #     self.assertIn(
-#         f"AtariNet/~/head_0_layer_{self.n_shared_layers}", q.params.keys(), f"random seed {self.random_seed}"
+#         f"AtariNet/~/head_0_layer_{self.n_shared_layers}", q.params.keys()
 #     )
-#     self.assertIn(f"AtariNet/~/head_0_layer_{q.n_layers - 1}", q.params.keys(), f"random seed {self.random_seed}")
+#     self.assertIn(f"AtariNet/~/head_0_layer_{q.n_layers - 1}", q.params.keys())
 
 # def test_move_forward(self) -> None:
 #     q = AtariiDQN(
@@ -188,4 +211,4 @@ class TestAtariDQN(unittest.TestCase):
 
 #     forward_output = q(q.params, state)
 
-#     self.assertEqual(np.linalg.norm(forward_output[:, 0] - output[:, -1]), 0, f"random seed {self.random_seed}")
+#     self.assertEqual(np.linalg.norm(forward_output[:, 0] - output[:, -1]), 0)

@@ -2,13 +2,12 @@
 The environment is inspired from https://github.com/google/dopamine/blob/master/dopamine/discrete_domains/atari_lib.py
 """
 import os
-from typing import Tuple
+from typing import Tuple, Dict
 from gymnasium.wrappers.monitoring import video_recorder
 import gymnasium as gym
 import numpy as np
 import jax
 import jax.numpy as jnp
-import haiku as hk
 from collections import deque
 import cv2
 from tqdm import tqdm
@@ -60,7 +59,7 @@ class AtariEnv:
 
         return self.state
 
-    def step(self, action: jnp.int8) -> Tuple[np.ndarray, np.ndarray, np.ndarray, dict]:
+    def step(self, action: jnp.int8) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict]:
         reward = 0
 
         for idx_frame in range(self.n_skipped_frames):
@@ -131,7 +130,7 @@ class AtariEnv:
     def collect_one_sample(
         self,
         q: BaseQ,
-        q_params: hk.Params,
+        q_params: Dict,
         horizon: int,
         replay_buffer: ReplayBuffer,
         exploration_schedule: EpsilonGreedySchedule,
@@ -155,7 +154,7 @@ class AtariEnv:
     def evaluate_one_simulation(
         self,
         q: BaseQ,
-        q_params: hk.Params,
+        q_params: Dict,
         horizon: int,
         eps_eval: float,
         exploration_key: jax.random.PRNGKey,
