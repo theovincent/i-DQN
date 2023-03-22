@@ -17,7 +17,7 @@ def run_cli():
 
 class TimeAtariDQN:
     def __init__(self) -> None:
-        self.random_seed = 724  # np.random.randint(1000)
+        self.random_seed = np.random.randint(1000)
         print(f"random seed {self.random_seed}")
         self.n_runs = 3000
         self.batch_size = 32

@@ -61,7 +61,7 @@ class TestReplayBuffer(unittest.TestCase):
             key, _ = jax.random.split(key)
             state = np.array(jax.random.randint(key, replay_buffer.state_shape, 1, 256, replay_buffer.state_dtype))
             action = np.array(jax.random.randint(key, (), 0, 10, replay_buffer.action_dtype))
-            reward = np.array(jax.random.uniform(self.key, (), replay_buffer.reward_dtype, 0, 1000))
+            reward = np.array(jax.random.uniform(key, (), replay_buffer.reward_dtype, 0, 1000))
             absorbing = np.array(jax.random.randint(key, (), 0, 2), dtype=replay_buffer.absorbing_dtype)
             key, _ = jax.random.split(key)
             next_state = np.array(jax.random.randint(key, replay_buffer.state_shape, 1, 256, replay_buffer.state_dtype))

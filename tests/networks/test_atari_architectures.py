@@ -20,7 +20,10 @@ class TestAtariDQN(unittest.TestCase):
     def test_output(self) -> None:
         q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
 
-        output = q(q.params, jax.random.uniform(self.key, self.state_shape))
+        state = jax.random.uniform(self.key, self.state_shape)
+        state_copy = state.copy()
+
+        output = q(q.params, state)
         output_batch = q(q.params, jax.random.uniform(self.key, (50,) + self.state_shape))
 
         self.assertGreater(np.linalg.norm(output), 0)
@@ -28,6 +31,10 @@ class TestAtariDQN(unittest.TestCase):
 
         self.assertEqual(output.shape, (1, self.n_actions))
         self.assertEqual(output_batch.shape, (50, self.n_actions))
+
+        # test if the input has been changed
+        self.assertEqual(np.linalg.norm(state - state_copy), 0)
+        self.assertEqual(state.shape, state_copy.shape)
 
     def test_compute_target(self) -> None:
         q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)

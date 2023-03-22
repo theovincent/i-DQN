@@ -144,7 +144,10 @@ class DQN(BaseSingleQ):
     @partial(jax.jit, static_argnames="self")
     def loss(self, params: Dict, params_target: Dict, samples: Dict) -> jnp.float32:
         targets = self.compute_target(params_target, samples)
-        predictions = self(params, samples["state"])[jnp.arange(samples["state"].shape[0]), samples["action"]]
+        q_states_actions = self(params, samples["state"])
+        predictions = jax.vmap(lambda q_state_actions, action: q_state_actions[action])(
+            q_states_actions, samples["action"]
+        )
 
         error = predictions - targets
         return self.metric(error, ord="2")
