@@ -1,8 +1,6 @@
 import sys
 import argparse
 import json
-import jax
-import jax.numpy as jnp
 import numpy as np
 
 from experiments.base.parser import addparse
@@ -22,47 +20,37 @@ def run_cli(argvs=sys.argv[1:]):
         open(f"experiments/atari/figures/{args.experiment_name.split('/')[0]}/parameters.json")
     )  # p for parameters
 
-    from experiments.atari.utils import (
-        define_environment,
-        define_multi_q,
-        collect_random_samples,
-        collect_samples_multi_head,
-        generate_keys,
-    )
+    from experiments.atari.utils import generate_keys
+    from idqn.environments.atari import AtariEnv
     from idqn.sample_collection.replay_buffer import ReplayBuffer
-    from idqn.utils.importance_iteration import importance_bound
-    from experiments.base.iDQN import train
+    from idqn.networks.q_architectures import AtariiDQN
+    from experiments.base.DQN import train
+    from idqn.utils.importance_iteration import importance_iteration
+    from experiments.base.DQN import train
 
-    sample_key, exploration_key, q_key = generate_keys(args.seed)
+    q_key, train_key = generate_keys(args.seed)
 
-    env = define_environment(jax.random.PRNGKey(p["env_seed"]), args.experiment_name.split("/")[1], p["gamma"])
+    env = AtariEnv(args.experiment_name.split("/")[1])
+
     replay_buffer = ReplayBuffer(
-        p["max_size"], (env.n_stacked_frames, env.state_height, env.state_width), np.uint8, np.int8
+        p["replay_buffer_size"],
+        p["batch_size"],
+        (env.n_stacked_frames, env.state_height, env.state_width),
+        np.uint8,
+        lambda x: np.clip(x, -1, 1),
     )
 
-    if p["importance_iteration"] == "bound":
-        importance_iteration = importance_bound(p["gamma"], args.bellman_iterations_scope)
-    elif p["importance_iteration"] == "uniform":
-        importance_iteration = jnp.ones(args.bellman_iterations_scope)
-    q = define_multi_q(
-        importance_iteration,
+    q = AtariiDQN(
+        importance_iteration(p["idqn_importance_iteration"], p["gamma"], args.bellman_iterations_scope),
         (env.n_stacked_frames, env.state_height, env.state_width),
         env.n_actions,
         p["gamma"],
         q_key,
-        p["n_shared_layers"],
-        p["learning_rate"],
+        importance_iteration(p["idqn_head_behaviorial_policy"], p["gamma"], args.bellman_iterations_scope + 1),
+        p["idqn_learning_rate"],
+        p["n_training_steps_per_online_update"],
+        p["idqn_n_training_steps_per_target_update"],
+        p["idqn_n_training_steps_per_head_update"],
     )
 
-    train(
-        "atari",
-        args,
-        q,
-        p,
-        exploration_key,
-        sample_key,
-        replay_buffer,
-        collect_random_samples,
-        collect_samples_multi_head,
-        env,
-    )
+    train(train_key, "atari", args, p, q, env, replay_buffer)

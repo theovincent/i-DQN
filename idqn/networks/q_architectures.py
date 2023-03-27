@@ -1,8 +1,10 @@
+from functools import partial
 import flax.linen as nn
+from flax.core import FrozenDict
 import jax
 import jax.numpy as jnp
 
-from idqn.networks.base_q import DQN
+from idqn.networks.base_q import DQN, iDQN
 
 
 class AtariQNet(nn.Module):
@@ -10,7 +12,7 @@ class AtariQNet(nn.Module):
     initializer = nn.initializers.xavier_uniform()
 
     @nn.compact
-    def __call__(self, state):
+    def __call__(self, state) -> jnp.float32:
         initializer = nn.initializers.xavier_uniform()
         # Convert to channel last
         x = jnp.transpose(state / 255.0, (1, 2, 0))
@@ -48,6 +50,93 @@ class AtariDQN(DQN):
             n_training_steps_per_online_update,
             n_training_steps_per_target_update,
         )
+
+
+class AtariSharedMultiQNet(nn.Module):
+    n_heads: int
+    n_actions: int
+    initializer = nn.initializers.xavier_uniform()
+
+    @nn.compact
+    def __call__(self, state) -> jnp.float32:
+        initializer = nn.initializers.xavier_uniform()
+        # Convert to channel last
+        input_shared_params = jnp.transpose(state / 255.0, (1, 2, 0))
+
+        x = nn.Conv(features=32, kernel_size=(8, 8), strides=(4, 4), kernel_init=initializer)(input_shared_params)
+        x = nn.relu(x)
+        x = nn.Conv(features=64, kernel_size=(4, 4), strides=(2, 2), kernel_init=initializer)(x)
+        x = nn.relu(x)
+        x = nn.Conv(features=64, kernel_size=(3, 3), strides=(1, 1), kernel_init=initializer)(x)
+        x = nn.relu(x)
+        input_first_head = x.reshape((-1))  # flatten
+
+        x = nn.Conv(features=32, kernel_size=(8, 8), strides=(4, 4), kernel_init=initializer)(input_shared_params)
+        x = nn.relu(x)
+        x = nn.Conv(features=64, kernel_size=(4, 4), strides=(2, 2), kernel_init=initializer)(x)
+        x = nn.relu(x)
+        x = nn.Conv(features=64, kernel_size=(3, 3), strides=(1, 1), kernel_init=initializer)(x)
+        x = nn.relu(x)
+        input_other_heads = x.reshape((-1))  # flatten
+
+        output = jnp.zeros((self.n_heads, self.n_actions))
+
+        x = nn.Dense(features=512, kernel_init=initializer)(input_first_head)
+        x = nn.relu(x)
+        output = output.at[0].set(nn.Dense(features=self.n_actions, kernel_init=initializer)(x))
+
+        for idx_head in range(1, self.n_heads):
+            x = nn.Dense(features=512, kernel_init=initializer)(input_other_heads)
+            x = nn.relu(x)
+            output = output.at[idx_head].set(nn.Dense(features=self.n_actions, kernel_init=initializer)(x))
+
+        return output
+
+
+class AtariiDQN(iDQN):
+    def __init__(
+        self,
+        importance_iteration: jnp.ndarray,
+        state_shape: list,
+        n_actions: int,
+        gamma: float,
+        network_key: jax.random.PRNGKeyArray,
+        head_behaviorial_probability: jnp.ndarray,
+        learning_rate: float,
+        n_training_steps_per_online_update: int,
+        n_training_steps_per_target_update: int,
+        n_training_steps_per_head_update: int,
+    ) -> None:
+        super().__init__(
+            importance_iteration,
+            state_shape,
+            n_actions,
+            gamma,
+            AtariSharedMultiQNet(len(importance_iteration) + 1, n_actions),
+            network_key,
+            head_behaviorial_probability,
+            learning_rate,
+            n_training_steps_per_online_update,
+            n_training_steps_per_target_update,
+            n_training_steps_per_head_update,
+        )
+
+    @partial(jax.jit, static_argnames="self")
+    def update_heads(self, params: FrozenDict) -> FrozenDict:
+        unfrozen_params = params.unfreeze()
+        # The shared params of the first head takes the shared params of the other heads
+        unfrozen_params["params"]["Conv_0"] = params["params"]["Conv_3"]
+        unfrozen_params["params"]["Conv_1"] = params["params"]["Conv_4"]
+        unfrozen_params["params"]["Conv_2"] = params["params"]["Conv_5"]
+
+        # Each head takes the params of the last head
+        for idx_head in range(self.n_heads - 1):
+            unfrozen_params["params"][f"Dense_{2 * idx_head}"] = params["params"][f"Dense_{2 * (self.n_heads - 1)}"]
+            unfrozen_params["params"][f"Dense_{2 * idx_head + 1}"] = params["params"][
+                f"Dense_{2 * (self.n_heads - 1) + 1}"
+            ]
+
+        return FrozenDict(unfrozen_params)
 
 
 # class FullyConnectedMultiQNet(hk.Module):
@@ -156,142 +245,5 @@ class AtariDQN(DQN):
 #         #         params[f"FullyConnectedNet/~/head_{self.n_heads - 1}_linear_last"],
 #         #         random_params[f"FullyConnectedNet/~/head_{idx_head}_linear_last"],
 #         #     )
-
-#         # return params
-
-
-# class AtariMultiQNet(hk.Module):
-#     def __init__(
-#         self,
-#         n_heads: int,
-#         n_shared_layers: int,
-#         zero_initializer: bool,
-#         n_actions: int,
-#     ) -> None:
-#         self.n_heads = n_heads
-#         super().__init__(name="AtariMultiQNet")
-#         if zero_initializer:
-#             self.initializer = hk.initializers.Constant(0)
-#         else:
-#             self.initializer = hk.initializers.TruncatedNormal()
-#         self.n_actions = n_actions
-
-#         architecture = [
-#             (hk.Conv2D, {"output_channels": 32, "kernel_shape": [8, 8], "stride": 4}),
-#             (hk.Conv2D, {"output_channels": 64, "kernel_shape": [4, 4], "stride": 2}),
-#             (hk.Conv2D, {"output_channels": 64, "kernel_shape": [3, 3], "stride": 1}),
-#             (hk.Linear, {"output_size": 512}),
-#             (hk.Linear, {"output_size": n_actions, "w_init": self.initializer}),
-#         ]
-
-#         shared_layers_first_head_ = []
-#         shared_layers_other_heads_ = []
-#         for idx_layer in range(n_shared_layers):
-#             shared_layers_first_head_.extend(
-#                 [
-#                     architecture[idx_layer][0](
-#                         **architecture[idx_layer][1], name=f"shared_first_head_layer_{idx_layer}"
-#                     ),
-#                     jax.nn.relu,
-#                 ]
-#             )
-#             shared_layers_other_heads_.extend(
-#                 [
-#                     architecture[idx_layer][0](
-#                         **architecture[idx_layer][1], name=f"shared_other_heads_layer_{idx_layer}"
-#                     ),
-#                     jax.nn.relu,
-#                 ]
-#             )
-#             if idx_layer == 2:
-#                 shared_layers_first_head_.append(hk.Flatten())
-#                 shared_layers_other_heads_.append(hk.Flatten())
-
-#         self.shared_layers_first_head = hk.Sequential(shared_layers_first_head_, name="shared_layers_first_head")
-#         self.shared_layers_other_heads = hk.Sequential(shared_layers_other_heads_, name="shared_layers_other_heads")
-
-#         self.heads = []
-#         for idx_head in range(self.n_heads):
-#             head_ = []
-#             for idx_layer in range(n_shared_layers, len(architecture) - 1):
-#                 head_.extend(
-#                     [
-#                         architecture[idx_layer][0](
-#                             **architecture[idx_layer][1], name=f"head_{idx_head}_layer_{idx_layer}"
-#                         ),
-#                         jax.nn.relu,
-#                     ]
-#                 )
-#                 if idx_layer == 2:
-#                     head_.append(hk.Flatten())
-#             head_.append(
-#                 architecture[-1][0](**architecture[-1][1], name=f"head_{idx_head}_layer_{len(architecture) - 1}")
-#             )
-#             self.heads.append(hk.Sequential(head_, name=f"head_{idx_head}"))
-
-#     def __call__(self, state: jnp.ndarray) -> jnp.ndarray:
-#         input = state / 255.0
-#         # "jnp.atleast4d"
-#         input = jnp.array(input, copy=False, ndmin=4)
-#         output = jnp.zeros((input.shape[0], self.n_heads, self.n_actions))
-
-#         shared_input_first_head = self.shared_layers_first_head(input)
-#         output = output.at[:, 0].set(self.heads[0](shared_input_first_head))
-
-#         shared_input_other_heads = self.shared_layers_other_heads(input)
-#         for idx_head in range(1, self.n_heads):
-#             output = output.at[:, idx_head].set(self.heads[idx_head](shared_input_other_heads))
-
-#         return output
-
-
-# class AtariiDQN(iDQN):
-#     def __init__(
-#         self,
-#         importance_iteration: jnp.ndarray,
-#         state_shape: list,
-#         n_actions: int,
-#         gamma: float,
-#         network_key: jax.random.PRNGKeyArray,
-#         head_behaviorial_probability: jnp.ndarray,
-#         n_shared_layers: int,
-#         zero_initializer: bool,
-#         learning_rate: float,
-#     ) -> None:
-#         self.n_shared_layers = n_shared_layers
-#         self.n_layers = 5
-
-#         def network(state: jnp.ndarray) -> jnp.ndarray:
-#             return AtariMultiQNet(len(importance_iteration) + 1, n_shared_layers, zero_initializer, n_actions)(state)
-
-#         super().__init__(
-#             importance_iteration,
-#             state_shape,
-#             n_actions,
-#             gamma,
-#             network,
-#             network_key,
-#             head_behaviorial_probability,
-#             learning_rate,
-#         )
-
-#     # This should go to base_q
-#     @partial(jax.jit, static_argnames="self")
-#     def move_forward(self, params: hk.Params) -> hk.Params:
-#         raise NotImplementedError
-#         # # The shared params of the first head takes the shared params of the other heads
-#         # for idx_layer in range(self.n_shared_layers):
-#         #     set_params(
-#         #         params[f"AtariNet/~/shared_first_head_layer_{idx_layer}"],
-#         #         params[f"AtariNet/~/shared_other_heads_layer_{idx_layer}"],
-#         #     )
-
-#         # # Each head takes the params of the last head with some noise
-#         # for idx_head in range(self.n_heads):
-#         #     for idx_layer in range(self.n_shared_layers, self.n_layers):
-#         #         set_params(
-#         #             params[f"AtariNet/~/head_{idx_head}_layer_{idx_layer}"],
-#         #             params[f"AtariNet/~/head_{self.n_heads - 1}_layer_{idx_layer}"],
-#         #         )
 
 #         # return params

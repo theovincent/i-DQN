@@ -1,5 +1,4 @@
 import os
-import shutil
 from tqdm import tqdm
 import numpy as np
 import jax
@@ -20,7 +19,13 @@ def train(
     env: AtariEnv,
     replay_buffer: ReplayBuffer,
 ) -> None:
-    experiment_path = f"experiments/{environment_name}/figures/{args.experiment_name}/DQN/"
+    # if DQN
+    if args.bellman_iterations_scope is None:
+        experiment_path = f"experiments/{environment_name}/figures/{args.experiment_name}/DQN/"
+    else:
+        experiment_path = (
+            f"experiments/{environment_name}/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_"
+        )
 
     if args.restart_training:
         first_epoch = p["n_epochs"] // 2
