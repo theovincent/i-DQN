@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.stats import t as student_variable
+from scipy.stats import bootstrap
 
 
 def single_confidence_interval(mean, std, n_samples, confidence_level):
@@ -10,7 +11,7 @@ def single_confidence_interval(mean, std, n_samples, confidence_level):
     return lower_bound, upper_bound
 
 
-def confidence_interval(means, stds, n_samples, confidence_level=0.95):
+def confidence_interval_student(means, stds, n_samples, confidence_level=0.95):
     confidence_intervals = np.zeros((2, len(means)))
 
     if n_samples == 1:
@@ -21,5 +22,16 @@ def confidence_interval(means, stds, n_samples, confidence_level=0.95):
             confidence_intervals[0, idx_iteration], confidence_intervals[1, idx_iteration] = single_confidence_interval(
                 means[idx_iteration], stds[idx_iteration], n_samples, confidence_level
             )
+
+    return confidence_intervals
+
+
+def confidence_interval_bootstrap(scores: np.ndarray) -> np.ndarray:
+    confidence_intervals = np.zeros((2, scores.shape[1]))
+
+    for idx_iteration in range(scores.shape[1]):
+        confidence_intervals[0, idx_iteration], confidence_intervals[1, idx_iteration] = bootstrap(
+            (scores[:, idx_iteration],), np.mean
+        ).confidence_interval
 
     return confidence_intervals
