@@ -89,14 +89,16 @@ class AtariSharedMultiQNet:
         features = self.torso.apply(jax.tree_util.tree_map(lambda x: x[0], torso_params), state)
         head_params = jax.vmap(self.head.init, in_axes=[0, None])(jax.random.split(key, self.n_heads), features)
 
-        return FrozenDict(torso_params=torso_params, head_params=head_params)
+        return FrozenDict(
+            torso_params=torso_params,
+            head_params_ref=jax.tree_util.tree_map(lambda x: x[0], head_params),
+            head_params=jax.tree_util.tree_map(lambda x: x[1:], head_params),
+        )
 
     def apply(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
         features = jax.vmap(self.torso.apply, in_axes=[0, None])(params["torso_params"], state)
-        head_ref = self.head.apply(jax.tree_util.tree_map(lambda x: x[0], params["head_params"]), features[0])
-        heads = jax.vmap(self.head.apply, in_axes=[0, None])(
-            jax.tree_util.tree_map(lambda x: x[1:], params["head_params"]), features[1]
-        )
+        head_ref = self.head.apply(params["head_params_ref"], features[0])
+        heads = jax.vmap(self.head.apply, in_axes=[0, None])(params["head_params"], features[1])
 
         return jnp.vstack((head_ref[None], heads))
 
