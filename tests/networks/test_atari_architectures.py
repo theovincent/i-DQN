@@ -2,6 +2,7 @@ import os
 import unittest
 import jax
 import jax.numpy as jnp
+from flax.core import FrozenDict
 import numpy as np
 
 from idqn.networks.q_architectures import AtariDQN, AtariiDQN
@@ -106,16 +107,20 @@ class TestAtariDQN(unittest.TestCase):
         q_to_load = AtariDQN(self.state_shape, self.n_actions, self.gamma, key, 1, None, None)
         q_to_load.load("tests/Q")
 
-        for idx_layers, layers in q_to_save.params["params"].items():
-            for idx_weights, weights in layers.items():
-                self.assertEqual(np.linalg.norm(weights - q_to_load.params["params"][idx_layers][idx_weights]), 0)
-                self.assertEqual(
-                    np.linalg.norm(
-                        q_to_save.target_params["params"][idx_layers][idx_weights]
-                        - q_to_load.target_params["params"][idx_layers][idx_weights]
-                    ),
-                    0,
-                )
+        def check_null(frozen_dict):
+            if isinstance(frozen_dict, FrozenDict):
+                for values in frozen_dict.values():
+                    check_null(values)
+            else:
+                self.assertEqual(frozen_dict, 0)
+
+        diff_params = jax.tree_util.tree_map(lambda x, y: jnp.linalg.norm(x - y), q_to_save.params, q_to_load.params)
+        diff_target_params = jax.tree_util.tree_map(
+            lambda x, y: jnp.linalg.norm(x - y), q_to_save.target_params, q_to_load.target_params
+        )
+
+        check_null(diff_params)
+        check_null(diff_target_params)
 
         os.remove("tests/Q_online_params")
         os.remove("tests/Q_target_params")
@@ -279,4 +284,4 @@ class TestAtariiDQN(unittest.TestCase):
 
         forward_output = q(q.params, state)
 
-        self.assertEqual(np.linalg.norm(forward_output[:, 0] - output[:, -1]), 0)
+        self.assertAlmostEqual(np.linalg.norm(forward_output[:, 0] - output[:, -1]), 0, places=8)

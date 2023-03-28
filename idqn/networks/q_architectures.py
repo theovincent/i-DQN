@@ -7,26 +7,51 @@ import jax.numpy as jnp
 from idqn.networks.base_q import DQN, iDQN
 
 
-class AtariQNet(nn.Module):
-    n_actions: int
-    initializer = nn.initializers.xavier_uniform()
-
+class Torso(nn.Module):
     @nn.compact
-    def __call__(self, state) -> jnp.float32:
+    def __call__(self, state):
         initializer = nn.initializers.xavier_uniform()
         # Convert to channel last
         x = jnp.transpose(state / 255.0, (1, 2, 0))
+
         x = nn.Conv(features=32, kernel_size=(8, 8), strides=(4, 4), kernel_init=initializer)(x)
         x = nn.relu(x)
         x = nn.Conv(features=64, kernel_size=(4, 4), strides=(2, 2), kernel_init=initializer)(x)
         x = nn.relu(x)
         x = nn.Conv(features=64, kernel_size=(3, 3), strides=(1, 1), kernel_init=initializer)(x)
         x = nn.relu(x)
-        x = x.reshape((-1))  # flatten
+
+        return x.reshape((-1))  # flatten
+
+
+class Head(nn.Module):
+    n_actions: int
+
+    @nn.compact
+    def __call__(self, x):
+        initializer = nn.initializers.xavier_uniform()
         x = nn.Dense(features=512, kernel_init=initializer)(x)
         x = nn.relu(x)
 
         return nn.Dense(features=self.n_actions, kernel_init=initializer)(x)
+
+
+class AtariQNet:
+    def __init__(self, n_actions: int) -> None:
+        self.n_actions = n_actions
+        self.torso = Torso()
+        self.head = Head(self.n_actions)
+
+    def init(self, key: jax.random.PRNGKey, state: jnp.ndarray) -> FrozenDict:
+        torso_params = self.torso.init(key, state)
+        features = self.torso.apply(torso_params, state)
+        head_params = self.head.init(key, features)
+
+        return FrozenDict(torso_params=torso_params, head_params=head_params)
+
+    def apply(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
+        features = self.torso.apply(params["torso_params"], state)
+        return self.head.apply(params["head_params"], features)
 
 
 class AtariDQN(DQN):
@@ -52,45 +77,28 @@ class AtariDQN(DQN):
         )
 
 
-class AtariSharedMultiQNet(nn.Module):
-    n_heads: int
-    n_actions: int
-    initializer = nn.initializers.xavier_uniform()
+class AtariSharedMultiQNet:
+    def __init__(self, n_heads: int, n_actions: int) -> None:
+        self.n_heads = n_heads
+        self.n_actions = n_actions
+        self.torso = Torso()
+        self.head = Head(self.n_actions)
 
-    @nn.compact
-    def __call__(self, state) -> jnp.float32:
-        initializer = nn.initializers.xavier_uniform()
-        # Convert to channel last
-        input_shared_params = jnp.transpose(state / 255.0, (1, 2, 0))
+    def init(self, key: jax.random.PRNGKey, state: jnp.ndarray) -> FrozenDict:
+        torso_params = jax.vmap(self.torso.init, in_axes=[0, None])(jax.random.split(key), state)
+        features = self.torso.apply(jax.tree_util.tree_map(lambda x: x[0], torso_params), state)
+        head_params = jax.vmap(self.head.init, in_axes=[0, None])(jax.random.split(key, self.n_heads), features)
 
-        x = nn.Conv(features=32, kernel_size=(8, 8), strides=(4, 4), kernel_init=initializer)(input_shared_params)
-        x = nn.relu(x)
-        x = nn.Conv(features=64, kernel_size=(4, 4), strides=(2, 2), kernel_init=initializer)(x)
-        x = nn.relu(x)
-        x = nn.Conv(features=64, kernel_size=(3, 3), strides=(1, 1), kernel_init=initializer)(x)
-        x = nn.relu(x)
-        input_first_head = x.reshape((-1))  # flatten
+        return FrozenDict(torso_params=torso_params, head_params=head_params)
 
-        x = nn.Conv(features=32, kernel_size=(8, 8), strides=(4, 4), kernel_init=initializer)(input_shared_params)
-        x = nn.relu(x)
-        x = nn.Conv(features=64, kernel_size=(4, 4), strides=(2, 2), kernel_init=initializer)(x)
-        x = nn.relu(x)
-        x = nn.Conv(features=64, kernel_size=(3, 3), strides=(1, 1), kernel_init=initializer)(x)
-        x = nn.relu(x)
-        input_other_heads = x.reshape((-1))  # flatten
+    def apply(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
+        features = jax.vmap(self.torso.apply, in_axes=[0, None])(params["torso_params"], state)
+        head_ref = self.head.apply(jax.tree_util.tree_map(lambda x: x[0], params["head_params"]), features[0])
+        heads = jax.vmap(self.head.apply, in_axes=[0, None])(
+            jax.tree_util.tree_map(lambda x: x[1:], params["head_params"]), features[1]
+        )
 
-        output = jnp.zeros((self.n_heads, self.n_actions))
-
-        x = nn.Dense(features=512, kernel_init=initializer)(input_first_head)
-        x = nn.relu(x)
-        output = output.at[0].set(nn.Dense(features=self.n_actions, kernel_init=initializer)(x))
-
-        for idx_head in range(1, self.n_heads):
-            x = nn.Dense(features=512, kernel_init=initializer)(input_other_heads)
-            x = nn.relu(x)
-            output = output.at[idx_head].set(nn.Dense(features=self.n_actions, kernel_init=initializer)(x))
-
-        return output
+        return jnp.vstack((head_ref[None], heads))
 
 
 class AtariiDQN(iDQN):
@@ -125,16 +133,14 @@ class AtariiDQN(iDQN):
     def update_heads(self, params: FrozenDict) -> FrozenDict:
         unfrozen_params = params.unfreeze()
         # The shared params of the first head takes the shared params of the other heads
-        unfrozen_params["params"]["Conv_0"] = params["params"]["Conv_3"]
-        unfrozen_params["params"]["Conv_1"] = params["params"]["Conv_4"]
-        unfrozen_params["params"]["Conv_2"] = params["params"]["Conv_5"]
+        unfrozen_params["torso_params"] = jax.tree_util.tree_map(
+            lambda x: jnp.array([x[1], x[1]]), params["torso_params"]
+        )
 
         # Each head takes the params of the last head
-        for idx_head in range(self.n_heads - 1):
-            unfrozen_params["params"][f"Dense_{2 * idx_head}"] = params["params"][f"Dense_{2 * (self.n_heads - 1)}"]
-            unfrozen_params["params"][f"Dense_{2 * idx_head + 1}"] = params["params"][
-                f"Dense_{2 * (self.n_heads - 1) + 1}"
-            ]
+        unfrozen_params["head_params"] = jax.tree_util.tree_map(
+            lambda x: jnp.repeat(x[None, -1], self.n_heads, 0), params["head_params"]
+        )
 
         return FrozenDict(unfrozen_params)
 
