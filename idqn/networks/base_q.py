@@ -26,7 +26,8 @@ class BaseQ:
         self.gamma = gamma
         self.network = network
         self.network_key = network_key
-        self.params = self.network.init(self.network_key, state=jnp.zeros(self.state_shape, dtype=jnp.float32))
+        # +1 for batch size
+        self.params = self.network.init(self.network_key, state=jnp.zeros((1,) + self.state_shape, dtype=jnp.float32))
         self.target_params = self.params
         self.n_training_steps_per_online_update = n_training_steps_per_online_update
 
@@ -40,9 +41,9 @@ class BaseQ:
     @partial(jax.jit, static_argnames="self")
     def __call__(self, params: FrozenDict, states: jnp.ndarray) -> jnp.ndarray:
         # "jnp.atleast{batch_dims}d"
-        inputs = jnp.array(states, ndmin=len(self.state_shape) + 1)
+        inputs = jnp.array(states, ndmin=1 + len(self.state_shape))
 
-        return jax.vmap(self.network.apply, in_axes=[None, 0])(params, inputs)
+        return self.network.apply(params, inputs)
 
     def loss(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict, ord: int = 2) -> jnp.float32:
         raise NotImplementedError

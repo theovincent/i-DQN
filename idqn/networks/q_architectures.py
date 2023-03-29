@@ -12,7 +12,7 @@ class Torso(nn.Module):
     def __call__(self, state):
         initializer = nn.initializers.xavier_uniform()
         # Convert to channel last
-        x = jnp.transpose(state / 255.0, (1, 2, 0))
+        x = jnp.transpose(state / 255.0, (0, 2, 3, 1))
 
         x = nn.Conv(features=32, kernel_size=(8, 8), strides=(4, 4), kernel_init=initializer)(x)
         x = nn.relu(x)
@@ -21,7 +21,7 @@ class Torso(nn.Module):
         x = nn.Conv(features=64, kernel_size=(3, 3), strides=(1, 1), kernel_init=initializer)(x)
         x = nn.relu(x)
 
-        return x.reshape((-1))  # flatten
+        return x.reshape((state.shape[0], -1))  # flatten
 
 
 class Head(nn.Module):
@@ -36,22 +36,16 @@ class Head(nn.Module):
         return nn.Dense(features=self.n_actions, kernel_init=initializer)(x)
 
 
-class AtariQNet:
-    def __init__(self, n_actions: int) -> None:
-        self.n_actions = n_actions
+class AtariQNet(nn.Module):
+    n_actions: int
+
+    def setup(self):
         self.torso = Torso()
         self.head = Head(self.n_actions)
 
-    def init(self, key: jax.random.PRNGKey, state: jnp.ndarray) -> FrozenDict:
-        torso_params = self.torso.init(key, state)
-        features = self.torso.apply(torso_params, state)
-        head_params = self.head.init(key, features)
-
-        return FrozenDict(torso_params=torso_params, head_params=head_params)
-
-    def apply(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
-        features = self.torso.apply(params["torso_params"], state)
-        return self.head.apply(params["head_params"], features)
+    @nn.compact
+    def __call__(self, state):
+        return self.head(self.torso(state))
 
 
 class AtariDQN(DQN):
@@ -77,6 +71,19 @@ class AtariDQN(DQN):
         )
 
 
+class AtariMultiQNet:
+    def __init__(self, n_heads: int, n_actions: int) -> None:
+        self.n_heads = n_heads
+        self.n_actions = n_actions
+        self.atari_q_net = AtariQNet(self.n_actions)
+
+    def init(self, key: jax.random.PRNGKey, state: jnp.ndarray) -> FrozenDict:
+        return jax.vmap(self.atari_q_net.init, in_axes=[0, None])(jax.random.split(key, self.n_heads), state)
+
+    def apply(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
+        return jax.vmap(self.atari_q_net.apply, in_axes=[0, None], out_axes=1)(params, state)
+
+
 class AtariSharedMultiQNet:
     def __init__(self, n_heads: int, n_actions: int) -> None:
         self.n_heads = n_heads
@@ -85,22 +92,32 @@ class AtariSharedMultiQNet:
         self.head = Head(self.n_actions)
 
     def init(self, key: jax.random.PRNGKey, state: jnp.ndarray) -> FrozenDict:
-        torso_params = jax.vmap(self.torso.init, in_axes=[0, None])(jax.random.split(key), state)
-        features = self.torso.apply(jax.tree_util.tree_map(lambda x: x[0], torso_params), state)
-        head_params = jax.vmap(self.head.init, in_axes=[0, None])(jax.random.split(key, self.n_heads), features)
+        # We need only two sets of torso parameters
+        torso_params = {}
+        torso_params["torso_params_0"] = self.torso.init(key, state)
+        key, _ = jax.random.split(key)
+        torso_params["torso_params_1"] = self.torso.init(key, state)
 
-        return FrozenDict(
-            torso_params=torso_params,
-            head_params_ref=jax.tree_util.tree_map(lambda x: x[0], head_params),
-            head_params=jax.tree_util.tree_map(lambda x: x[1:], head_params),
-        )
+        features = self.torso.apply(torso_params["torso_params_0"], state)
+
+        head_params = {}
+        for idx_head in range(self.n_heads):
+            key, _ = jax.random.split(key)
+            head_params[f"head_params_{idx_head}"] = self.head.init(key, features)
+
+        return FrozenDict(**torso_params, **head_params)
 
     def apply(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
-        features = jax.vmap(self.torso.apply, in_axes=[0, None])(params["torso_params"], state)
-        head_ref = self.head.apply(params["head_params_ref"], features[0])
-        heads = jax.vmap(self.head.apply, in_axes=[0, None])(params["head_params"], features[1])
+        features_0 = self.torso.apply(params["torso_params_0"], state)
+        features_1 = self.torso.apply(params["torso_params_1"], state)
 
-        return jnp.vstack((head_ref[None], heads))
+        output = jnp.zeros((state.shape[0], self.n_heads, self.n_actions))
+
+        output = output.at[:, 0].set(self.head.apply(params["head_params_0"], features_0))
+        for idx_head in range(1, self.n_heads):
+            output = output.at[:, idx_head].set(self.head.apply(params[f"head_params_{idx_head}"], features_1))
+
+        return output
 
 
 class AtariiDQN(iDQN):
@@ -135,14 +152,11 @@ class AtariiDQN(iDQN):
     def update_heads(self, params: FrozenDict) -> FrozenDict:
         unfrozen_params = params.unfreeze()
         # The shared params of the first head takes the shared params of the other heads
-        unfrozen_params["torso_params"] = jax.tree_util.tree_map(
-            lambda x: jnp.array([x[1], x[1]]), params["torso_params"]
-        )
+        unfrozen_params["torso_params_0"] = params["torso_params_1"]
 
         # Each head takes the params of the last head
-        unfrozen_params["head_params"] = jax.tree_util.tree_map(
-            lambda x: jnp.repeat(x[None, -1], self.n_heads, 0), params["head_params"]
-        )
+        for idx_head in range(self.n_heads - 1):
+            unfrozen_params[f"head_params_{idx_head}"] = params[f"head_params_{self.n_heads - 1}"]
 
         return FrozenDict(unfrozen_params)
 
