@@ -22,10 +22,3 @@ def addparse(parser: argparse.ArgumentParser) -> None:
         type=int,
         required=True,
     )
-    parser.add_argument(
-        "-r",
-        "--restart_training",
-        help="Whether to restart the training from the last stored epoch.",
-        default=False,
-        action="store_true",
-    )

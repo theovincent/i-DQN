@@ -24,7 +24,6 @@ def run_cli(argvs=sys.argv[1:]):
     from idqn.environments.atari import AtariEnv
     from idqn.sample_collection.replay_buffer import ReplayBuffer
     from idqn.networks.q_architectures import AtariiDQN
-    from experiments.base.DQN import train
     from idqn.utils.importance_iteration import importance_iteration
     from experiments.base.DQN import train
 

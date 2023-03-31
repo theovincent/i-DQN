@@ -27,32 +27,14 @@ def train(
             f"experiments/{environment_name}/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_"
         )
 
-    if args.restart_training:
-        first_epoch = p["n_epochs"] // 2
-        last_epoch = p["n_epochs"]
+    sample_key, exploration_key = jax.random.split(key)
+    n_training_steps = 0
+    losses = np.ones((p["n_epochs"], p["n_training_steps_per_epoch"])) * np.nan
+    js = np.ones(p["n_epochs"]) * np.nan
+    max_j = -float("inf")
+    argmax_j = None
 
-        sample_key, exploration_key = np.load(f"{experiment_path}K_{args.seed}.npy")
-        env.load(f"{experiment_path}E_{args.seed}")
-        replay_buffer.load(f"{experiment_path}R_{args.seed}")
-        q.load(f"{experiment_path}Q_{args.seed}_{first_epoch - 1}")
-        n_training_steps = int(np.load(f"{experiment_path}N_{args.seed}"))
-
-        losses = np.load(f"{experiment_path}L_{args.seed}.npy")
-        js = np.load(f"{experiment_path}J_{args.seed}.npy")
-        max_j = np.max(js[:first_epoch])
-        argmax_j = np.argmax(js[:first_epoch])
-    else:
-        first_epoch = 0
-        last_epoch = p["n_epochs"] // 2
-
-        sample_key, exploration_key = jax.random.split(key)
-        n_training_steps = 0
-        losses = np.ones((p["n_epochs"], p["n_training_steps_per_epoch"])) * np.nan
-        js = np.ones(p["n_epochs"]) * np.nan
-        max_j = -float("inf")
-        argmax_j = None
-
-        env.collect_random_samples(sample_key, replay_buffer, p["n_initial_samples"], p["horizon"])
+    env.collect_random_samples(sample_key, replay_buffer, p["n_initial_samples"], p["horizon"])
 
     epsilon_schedule = EpsilonGreedySchedule(
         p["starting_eps"],
@@ -62,7 +44,7 @@ def train(
         n_training_steps,
     )
 
-    for idx_epoch in tqdm(range(first_epoch, last_epoch)):
+    for idx_epoch in tqdm(range(p["n_epochs"])):
         sum_reward = 0
         n_episodes = 0
         idx_training_step = 0
@@ -99,10 +81,3 @@ def train(
             argmax_j = idx_epoch
             max_j = js[idx_epoch]
             q.save(f"{experiment_path}Q_{args.seed}_{argmax_j}_best", online_params_only=True)
-
-    if not args.restart_training:
-        np.save(f"{experiment_path}K_{args.seed}", np.array([sample_key, epsilon_schedule.key]))
-        q.save(f"{experiment_path}Q_{args.seed}_{last_epoch - 1}")
-        env.save(f"{experiment_path}E_{args.seed}")
-        replay_buffer.save(f"{experiment_path}R_{args.seed}")
-        np.save(f"{experiment_path}N_{args.seed}", np.array(n_training_steps))
