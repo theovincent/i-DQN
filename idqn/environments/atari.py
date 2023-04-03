@@ -58,7 +58,7 @@ class AtariEnv:
 
     @property
     def state(self) -> np.ndarray:
-        return np.array(self.stacked_frames)
+        return LazyFrames(list(self.stacked_frames))
 
     def reset(self) -> np.ndarray:
         self.env.reset()
@@ -73,7 +73,7 @@ class AtariEnv:
             maxlen=self.n_stacked_frames,
         )
 
-        return LazyFrames(list(self.stacked_frames))
+        return self.state
 
     def step(self, action: jnp.int8) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict]:
         reward = 0
@@ -94,7 +94,7 @@ class AtariEnv:
 
         self.n_steps += 1
 
-        return LazyFrames(list(self.stacked_frames)), reward, absorbing, _
+        return self.state, reward, absorbing, _
 
     def pool_and_resize(self) -> np.ndarray:
         np.maximum(self.screen_buffer[0], self.screen_buffer[1], out=self.screen_buffer[0])

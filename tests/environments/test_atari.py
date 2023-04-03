@@ -72,13 +72,13 @@ class TestAtariEnv(unittest.TestCase):
         )
         env_to_load.load("tests/test_store_load")
 
-        self.assertEqual(np.linalg.norm(env_to_store.state - env_to_load.state), 0)
+        self.assertEqual(np.linalg.norm(np.array(env_to_store.state) - np.array(env_to_load.state)), 0)
         self.assertEqual(env_to_store.n_steps, env_to_load.n_steps)
 
         env_to_store.step(0)
         env_to_load.step(0)
 
-        self.assertEqual(np.linalg.norm(env_to_store.state - env_to_load.state), 0)
+        self.assertEqual(np.linalg.norm(np.array(env_to_store.state) - np.array(env_to_load.state)), 0)
 
         os.remove("tests/test_store_load_ale_state")
         os.remove("tests/test_store_load_frame_state")
