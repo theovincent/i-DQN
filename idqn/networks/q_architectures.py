@@ -11,8 +11,10 @@ class Torso(nn.Module):
     @nn.compact
     def __call__(self, state):
         initializer = nn.initializers.xavier_uniform()
+        # "jnp.atleast4d"
+        x = jnp.array(state, ndmin=4)
         # Convert to channel last
-        x = jnp.transpose(state / 255.0, (0, 2, 3, 1))
+        x = jnp.transpose(x / 255.0, (0, 2, 3, 1))
 
         x = nn.Conv(features=32, kernel_size=(8, 8), strides=(4, 4), kernel_init=initializer)(x)
         x = nn.relu(x)
@@ -118,6 +120,24 @@ class AtariSharedMultiQNet:
             output = output.at[:, idx_head].set(self.head.apply(params[f"head_params_{idx_head}"], features_1))
 
         return output
+
+    def apply_specific_head(self, params: FrozenDict, states: jnp.ndarray, idx_head: int) -> jnp.ndarray:
+        if idx_head == 0:
+            return self.apply_first_head(params, states)
+        else:
+            return self.apply_other_head(params, params[f"head_params_{idx_head}"], states)
+
+    @partial(jax.jit, static_argnames="self")
+    def apply_first_head(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
+        features_0 = self.torso.apply(params["torso_params_0"], state)
+
+        return self.head.apply(params["head_params_0"], features_0)
+
+    @partial(jax.jit, static_argnames="self")
+    def apply_other_head(self, params: FrozenDict, params_head: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
+        features_1 = self.torso.apply(params["torso_params_1"], state)
+
+        return self.head.apply(params_head, features_1)
 
 
 class AtariiDQN(iDQN):

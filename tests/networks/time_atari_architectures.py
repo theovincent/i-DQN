@@ -127,9 +127,10 @@ class TimeAtariQ:
         state_key = self.key
 
         # Outside of the count: time to jit the __call__ function
-        jax.block_until_ready(
-            self.q.best_action(self.key, self.q.params, jax.random.uniform(self.key, self.state_shape))
-        )
+        # several time to jit all the underlying functions of q.best_action
+        for _ in range(self.n_runs):
+            state_key, key = jax.random.split(state_key)
+            jax.block_until_ready(self.q.best_action(key, self.q.params, jax.random.uniform(key, self.state_shape)))
 
         t_begin = time()
 

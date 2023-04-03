@@ -27,7 +27,7 @@ class BaseQ:
         self.network = network
         self.network_key = network_key
         # +1 for batch size
-        self.params = self.network.init(self.network_key, state=jnp.zeros((1,) + self.state_shape, dtype=jnp.float32))
+        self.params = self.network.init(self.network_key, state=jnp.zeros(self.state_shape, dtype=jnp.float32))
         self.target_params = self.params
         self.n_training_steps_per_online_update = n_training_steps_per_online_update
 
@@ -40,10 +40,7 @@ class BaseQ:
 
     @partial(jax.jit, static_argnames="self")
     def __call__(self, params: FrozenDict, states: jnp.ndarray) -> jnp.ndarray:
-        # "jnp.atleast{batch_dims}d"
-        inputs = jnp.array(states, ndmin=1 + len(self.state_shape))
-
-        return self.network.apply(params, inputs)
+        return self.network.apply(params, states)
 
     def loss(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict, ord: int = 2) -> jnp.float32:
         raise NotImplementedError
@@ -250,11 +247,17 @@ class iDQN(BaseMultiHeadQ):
         error = predictions - targets
         return self.metric(error, ord="sum")
 
-    @partial(jax.jit, static_argnames="self")
     def best_action(self, key: jax.random.PRNGKey, q_params: FrozenDict, state: jnp.ndarray) -> jnp.int8:
         idx_head = self.random_head(key, self.head_behaviorial_probability)
 
-        return jnp.argmax(self(q_params, jnp.array(state, dtype=jnp.float32))[0, idx_head]).astype(jnp.int8)
+        possible_actions = self.network.apply_specific_head(q_params, state, idx_head)
+
+        return self.argmax_0(possible_actions)
+
+    @staticmethod
+    @jax.jit
+    def argmax_0(possible_actions):
+        return jnp.argmax(possible_actions[0]).astype(jnp.int8)
 
     def update_online_params(self, step: int, replay_buffer: ReplayBuffer, key: jax.random.PRNGKeyArray) -> jnp.float32:
         loss = super().update_online_params(step, replay_buffer, key)
