@@ -83,17 +83,3 @@ class TestAtariEnv(unittest.TestCase):
         os.remove("tests/test_store_load_ale_state")
         os.remove("tests/test_store_load_frame_state")
         os.remove("tests/test_store_load_n_steps")
-
-    def test_lazy_frame(self):
-        env = AtariEnv(self.name)
-        key = self.key
-        first_state = env.reset()
-
-        key, _ = jax.random.split(key)
-        action = jax.random.randint(key, shape=(), minval=0, maxval=env.n_actions)
-        second_state, _, _, _ = env.step(action)
-
-        env.stacked_frames[0] *= 0
-
-        self.assertEqual(np.linalg.norm(np.array(first_state)[1]), 0)
-        self.assertEqual(np.linalg.norm(np.array(second_state)[0]), 0)

@@ -18,19 +18,6 @@ from idqn.sample_collection.exploration import EpsilonGreedySchedule
 from idqn.utils.pickle import save_pickled_data, load_pickled_data
 
 
-class LazyFrames:
-    """
-    Ensures common frames are only stored once to optimize memory use.
-    Inspired by https://github.com/Farama-Foundation/Gymnasium.
-    """
-
-    def __init__(self, frames: list):
-        self._frames = frames
-
-    def __array__(self):
-        return np.array(self._frames)
-
-
 class AtariEnv:
     def __init__(
         self,
@@ -58,7 +45,7 @@ class AtariEnv:
 
     @property
     def state(self) -> np.ndarray:
-        return LazyFrames(list(self.stacked_frames))
+        return np.array(self.stacked_frames)
 
     def reset(self) -> np.ndarray:
         self.env.reset()
