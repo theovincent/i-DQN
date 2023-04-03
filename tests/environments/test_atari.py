@@ -26,7 +26,7 @@ class TestAtariEnv(unittest.TestCase):
         for i in range(70):
             state_bis = env.step(i % 4)[0]
 
-        self.assertNotEqual(np.linalg.norm(state - state_bis), 0)
+        self.assertNotEqual(np.linalg.norm(np.array(state) - np.array(state_bis)), 0)
 
     def test_step_frame_stacking(self) -> None:
         env = AtariEnv(self.name)
@@ -39,7 +39,7 @@ class TestAtariEnv(unittest.TestCase):
             action = jax.random.randint(key, shape=(), minval=0, maxval=env.n_actions)
             state, _, absorbing, _ = env.step(action)
 
-            self.assertEqual(state.shape[0], env.n_stacked_frames)
+            self.assertEqual(np.array(state).shape[0], env.n_stacked_frames)
 
         self.assertEqual(env.env.unwrapped.ale.lives(), 0)
 
@@ -83,3 +83,17 @@ class TestAtariEnv(unittest.TestCase):
         os.remove("tests/test_store_load_ale_state")
         os.remove("tests/test_store_load_frame_state")
         os.remove("tests/test_store_load_n_steps")
+
+    def test_lazy_frame(self):
+        env = AtariEnv(self.name)
+        key = self.key
+        first_state = env.reset()
+
+        key, _ = jax.random.split(key)
+        action = jax.random.randint(key, shape=(), minval=0, maxval=env.n_actions)
+        second_state, _, _, _ = env.step(action)
+
+        env.stacked_frames[0] *= 0
+
+        self.assertEqual(np.linalg.norm(np.array(first_state)[1]), 0)
+        self.assertEqual(np.linalg.norm(np.array(second_state)[0]), 0)

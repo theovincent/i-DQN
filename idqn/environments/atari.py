@@ -18,6 +18,19 @@ from idqn.sample_collection.exploration import EpsilonGreedySchedule
 from idqn.utils.pickle import save_pickled_data, load_pickled_data
 
 
+class LazyFrames:
+    """
+    Ensures common frames are only stored once to optimize memory use.
+    Inspired by https://github.com/Farama-Foundation/Gymnasium.
+    """
+
+    def __init__(self, frames: list):
+        self._frames = frames
+
+    def __array__(self):
+        return np.array(self._frames)
+
+
 class AtariEnv:
     def __init__(
         self,
@@ -43,6 +56,10 @@ class AtariEnv:
             np.empty((self.original_state_height, self.original_state_width), dtype=np.uint8),
         ]
 
+    @property
+    def state(self) -> np.ndarray:
+        return np.array(self.stacked_frames)
+
     def reset(self) -> np.ndarray:
         self.env.reset()
 
@@ -55,9 +72,8 @@ class AtariEnv:
             np.repeat(self.resize()[None, ...], self.n_stacked_frames, axis=0),
             maxlen=self.n_stacked_frames,
         )
-        self.state = np.array(self.stacked_frames)
 
-        return self.state
+        return LazyFrames(list(self.stacked_frames))
 
     def step(self, action: jnp.int8) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict]:
         reward = 0
@@ -75,11 +91,10 @@ class AtariEnv:
                 break
 
         self.stacked_frames.append(self.pool_and_resize())
-        self.state = np.array(self.stacked_frames)
 
         self.n_steps += 1
 
-        return self.state, reward, absorbing, _
+        return LazyFrames(list(self.stacked_frames)), reward, absorbing, _
 
     def pool_and_resize(self) -> np.ndarray:
         np.maximum(self.screen_buffer[0], self.screen_buffer[1], out=self.screen_buffer[0])
@@ -107,7 +122,6 @@ class AtariEnv:
         self.reset()
         self.restore_ale_state(load_pickled_data(path + "_ale_state"))
         self.stacked_frames = load_pickled_data(path + "_frame_state")
-        self.state = np.array(self.stacked_frames)
         self.n_steps = load_pickled_data(path + "_n_steps")
 
     def collect_random_samples(
