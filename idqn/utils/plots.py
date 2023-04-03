@@ -29,9 +29,13 @@ def confidence_interval_student(means, stds, n_samples, confidence_level=0.95):
 def confidence_interval_bootstrap(scores: np.ndarray) -> np.ndarray:
     confidence_intervals = np.zeros((2, scores.shape[1]))
 
-    for idx_iteration in range(scores.shape[1]):
-        confidence_intervals[0, idx_iteration], confidence_intervals[1, idx_iteration] = bootstrap(
-            (scores[:, idx_iteration],), np.mean
-        ).confidence_interval
+    if scores.shape[0] == 1:
+        confidence_intervals[0] = scores
+        confidence_intervals[1] = scores
+    else:
+        for idx_iteration in range(scores.shape[1]):
+            confidence_intervals[0, idx_iteration], confidence_intervals[1, idx_iteration] = bootstrap(
+                (scores[:, idx_iteration],), np.mean
+            ).confidence_interval
 
     return confidence_intervals
