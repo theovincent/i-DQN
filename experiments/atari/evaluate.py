@@ -1,24 +1,52 @@
 import json
 import jax
 from idqn.utils.pickle import load_pickled_data
+from idqn.utils.importance_iteration import importance_iteration
 from idqn.environments.atari import AtariEnv
-from idqn.networks.q_architectures import AtariDQN
+from idqn.networks.q_architectures import AtariDQN, AtariiDQN
 
-params_path = "DQN_5/Breakout/DQN/Q_1_99"
 
-p = json.load(open(f"experiments/atari/figures/{params_path.split('/')[0]}/parameters.json"))
+# ------- To modify ------- #
+experiment = "test"
+algorithm = "iDQN"
+game = "Asterix"
+bellman_iterations_scope = 1
+parameters = "Q_1_1_best"
+# ------------------------- #
 
-env = AtariEnv(params_path.split("/")[1])
+if algorithm == "DQN":
+    params_path = f"{experiment}/{game}/{algorithm}/{parameters}"
+else:
+    params_path = f"{experiment}/{game}/{algorithm}/{bellman_iterations_scope}_{parameters}"
 
-q = AtariDQN(
-    (env.n_stacked_frames, env.state_height, env.state_width),
-    env.n_actions,
-    p["gamma"],
-    jax.random.PRNGKey(0),
-    None,
-    None,
-    None,
-)
+p = json.load(open(f"experiments/atari/figures/{experiment}/parameters.json"))
+
+env = AtariEnv(game)
+
+if algorithm == "DQN":
+    q = AtariDQN(
+        (env.n_stacked_frames, env.state_height, env.state_width),
+        env.n_actions,
+        p["gamma"],
+        jax.random.PRNGKey(0),
+        None,
+        None,
+        None,
+    )
+else:
+    q = AtariiDQN(
+        importance_iteration(p["idqn_importance_iteration"], p["gamma"], bellman_iterations_scope),
+        (env.n_stacked_frames, env.state_height, env.state_width),
+        env.n_actions,
+        p["gamma"],
+        jax.random.PRNGKey(0),
+        importance_iteration(p["idqn_head_behaviorial_policy"], p["gamma"], bellman_iterations_scope + 1),
+        None,
+        None,
+        None,
+        None,
+    )
+
 q_params = load_pickled_data(f"experiments/atari/figures/{params_path}_online_params")
 
 
