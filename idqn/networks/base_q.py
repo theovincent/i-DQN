@@ -26,7 +26,6 @@ class BaseQ:
         self.gamma = gamma
         self.network = network
         self.network_key = network_key
-        # +1 for batch size
         self.params = self.network.init(self.network_key, state=jnp.zeros(self.state_shape, dtype=jnp.float32))
         self.target_params = self.params
         self.n_training_steps_per_online_update = n_training_steps_per_online_update
