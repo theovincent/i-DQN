@@ -174,9 +174,9 @@ class AtariiDQN(iDQN):
         # The shared params of the first head takes the shared params of the other heads
         unfrozen_params["torso_params_0"] = params["torso_params_1"]
 
-        # Each head takes the params of the last head
+        # Each head takes the params of the following one
         for idx_head in range(self.n_heads - 1):
-            unfrozen_params[f"head_params_{idx_head}"] = params[f"head_params_{self.n_heads - 1}"]
+            unfrozen_params[f"head_params_{idx_head}"] = params[f"head_params_{idx_head + 1}"]
 
         return FrozenDict(unfrozen_params)
 

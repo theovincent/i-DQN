@@ -284,4 +284,4 @@ class TestAtariiDQN(unittest.TestCase):
 
         forward_output = q(q.params, state)
 
-        self.assertAlmostEqual(np.linalg.norm(forward_output[:, 0] - output[:, -1]), 0, places=8)
+        self.assertAlmostEqual(np.linalg.norm(forward_output[:, :-1] - output[:, 1:]), 0, places=8)
