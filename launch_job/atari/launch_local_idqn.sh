@@ -21,10 +21,6 @@ do
         # iDQN
         echo "launch train idqn"
         train_command="launch_job/atari/train_idqn.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope -g -ns $N_PARALLEL_SEEDS"
-        tmux send-keys -t train "$seed_command" ENTER "$train_command" ENTER "$train_command -r" ENTER
-
-        echo "launch evaluate idqn"
-        evaluate_command="launch_job/atari/evaluate_idqn.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope -ns $N_PARALLEL_SEEDS"
-        tmux send-keys -t evaluate "$seed_command" ENTER "$evaluate_command" ENTER "$evaluate_command -r" ENTER
+        tmux send-keys -t train "$seed_command" ENTER "$train_command" ENTER
     done
 done
