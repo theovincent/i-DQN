@@ -20,6 +20,8 @@ conda install -c conda-forge cudatoolkit-dev=11.6
 conda install -c conda-forge cudnn=8.4
 Set export XLA_PYTHON_CLIENT_MEM_FRACTION=0.5
 
+Clone the dopamine repository at the same level as the top folder.
+
 
 Atari implementation:
 The wrapped environment is build on gymnasium with no frame kipping, with 25% of probability that the previous action is played instead of the current one and with a reduced subset of actions. 
