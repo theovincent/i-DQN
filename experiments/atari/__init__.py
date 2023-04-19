@@ -116,3 +116,26 @@ ALL_RANDOM_SCORES = {
     "YarsRevenge": 3092.9,
     "Zaxxon": 32.5,
 }
+
+EXPERIMENTED_GAME = [
+    "Alien",
+    "Amidar",
+    "Assault",
+    "Asterix",
+    "BankHeist",
+    "BeamRider",
+    "Berzerk",
+    "Bowling",
+    "Boxing",
+    "Breakout",
+    "Centipede",
+    "ChopperCommand",
+    "CrazyClimber",
+    "DemonAttack",
+    "FishingDerby",
+    "Gopher",
+    "Qbert",
+    "Riverraid",
+    "StarGunner",
+    "VideoPinball",
+]
