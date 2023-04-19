@@ -148,6 +148,7 @@ dmypy.json
 experiments/car_on_hill/figures/*
 experiments/lunar_lander/figures/*
 experiments/atari/figures/*
+experiments/atari/baselines_scores/
 **/*.out
 
 # Save optimal values

@@ -20,7 +20,10 @@ conda install -c conda-forge cudatoolkit-dev=11.6
 conda install -c conda-forge cudnn=8.4
 Set export XLA_PYTHON_CLIENT_MEM_FRACTION=0.5
 
-Clone the dopamine repository at the same level as the top folder.
+For atari games get the google bucket provided in https://github.com/google-research/rliable to have the scores for the baselines. For that you might need to install the google cloud SDK https://cloud.google.com/sdk/docs/downloads-interactive?hl=en#linux-mac and run:
+```bash
+gsutil -m cp -R gs://rl-benchmark-data/ALE experiments/atari/baselines_scores
+```
 
 
 Atari implementation:
