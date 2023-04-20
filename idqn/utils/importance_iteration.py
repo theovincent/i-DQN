@@ -1,9 +1,10 @@
+from typing import Union
 import jax.numpy as jnp
 
 
-def importance_iteration(method: str, gamma: float, n_elements: int) -> jnp.ndarray:
+def importance_iteration(method: Union[str, int], gamma: float, n_elements: int) -> jnp.ndarray:
     """
-    Available methods: bound | uniform | last
+    Available methods: bound | uniform | [int]
     For method = bound:
         $\alpha_k = (1 - \gamma) \gamma^{K-k-1} / (1 - \gamma^{K+1})$
         so
@@ -21,5 +22,5 @@ def importance_iteration(method: str, gamma: float, n_elements: int) -> jnp.ndar
         return importance / importance.sum() * n_elements
     elif method == "uniform":
         return jnp.ones(n_elements)
-    elif method == "last":
-        return jnp.zeros(n_elements).at[-1].set(1)
+    elif type(method) != str:
+        return jnp.zeros(n_elements).at[int(method)].set(1)
