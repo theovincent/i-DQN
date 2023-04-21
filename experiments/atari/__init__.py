@@ -134,6 +134,7 @@ EXPERIMENTED_GAME = [
     "DemonAttack",
     "FishingDerby",
     "Gopher",
+    "Hero",
     "Qbert",
     "Riverraid",
     "StarGunner",

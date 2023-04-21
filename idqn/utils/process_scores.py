@@ -1,4 +1,5 @@
 from typing import Dict, Tuple, List
+from functools import partial
 import numpy as np
 import scipy
 import arch.bootstrap as arch_bs
@@ -133,3 +134,28 @@ def compute_iqm_and_confidence_interval(scores: Dict, selected_epochs: np.ndarra
     )
 
     return iqms, iqms_confidence_interval
+
+
+@partial(np.vectorize, excluded=[0])
+def scores_distribution(scores: np.ndarray, tau: float) -> float:
+    """Evaluates how many `scores` are above `tau` averaged across all runs."""
+    return np.mean(scores > tau)
+
+
+def compute_performance_profile_and_confidence_interval(scores: Dict, taus: np.ndarray) -> Tuple:
+    """
+    scores: "algorithm": "game": 200 x n_seeds
+    """
+    normalized_scores = normalize_scores(scores)
+    stacked_scores = stack_dictionary_values(normalized_scores)
+    # transpose to have n_seeds x n_games : format required by StratifiedBootstrap
+    selected_scores = stacked_scores[:, 199, :].transpose()
+
+    # Take the score distribution over games and seeds.
+    performance_profile = scores_distribution(selected_scores, taus)
+    # Take the confidence interval over seeds only.
+    performance_profile_confidence_interval = StratifiedBootstrap(selected_scores).conf_int(
+        partial(scores_distribution, tau=taus), reps=2000, size=0.95, method="percentile"
+    )
+
+    return performance_profile, performance_profile_confidence_interval
