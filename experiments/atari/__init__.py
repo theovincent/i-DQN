@@ -117,12 +117,15 @@ ALL_RANDOM_SCORES = {
     "Zaxxon": 32.5,
 }
 
+
 EXPERIMENTED_GAME = [
     "Alien",
     "Amidar",
     "Assault",
     "Asterix",
+    "Asteroids",
     "BankHeist",
+    "BattleZone",
     "BeamRider",
     "Berzerk",
     "Bowling",
@@ -132,6 +135,7 @@ EXPERIMENTED_GAME = [
     "ChopperCommand",
     "CrazyClimber",
     "DemonAttack",
+    "DoubleDunk",
     "FishingDerby",
     "Gopher",
     "Hero",
@@ -140,3 +144,5 @@ EXPERIMENTED_GAME = [
     "StarGunner",
     "VideoPinball",
 ]
+
+COLORS = {"ut30_uh6000_5": "#0072B2", "IQN": "#F0E442", "Rainbow": "#CC79A7", "REM": "#D55E00", "DQN (Adam)": "#009E73"}

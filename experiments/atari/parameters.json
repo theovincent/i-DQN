@@ -13,10 +13,10 @@
     "batch_size": 32,
     "---- iDQNs ---": "----------------------------",
     "idqn_learning_rate": 6.25e-5,
-    "idqn_n_training_steps_per_target_update": 1,
-    "idqn_n_training_steps_per_head_update": 8000,
+    "idqn_n_training_steps_per_target_update": 30,
+    "idqn_n_training_steps_per_head_update": 6000,
     "idqn_importance_iteration": "uniform",
-    "idqn_head_behaviorial_policy": "last",
+    "idqn_head_behaviorial_policy": "uniform",
     "---- DQNs ---": "-----------------------------",
     "dqn_learning_rate": 6.25e-5,
     "dqn_n_training_steps_per_target_update": 8000
