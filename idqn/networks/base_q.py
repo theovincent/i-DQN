@@ -195,7 +195,6 @@ class BaseMultiHeadQ(BaseQ):
     def random_head(self, key: jax.random.PRNGKeyArray, head_probability: jnp.ndarray) -> jnp.int8:
         return jax.random.choice(key, jnp.arange(self.n_heads), p=head_probability)
 
-    @partial(jax.jit, static_argnames="self")
     def compute_standard_deviation_head(self, replay_buffer: ReplayBuffer, key: jax.random.PRNGKeyArray) -> jnp.float32:
         standard_deviation = 0
 

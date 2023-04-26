@@ -117,12 +117,13 @@ def iqm(scores: np.ndarray) -> np.ndarray:
     return scipy.stats.trim_mean(scores.reshape((-1, scores.shape[-1])), proportiontocut=0.25, axis=0)
 
 
-def compute_iqm_and_confidence_interval(scores: Dict, selected_epochs: np.ndarray) -> Tuple:
+def compute_iqm_and_confidence_interval(scores: Dict, selected_epochs: np.ndarray, normalize: bool = True) -> Tuple:
     """
     scores: "algorithm": "game": 200 x n_seeds
     """
-    normalized_scores = normalize_scores(scores)
-    stacked_scores = stack_dictionary_values(normalized_scores)
+    if normalize:
+        scores = normalize_scores(scores)
+    stacked_scores = stack_dictionary_values(scores)
     # transpose to have n_seeds x n_games x n_selected_epochs: format required by StratifiedBootstrap
     selected_scores = stacked_scores[:, selected_epochs, :].transpose((2, 0, 1))
 
