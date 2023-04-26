@@ -154,7 +154,7 @@ COLORS = {
     "ut30_uh6000_k5_5": "#009E73",
     "sanity_check_1": "#0072B2",
     "sanity_check": "#D55E00",
-    "std_head_5": "#CC79A7",
+    "head_std_5": "#CC79A7",
     "IQN": "#F0E442",
     "Rainbow": "#CC79A7",
     "REM": "#D55E00",
@@ -168,7 +168,7 @@ LABEL = {
     "ut30_uh6000_k1_5_5": "uniform head sampling",
     "ut30_uh6000_k1_5": "first head sampling",
     "ut30_uh6000_k5_5": "last head sampling",
-    "std_head_5": "inter-head standard deviation",
+    "head_std_5": "inter-head standard deviation",
     "sanity_check_1": "K=1",
     "sanity_check": "(our implementation)",
 }
