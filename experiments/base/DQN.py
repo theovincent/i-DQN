@@ -29,8 +29,9 @@ def train(
 
     sample_key, exploration_key = jax.random.split(key)
     n_training_steps = 0
-    losses = np.ones((p["n_epochs"], p["n_training_steps_per_epoch"])) * np.nan
-    js = np.ones(p["n_epochs"]) * np.nan
+    losses = np.zeros((p["n_epochs"], p["n_training_steps_per_epoch"])) * np.nan
+    js = np.zeros(p["n_epochs"]) * np.nan
+    stds = np.zeros(p["n_epochs"]) * np.nan
     max_j = -float("inf")
     argmax_j = None
 
@@ -81,3 +82,10 @@ def train(
             argmax_j = idx_epoch
             max_j = js[idx_epoch]
             q.save(f"{experiment_path}Q_{args.seed}_{argmax_j}_best", online_params_only=True)
+
+        if p.get("compute_variance_head", False):
+            stds[idx_epoch] = q.compute_standard_deviation_head(replay_buffer, key)
+            np.save(
+                f"{experiment_path}S_{args.seed}.npy",
+                stds,
+            )

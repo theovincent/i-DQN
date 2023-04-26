@@ -195,6 +195,16 @@ class BaseMultiHeadQ(BaseQ):
     def random_head(self, key: jax.random.PRNGKeyArray, head_probability: jnp.ndarray) -> jnp.int8:
         return jax.random.choice(key, jnp.arange(self.n_heads), p=head_probability)
 
+    @partial(jax.jit, static_argnames="self")
+    def compute_standard_deviation_head(self, replay_buffer: ReplayBuffer, key: jax.random.PRNGKeyArray) -> jnp.float32:
+        standard_deviation = 0
+
+        for _ in range(100):
+            batch_samples = replay_buffer.sample_random_batch(key)
+            standard_deviation += jnp.std(self(self.params, batch_samples["state"]), axis=1).sum()
+
+        return standard_deviation / (100 * replay_buffer.batch_size * self.n_actions)
+
 
 class iDQN(BaseMultiHeadQ):
     def __init__(
