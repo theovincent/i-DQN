@@ -145,4 +145,28 @@ EXPERIMENTED_GAME = [
     "VideoPinball",
 ]
 
-COLORS = {"ut30_uh6000_5": "#0072B2", "IQN": "#F0E442", "Rainbow": "#CC79A7", "REM": "#D55E00", "DQN (Adam)": "#009E73"}
+COLORS = {
+    "ut30_uh6000_5": "#0072B2",
+    "ablation_study_K_5": "#0072B2",
+    "ablation_study_K_10": "#F0E442",
+    "ut30_uh6000_k1_5_5": "#0072B2",
+    "ut30_uh6000_k1_5": "#D55E00",
+    "ut30_uh6000_k5_5": "#009E73",
+    "sanity_check_1": "#0072B2",
+    "sanity_check": "#D55E00",
+    "IQN": "#F0E442",
+    "Rainbow": "#CC79A7",
+    "REM": "#D55E00",
+    "DQN (Adam)": "#009E73",
+}
+
+LABEL = {
+    "ut30_uh6000_5": "K=5",
+    "ablation_study_K_5": "K=5",
+    "ablation_study_K_10": "K=10",
+    "ut30_uh6000_k1_5_5": "uniform head sampling",
+    "ut30_uh6000_k1_5": "first head sampling",
+    "ut30_uh6000_k5_5": "last head sampling",
+    "sanity_check_1": "K=1",
+    "sanity_check": "(our implementation)",
+}
