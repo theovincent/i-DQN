@@ -32,6 +32,7 @@ def train(
     losses = np.zeros((p["n_epochs"], p["n_training_steps_per_epoch"])) * np.nan
     js = np.zeros(p["n_epochs"]) * np.nan
     stds = np.zeros(p["n_epochs"]) * np.nan
+    approximation_errors = np.zeros(p["n_epochs"]) * np.nan
     max_j = -float("inf")
     argmax_j = None
 
@@ -88,4 +89,10 @@ def train(
             np.save(
                 f"{experiment_path}S_{args.seed}.npy",
                 stds,
+            )
+        if args.bellman_iterations_scope is not None and p.get("compute_approximation_error", False):
+            approximation_errors[idx_epoch] = q.compute_approximation_error(replay_buffer, key)
+            np.save(
+                f"{experiment_path}A_{args.seed}.npy",
+                approximation_errors,
             )
