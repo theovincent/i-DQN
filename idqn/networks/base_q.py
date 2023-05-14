@@ -207,16 +207,16 @@ class BaseMultiHeadQ(BaseQ):
     def compute_approximation_error(self, replay_buffer: ReplayBuffer, key: jax.random.PRNGKeyArray) -> jnp.float32:
         approximation_error = 0
 
-        for _ in range(100):
+        for _ in range(500):
             batch_samples = replay_buffer.sample_random_batch(key)
 
             targets = self.compute_target(self.target_params, batch_samples)[:, 0]
             predictions = self(self.params, batch_samples["state"])[
                 jnp.arange(batch_samples["state"].shape[0]), 1, batch_samples["action"]
             ]
-            approximation_error += self.metric(predictions - targets, ord="2")
+            approximation_error += self.metric(predictions - targets, ord="sum")
 
-        return approximation_error / (100 * replay_buffer.batch_size * self.n_actions)
+        return approximation_error / (500 * replay_buffer.batch_size)
 
 
 class iDQN(BaseMultiHeadQ):
