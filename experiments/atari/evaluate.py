@@ -7,11 +7,11 @@ from idqn.networks.q_architectures import AtariDQN, AtariiDQN
 
 
 # ------- To modify ------- #
-experiment = "test"
+experiment = "ut30_uh6000"
 algorithm = "iDQN"
-game = "Asterix"
-bellman_iterations_scope = 1
-parameters = "Q_1_1_best"
+game = "Hero"
+bellman_iterations_scope = 10
+parameters = "Q_11_194_best"
 # ------------------------- #
 
 if algorithm == "DQN":
