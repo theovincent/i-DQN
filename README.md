@@ -1,8 +1,59 @@
-# iDQN
-Iterated Deep-Q Networks
+# Iterated Deep Q-Network: Efficient Learning of Bellman Iterations for Deep Reinforcement Learning
 
+## User installation (with Python 3.8.13 installed)
+A GPU is needed to run the experiments. In the folder where the code is, create a Python virtual environment, activate it, updae pip and install the package and its dependencies in editable mode:
+```bash
+python3 -m venv env_gpu
+source env_gpu/bin/activate
+pip install --upgrade pip
+pip install -e .
+pip install -U jax[cuda11_cudnn82]==0.4.6 -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+```
 
-You will need to install _swig_ to be able to install the library _box2d-py_ with the command line:
+## Run the experiments
+All the Atari games can be ran the same way by simply replacing the Atari game name, here is an example for Asteroids.
+
+The following command line runs the training in a tmux terminal:
+```Bash
+tmux new -s train -d
+launch_job/atari/launch_local_idqn.sh -e first_try/Asteroids -lb 5 -fs 1 -ls 1 -ns 1
+```
+The expected time to finish the run is around 60 hours.
+
+To monitor the current state of the training, you can have a look to the logs at:
+```Bash
+cat out/atari/first_try/Asteroids/5_train_idqn_11.out
+```
+
+At any time during the training, you can generate the figures shown in the paper by running the jupyter notebook file located at *experiments/atari/plots.ipynb*. In the first cell of the notebook, please make sure to change the entries according to what you have been running. You can also have a look at the loss of the training thought the jupyter notebook under *experiments/atari/plots_loss.ipynb*.
+
+## Run the tests
+Run all tests with
+```Bash
+pytest
+```
+The tests should take around 1 minute to run.
+
+## Baseline scores
+Get the google bucket provided in https://github.com/google-research/rliable to have the scores of the baselines. For that you might need to install the google cloud SDK https://cloud.google.com/sdk/docs/downloads-interactive?hl=en#linux-mac and run:
+```bash
+gsutil -m cp -R gs://rl-benchmark-data/ALE experiments/atari/baselines_scores
+```
+The file *atari_200_iters_scores.npy* is the one used to plot the figures. 
+
+## Details on the Atari environment
+The wrapped environment is build on Gymnasium with no frame kipping, with 25% of probability that the previous action is played instead of the current one and with a reduced subset of actions. 
+One step of the wrapped environment is composed of:
+- 4 steps of the gymnasium environment.
+- Max pooling over the 2 last greyscale frames.
+- Converting to a greyscale image with OpenCV.
+- Downscaling to 84 x 84 with OpenCV using linear interpolation.
+- Outputting the resulting frame along with the resulting frames of the 3 last steps. 
+
+Each episode ends when the _game over_ signal is sent.
+
+## Potential issues
+You might need to install _swig_ to be able to install the library _box2d-py_ with the command line:
 ```bash
 sudo apt-get install swig
 ```
@@ -11,28 +62,9 @@ or with conda
 conda install -c conda-forge swig
 ```
 
-For GPU usage:
-```Bash
-pip install -U jax[cuda11_cudnn82]==0.4.6 -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-```
-
+If JAX cannot access the GPU, use these specific version of CUDA libraries and restrain the GPU memory pre allocation with:
+```bash 
 conda install -c conda-forge cudatoolkit-dev=11.6
 conda install -c conda-forge cudnn=8.4
-Set export XLA_PYTHON_CLIENT_MEM_FRACTION=0.5
-
-For atari games get the google bucket provided in https://github.com/google-research/rliable to have the scores for the baselines. For that you might need to install the google cloud SDK https://cloud.google.com/sdk/docs/downloads-interactive?hl=en#linux-mac and run:
-```bash
-gsutil -m cp -R gs://rl-benchmark-data/ALE experiments/atari/baselines_scores
 ```
-
-
-Atari implementation:
-The wrapped environment is build on gymnasium with no frame kipping, with 25% of probability that the previous action is played instead of the current one and with a reduced subset of actions. 
-One step of the wrapped environment is composed of:
-- 4 steps of the gymnasium environment.
-- Max pooling over the 2 last frames.
-- Converting to a grayscale image with OpenCV.
-- Downscaling to 84 x 84 with OpenCV using linear interpolation.
-- Outputting the resulting frame along with the resulting frames of the 3 last steps. 
-
-Each episode starts with a random number of no-op actions that can go up to 30 single steps. Each episode ends when a life is lost. The reward of the wrapped environment is the sign of the reward from gymnasium. If the action "FIRE" can be used, it is used followed by action 2 before the no-op actions.
+and set ```XLA_PYTHON_CLIENT_MEM_FRACTION``` to ```0.4``` in line 15 of file *launch_job/atari/train_idqn.sh*.
