@@ -6,41 +6,24 @@ import jax.numpy as jnp
 
 
 class ReplayBuffer:
-    def __init__(
-        self, max_size: int, path: str, state_shape: list, state_dtype: Type, reward_dtype: Type, overwrite: bool
-    ) -> None:
+    def __init__(self, max_size: int, batch_size: int, state_shape: list, state_dtype: Type, clipping) -> None:
         self.max_size = max_size
-        self.path = path
-
+        self.batch_size = batch_size
         self.state_shape = state_shape
         self.state_dtype = state_dtype
         self.action_dtype = np.int8
-        self.reward_dtype = reward_dtype
+        self.reward_dtype = np.float32
         self.absorbing_dtype = np.bool_
+        self.clipping = clipping
 
-        self.load(overwrite)
+        self.states = np.zeros((self.max_size,) + self.state_shape, dtype=self.state_dtype)
+        self.actions = np.zeros(self.max_size, dtype=self.action_dtype)
+        self.rewards = np.zeros(self.max_size, dtype=self.reward_dtype)
+        self.next_states = np.zeros((self.max_size,) + self.state_shape, dtype=self.state_dtype)
+        self.absorbings = np.zeros(self.max_size, dtype=self.absorbing_dtype)
 
-    def load(self, overwrite: bool) -> None:
-        if overwrite:
-            mode = "w+"
-            self.len = 0
-            self.idx = 0
-        else:
-            mode = "r+"
-            self.len = np.load(self.path + "_len.npy")
-            self.idx = np.load(self.path + "_idx.npy")
-
-        self.states = np.memmap(
-            self.path + "_states", mode=mode, shape=(self.max_size,) + self.state_shape, dtype=self.state_dtype
-        )
-        self.actions = np.memmap(self.path + "_actions", mode=mode, shape=self.max_size, dtype=self.action_dtype)
-        self.rewards = np.memmap(self.path + "_rewards", mode=mode, shape=self.max_size, dtype=self.reward_dtype)
-        self.next_states = np.memmap(
-            self.path + "_next_states", mode=mode, shape=(self.max_size,) + self.state_shape, dtype=self.state_dtype
-        )
-        self.absorbings = np.memmap(
-            self.path + "_absorbings", mode=mode, shape=self.max_size, dtype=self.absorbing_dtype
-        )
+        self.len = 0
+        self.idx = 0
 
     def add(
         self,
@@ -52,7 +35,7 @@ class ReplayBuffer:
     ) -> None:
         self.states[self.idx] = state
         self.actions[self.idx] = action
-        self.rewards[self.idx] = reward
+        self.rewards[self.idx] = self.clipping(reward)
         self.next_states[self.idx] = next_state
         self.absorbings[self.idx] = absorbing
 
@@ -61,26 +44,15 @@ class ReplayBuffer:
         if self.idx >= self.max_size:
             self.idx = 0
 
-    def save(self) -> None:
-        np.save(self.path + "_len", self.len)
-        np.save(self.path + "_idx", self.idx)
-
-        self.states.flush()
-        self.actions.flush()
-        self.rewards.flush()
-        self.next_states.flush()
-        self.absorbings.flush()
-
-    def sample_random_batch(self, sample_key: jax.random.PRNGKeyArray, n_samples: int) -> Dict[str, jnp.ndarray]:
-        idxs = self.get_sample_indexes(sample_key, n_samples, self.len)
+    def sample_random_batch(self, sample_key: jax.random.PRNGKeyArray) -> Dict[str, jnp.ndarray]:
+        idxs = self.get_sample_indexes(sample_key, self.len)
         return self.create_batch(
             self.states[idxs], self.actions[idxs], self.rewards[idxs], self.next_states[idxs], self.absorbings[idxs]
         )
 
-    @staticmethod
-    @partial(jax.jit, static_argnames="n_samples")
-    def get_sample_indexes(key: jax.random.PRNGKeyArray, n_samples: int, maxval: int) -> jnp.ndarray:
-        return jax.random.randint(key, shape=(n_samples,), minval=0, maxval=maxval)
+    @partial(jax.jit, static_argnames="self")
+    def get_sample_indexes(self, key: jax.random.PRNGKeyArray, maxval: int) -> jnp.ndarray:
+        return jax.random.randint(key, shape=(self.batch_size,), minval=0, maxval=maxval)
 
     @staticmethod
     @jax.jit
@@ -94,3 +66,23 @@ class ReplayBuffer:
             "next_state": jnp.array(next_states, dtype=jnp.float32),
             "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
         }
+
+    def save(self, path) -> None:
+        np.save(path + "_states", self.states)
+        np.save(path + "_actions", self.actions)
+        np.save(path + "_rewards", self.rewards)
+        np.save(path + "_next_states", self.next_states)
+        np.save(path + "_absorbings", self.absorbings)
+
+        np.save(path + "_len", self.len)
+        np.save(path + "_idx", self.idx)
+
+    def load(self, path: str) -> None:
+        self.states = np.load(path + "_states.npy", self.len).astype(self.state_dtype)
+        self.actions = np.load(path + "_actions.npy", self.idx).astype(self.action_dtype)
+        self.rewards = np.load(path + "_rewards.npy", self.len).astype(self.reward_dtype)
+        self.next_states = np.load(path + "_next_states.npy", self.idx).astype(self.state_dtype)
+        self.absorbings = np.load(path + "_absorbings.npy", self.len).astype(self.absorbing_dtype)
+
+        self.len = np.load(path + "_len.npy").astype(int)
+        self.idx = np.load(path + "_idx.npy").astype(int)

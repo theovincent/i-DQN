@@ -12,10 +12,10 @@ def run_cli(argvs=sys.argv[1:]):
 
     warnings.simplefilter(action="ignore", category=FutureWarning)
 
-    parser = argparse.ArgumentParser("Train iDQN on Atari.")
+    parser = argparse.ArgumentParser("Train DQN on Atari.")
     addparse(parser)
     args = parser.parse_args(argvs)
-    print_info(args.experiment_name, "iDQN", "Atari", args.bellman_iterations_scope, args.seed)
+    print_info(args.experiment_name, "DQN", "Atari", args.bellman_iterations_scope, args.seed)
     p = json.load(
         open(f"experiments/atari/figures/{args.experiment_name.split('/')[0]}/parameters.json")
     )  # p for parameters
@@ -23,8 +23,7 @@ def run_cli(argvs=sys.argv[1:]):
     from experiments.atari.utils import generate_keys
     from idqn.environments.atari import AtariEnv
     from idqn.sample_collection.replay_buffer import ReplayBuffer
-    from idqn.networks.q_architectures import AtariiDQN
-    from idqn.utils.importance_iteration import importance_iteration
+    from idqn.networks.q_architectures import AtariDQN
     from experiments.base.DQN import train
 
     q_key, train_key = generate_keys(args.seed)
@@ -39,17 +38,14 @@ def run_cli(argvs=sys.argv[1:]):
         lambda x: np.clip(x, -1, 1),
     )
 
-    q = AtariiDQN(
-        importance_iteration(p["idqn_importance_iteration"], p["gamma"], args.bellman_iterations_scope),
+    q = AtariDQN(
         (env.n_stacked_frames, env.state_height, env.state_width),
         env.n_actions,
         p["gamma"],
         q_key,
-        importance_iteration(p["idqn_head_behaviorial_policy"], p["gamma"], args.bellman_iterations_scope + 1),
-        p["idqn_learning_rate"],
+        p["dqn_learning_rate"],
         p["n_training_steps_per_online_update"],
-        p["idqn_n_training_steps_per_target_update"],
-        p["idqn_n_training_steps_per_head_update"],
+        p["dqn_n_training_steps_per_target_update"],
     )
 
     train(train_key, "atari", args, p, q, env, replay_buffer)
