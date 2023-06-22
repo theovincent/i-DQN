@@ -16,4 +16,4 @@ EXPERIMENT_GENERAL_NAME=${split_experiment_name[0]}
 
 # DQN
 echo "launch train dqn"
-submission_train_dqn_1=$(sbatch -J $EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=$(( 2 * $N_PARALLEL_SEEDS )) --mem-per-cpu=30Gc --time=3-00:00:00 --output=/dev/null --gres=gpu:1 -p amd,amd2,rtx,rtx2,dgx launch_job/atari/train_dqn.sh -e $EXPERIMENT_NAME -g -ns $N_PARALLEL_SEEDS)
+submission_train_dqn_1=$(sbatch -J $EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=$(( 2 * $N_PARALLEL_SEEDS )) --mem-per-cpu=30G --time=3-00:00:00 --output=/dev/null --gres=gpu:1 -p gpu launch_job/atari/train_dqn.sh -e $EXPERIMENT_NAME -g -ns $N_PARALLEL_SEEDS)
