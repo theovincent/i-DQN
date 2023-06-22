@@ -135,7 +135,7 @@ class AtariEnv:
         horizon: int,
         replay_buffer: ReplayBuffer,
         exploration_schedule: EpsilonGreedySchedule,
-    ) -> bool:
+    ) -> Tuple[float, bool]:
         state = self.state
 
         if exploration_schedule.explore():
@@ -150,7 +150,7 @@ class AtariEnv:
         if absorbing or self.n_steps >= horizon:
             self.reset()
 
-        return reward, absorbing
+        return reward, absorbing or self.n_steps >= horizon
 
     def evaluate_one_simulation(
         self,
@@ -185,4 +185,4 @@ class AtariEnv:
         video.close()
         os.remove(f"experiments/atari/figures/{video_path}.meta.json")
 
-        return sun_reward
+        return sun_reward, absorbing

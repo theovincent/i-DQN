@@ -9,9 +9,9 @@ from idqn.networks.q_architectures import AtariDQN, AtariiDQN
 # ------- To modify ------- #
 experiment = "ut30_uh6000"
 algorithm = "iDQN"
-game = "Hero"
-bellman_iterations_scope = 10
-parameters = "Q_11_194_best"
+game = "Pitfall"
+bellman_iterations_scope = 5
+parameters = "Q_11_146_best"
 # ------------------------- #
 
 if algorithm == "DQN":
@@ -50,7 +50,7 @@ else:
 q_params = load_pickled_data(f"experiments/atari/figures/{params_path}_online_params")
 
 
-reward = env.evaluate_one_simulation(
+reward, absorbing = env.evaluate_one_simulation(
     q,
     q_params,
     p["horizon"],
@@ -59,3 +59,4 @@ reward = env.evaluate_one_simulation(
     params_path,
 )
 print("Reward:", reward)
+print("N steps", env.n_steps, "; Horizong", p["horizon"], "; Absorbing", absorbing)

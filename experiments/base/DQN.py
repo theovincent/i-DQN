@@ -50,14 +50,14 @@ def train(
         sum_reward = 0
         n_episodes = 0
         idx_training_step = 0
-        absorbing = False
+        has_reset = False
 
-        while idx_training_step < p["n_training_steps_per_epoch"] or not absorbing:
+        while idx_training_step < p["n_training_steps_per_epoch"] or not has_reset:
             sample_key, key = jax.random.split(sample_key)
-            reward, absorbing = env.collect_one_sample(q, q.params, p["horizon"], replay_buffer, epsilon_schedule)
+            reward, has_reset = env.collect_one_sample(q, q.params, p["horizon"], replay_buffer, epsilon_schedule)
 
             sum_reward += reward
-            n_episodes += int(absorbing)
+            n_episodes += int(has_reset)
 
             losses[
                 idx_epoch, np.minimum(idx_training_step, p["n_training_steps_per_epoch"] - 1)

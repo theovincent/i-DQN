@@ -155,3 +155,4 @@ experiments/atari/baselines_scores/**.npy
 !experiments/car_on_hill/figures/data
 !experiments/car_on_hill/figures/data/optimal/Q.npy
 !experiments/car_on_hill/figures/data/optimal/V.npy
+.vscode/
