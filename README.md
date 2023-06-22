@@ -1,6 +1,7 @@
 # Iterated Deep Q-Network: Efficient Learning of Bellman Iterations for Deep Reinforcement Learning
 
-## User installation (with Python 3.8.13 installed)
+## User installation
+We recommend using Python 3.8.13.
 A GPU is needed to run the experiments. In the folder where the code is, create a Python virtual environment, activate it, updae pip and install the package and its dependencies in editable mode:
 ```bash
 python3 -m venv env_gpu
@@ -62,9 +63,24 @@ or with conda
 conda install -c conda-forge swig
 ```
 
-If JAX cannot access the GPU, use these specific version of CUDA libraries and restrain the GPU memory pre allocation with:
+If JAX cannot access the GPU, download miniconda:
+```Bash
+wget https://repo.anaconda.com/miniconda/Miniconda3-py310_23.3.1-0-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
+```
+Install cuda packages with:
 ```bash 
 conda install -c conda-forge cudatoolkit-dev=11.6
 conda install -c conda-forge cudnn=8.4
 ```
-and set ```XLA_PYTHON_CLIENT_MEM_FRACTION``` to ```0.4``` in line 15 of file *launch_job/atari/train_idqn.sh*.
+Do not forget to set the environment variable *LD_LIBRARY_PATH* correctly, here is an example:
+```bash
+export LD_LIBRARY_PATH=/home/{user}/miniconda3/lib
+```
+Restrain the GPU memory pre allocation by setting ```XLA_PYTHON_CLIENT_MEM_FRACTION``` to ```0.4``` in line 15 of file *launch_job/atari/train_idqn.sh*.
+Finally, upgrade pip and install virtualenv
+```Bash
+python3 -m pip install --user --upgrade pip
+python3 -m pip install --user virtualenv
+```
+Now you can go back to the [user installation](#user-installation) guidelines.
