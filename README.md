@@ -1,7 +1,7 @@
 # Iterated Deep Q-Network: Efficient Learning of Bellman Iterations for Deep Reinforcement Learning
 
 ## User installation
-We recommend using Python 3.8.13.
+We recommend using Python 3.8|3.9|3.10.
 A GPU is needed to run the experiments. In the folder where the code is, create a Python virtual environment, activate it, updae pip and install the package and its dependencies in editable mode:
 ```bash
 python3 -m venv env_gpu
@@ -54,24 +54,8 @@ One step of the wrapped environment is composed of:
 Each episode ends when the _game over_ signal is sent.
 
 ## Potential issues
-If JAX cannot access the GPU, download miniconda:
-```Bash
-wget https://repo.anaconda.com/miniconda/Miniconda3-py310_23.3.1-0-Linux-x86_64.sh
-bash Miniconda3-latest-Linux-x86_64.sh
-```
-Install cuda packages with:
-```bash 
-conda install -c conda-forge cudatoolkit-dev=11.6
-conda install -c conda-forge cudnn=8.4
-```
-Do not forget to set the environment variable *LD_LIBRARY_PATH* correctly, here is an example:
-```bash
-export LD_LIBRARY_PATH=/home/{user}/miniconda3/lib
-```
-Restrain the GPU memory pre allocation by setting ```XLA_PYTHON_CLIENT_MEM_FRACTION``` to ```0.4``` in line 15 of file *launch_job/atari/train_idqn.sh*.
-Finally, upgrade pip and install virtualenv
-```Bash
-python3 -m pip install --user --upgrade pip
-python3 -m pip install --user virtualenv
-```
+If JAX cannot access the GPU, we recomment using docker. A [Dockerfile](Dockerfile) has been developped for that purpose.
+
+Restraining the GPU memory pre allocation by setting ```XLA_PYTHON_CLIENT_MEM_FRACTION``` to ```0.4``` in line 15 of file *launch_job/atari/train_idqn.sh* might solve the issue as well.
+
 Now you can go back to the [user installation](#user-installation) guidelines.
