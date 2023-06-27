@@ -7,8 +7,8 @@ A GPU is needed to run the experiments. In the folder where the code is, create 
 python3 -m venv env_gpu
 source env_gpu/bin/activate
 pip install --upgrade pip
+pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 pip install -e .
-pip install -U jax[cuda11_cudnn82]==0.4.6 -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 ```
 
 ## Run the experiments
@@ -54,15 +54,6 @@ One step of the wrapped environment is composed of:
 Each episode ends when the _game over_ signal is sent.
 
 ## Potential issues
-You might need to install _swig_ to be able to install the library _box2d-py_ with the command line:
-```bash
-sudo apt-get install swig
-```
-or with conda
-```Bash
-conda install -c conda-forge swig
-```
-
 If JAX cannot access the GPU, download miniconda:
 ```Bash
 wget https://repo.anaconda.com/miniconda/Miniconda3-py310_23.3.1-0-Linux-x86_64.sh
