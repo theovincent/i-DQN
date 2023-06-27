@@ -13,7 +13,6 @@ EXPERIMENT_GENERAL_NAME=${split_experiment_name[0]}
 [ -d experiments/atari/figures/$EXPERIMENT_NAME/DQN ] || mkdir experiments/atari/figures/$EXPERIMENT_NAME/DQN
 
 
-
 # DQN
 echo "launch train dqn"
-submission_train_dqn_1=$(sbatch -J $EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=$(( 2 * $N_PARALLEL_SEEDS )) --mem-per-cpu=30G --time=3-00:00:00 --output=/dev/null --gres=gpu:1 -p gpu launch_job/atari/train_dqn.sh -e $EXPERIMENT_NAME -g -ns $N_PARALLEL_SEEDS)
+submission_train_dqn_1=$(sbatch -J $EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=$(( 2 * $N_PARALLEL_SEEDS )) --mem-per-cpu=30G --time=3-00:00:00 --gres=gpu:1 -p gpu --output=/dev/null launch_job/docker_launcher.sh launch_job/atari/train_dqn.sh -e $EXPERIMENT_NAME -ns $N_PARALLEL_SEEDS)

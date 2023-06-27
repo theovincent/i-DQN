@@ -3,12 +3,7 @@
 source launch_job/parse_arguments.sh
 parse_arguments $@
 
-if [[ $GPU = true ]]
-then
-    source env_gpu/bin/activate
-else
-    source env_cpu/bin/activate
-fi 
+source env/bin/activate
 
 if [[ $N_PARALLEL_SEEDS = 1 ]]
 then

@@ -33,10 +33,6 @@ function parse_arguments() {
                 shift
                 shift
                 ;;
-            -g | --gpu)
-                GPU=true
-                shift
-                ;;
             -?*)
                 printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
                 shift
@@ -62,9 +58,5 @@ function parse_arguments() {
     then
         echo "the number of parallel seeds is missing, use -ns" >&2
         exit
-    fi
-    if [[ $GPU == "" ]]
-    then
-        GPU=false
     fi
 }
