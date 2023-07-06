@@ -193,6 +193,7 @@ COLORS = {
     "C51": "#984ea3",
     "REM": "#4daf4a",
     "Rainbow": "#a65628",
+    "IQN_pure": "#e41a1c",
     "IQN": "#ff7f00",
     "M-IQN": "#dede00",
     "DQN_dopamine": "#ff7f00",
@@ -220,6 +221,7 @@ LABEL = {
     "C51": "C51",
     "REM": "REM",
     "Rainbow": "Rainbow (C51 + 3-step return + PER)",
+    "IQN_pure": "IQN",
     "IQN": "IQN + 3-step return",
     "M-IQN": "Munchausen + IQN + 3-step return",
     "DQN_dopamine": "DQN (Nature) dopamine",
@@ -247,6 +249,7 @@ ORDER = {
     "C51": 5,
     "REM": 6,
     "Rainbow": 7,
+    "IQN_pure": 8,
     "IQN": 8,
     "M-IQN": 9,
 }
