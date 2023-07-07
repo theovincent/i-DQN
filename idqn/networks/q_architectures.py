@@ -8,9 +8,16 @@ from idqn.networks.base_q import DQN, iDQN
 
 
 class Torso(nn.Module):
+    dqn_initialisation: bool = True
+
     @nn.compact
     def __call__(self, state):
-        initializer = nn.initializers.xavier_uniform()
+        if self.dqn_initialisation:
+            initializer = nn.initializers.variance_scaling(scale=1.0, mode="fan_avg", distribution="truncated_normal")
+        else:
+            initializer = nn.initializers.variance_scaling(
+                scale=1.0 / jnp.sqrt(3.0), mode="fan_in", distribution="uniform"
+            )
 
         # scale -> at least 4 dimensions -> transpose to channel last
         preprocessed_state = jnp.array(state / 255.0, ndmin=4).transpose((0, 2, 3, 1))
@@ -26,15 +33,38 @@ class Torso(nn.Module):
 
 class Head(nn.Module):
     n_actions: int
+    dqn_initialisation: bool = True
 
     @nn.compact
     def __call__(self, x):
-        initializer = nn.initializers.xavier_uniform()
+        if self.dqn_initialisation:
+            initializer = nn.initializers.variance_scaling(scale=1.0, mode="fan_avg", distribution="truncated_normal")
+        else:
+            initializer = nn.initializers.variance_scaling(
+                scale=1.0 / jnp.sqrt(3.0), mode="fan_in", distribution="uniform"
+            )
 
         x = nn.Dense(features=512, kernel_init=initializer)(x)
         x = nn.relu(x)
 
         return nn.Dense(features=self.n_actions, kernel_init=initializer)(x)
+
+
+class QuantileEmbedding(nn.Module):
+    n_features: int = 7744
+    quantile_embedding_dim: int = 64
+
+    @nn.compact
+    def __call__(self, key, n_quantiles, batch_size):
+        initializer = nn.initializers.variance_scaling(scale=1.0 / jnp.sqrt(3.0), mode="fan_in", distribution="uniform")
+
+        quantiles = jax.random.uniform(key, shape=(batch_size, n_quantiles, 1))
+        arange = jnp.arange(1, self.quantile_embedding_dim + 1).reshape((1, self.quantile_embedding_dim))
+
+        quantile_embedding = nn.Dense(features=self.n_features, kernel_init=initializer)(
+            jnp.cos(jnp.pi * quantiles @ arange)
+        )
+        return nn.relu(quantile_embedding)
 
 
 class AtariQNet(nn.Module):
@@ -65,6 +95,47 @@ class AtariDQN(DQN):
             n_actions,
             gamma,
             AtariQNet(n_actions),
+            network_key,
+            learning_rate,
+            n_training_steps_per_online_update,
+            n_training_steps_per_target_update,
+        )
+
+
+class AtariIQNNet(nn.Module):
+    n_actions: int
+
+    def setup(self):
+        self.torso = Torso(dqn_initialisation=False)
+        self.quantile_embedding = QuantileEmbedding()
+        self.head = Head(self.n_actions, dqn_initialisation=False)
+
+    @nn.compact
+    def __call__(self, state, key, n_quantiles):
+        states_features = self.torso(state)  # output (batch_size, n_features)
+        quantile_features = self.quantile_embedding(
+            key, n_quantiles, states_features.shape[0]
+        )  # output (batch_size, n_quantiles, n_features)
+
+        return self.head(quantile_features * jnp.repeat(states_features[:, jnp.newaxis], n_quantiles, axis=1))
+
+
+class AtariIQN(DQN):
+    def __init__(
+        self,
+        state_shape: list,
+        n_actions: int,
+        gamma: float,
+        network_key: jax.random.PRNGKeyArray,
+        learning_rate: float,
+        n_training_steps_per_online_update: int,
+        n_training_steps_per_target_update: int,
+    ) -> None:
+        super().__init__(
+            state_shape,
+            n_actions,
+            gamma,
+            AtariIQNNet(n_actions),
             network_key,
             learning_rate,
             n_training_steps_per_online_update,
