@@ -13,7 +13,7 @@ from idqn.utils.pickle import load_pickled_data, save_pickled_data
 class BaseQ:
     def __init__(
         self,
-        state_shape: list,
+        q_inputs: dict,
         n_actions: int,
         gamma: float,
         network: nn.Module,
@@ -21,12 +21,11 @@ class BaseQ:
         learning_rate: float,
         n_training_steps_per_online_update: int,
     ) -> None:
-        self.state_shape = state_shape
         self.n_actions = n_actions
         self.gamma = gamma
         self.network = network
         self.network_key = network_key
-        self.params = self.network.init(self.network_key, state=jnp.zeros(self.state_shape, dtype=jnp.float32))
+        self.params = self.network.init(self.network_key, **q_inputs)
         self.target_params = self.params
         self.n_training_steps_per_online_update = n_training_steps_per_online_update
 
@@ -103,7 +102,7 @@ class BaseQ:
 class BaseSingleQ(BaseQ):
     def __init__(
         self,
-        state_shape: list,
+        q_inputs: dict,
         n_actions: int,
         gamma: float,
         network: nn.Module,
@@ -112,7 +111,7 @@ class BaseSingleQ(BaseQ):
         n_training_steps_per_online_update: int,
     ) -> None:
         super().__init__(
-            state_shape, n_actions, gamma, network, network_key, learning_rate, n_training_steps_per_online_update
+            q_inputs, n_actions, gamma, network, network_key, learning_rate, n_training_steps_per_online_update
         )
 
     @partial(jax.jit, static_argnames="self")
@@ -135,7 +134,13 @@ class DQN(BaseSingleQ):
         n_training_steps_per_target_update: int,
     ) -> None:
         super().__init__(
-            state_shape, n_actions, gamma, network, network_key, learning_rate, n_training_steps_per_online_update
+            {"state": jnp.zeros(state_shape, dtype=jnp.float32)},
+            n_actions,
+            gamma,
+            network,
+            network_key,
+            learning_rate,
+            n_training_steps_per_online_update,
         )
         self.n_training_steps_per_target_update = n_training_steps_per_target_update
 
@@ -151,14 +156,6 @@ class DQN(BaseSingleQ):
         return self.metric(error, ord="2")
 
     @partial(jax.jit, static_argnames="self")
-    def bellman_error(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict) -> jnp.float32:
-        targets = self.compute_target(params_target, samples)
-        predictions = self(params, samples["state"])[jnp.arange(samples["state"].shape[0]), samples["action"]]
-
-        error = predictions - targets
-        return self.metric(error, ord="sum")
-
-    @partial(jax.jit, static_argnames="self")
     def best_action(self, key: jax.random.PRNGKey, q_params: FrozenDict, state: jnp.ndarray) -> jnp.int8:
         # key is not used here
         return jnp.argmax(self(q_params, jnp.array(state, dtype=jnp.float32))[0]).astype(jnp.int8)
@@ -168,11 +165,63 @@ class DQN(BaseSingleQ):
             self.target_params = self.params
 
 
+class IQN(BaseQ):
+    def __init__(
+        self,
+        state_shape: list,
+        n_actions: int,
+        gamma: float,
+        network: nn.Module,
+        network_key: jax.random.PRNGKeyArray,
+        learning_rate: float,
+        n_training_steps_per_online_update: int,
+    ) -> None:
+        super().__init__(
+            {"state": jnp.zeros(state_shape, dtype=jnp.float32), "key": jax.random.PRNGKey(0), "n_quantiles": 32},
+            n_actions,
+            gamma,
+            network,
+            network_key,
+            learning_rate,
+            n_training_steps_per_online_update,
+        )
+
+    @partial(jax.jit, static_argnames="self")
+    def compute_target(self, params: FrozenDict, samples: FrozenDict) -> jnp.ndarray:
+        next_states_policy_quantiles_actions = self(
+            params, samples["next_state"], samples["policy_key"], samples["n_quantiles_policy"]
+        )  # output (batch_size, n_quantiles_policy, n_actions)
+        next_states_policy_values_actions = jnp.mean(
+            next_states_policy_quantiles_actions, axis=1
+        )  # output (batch_size, n_actions)
+        next_states_action = jnp.argmax(next_states_policy_values_actions, axis=0)  # output (batch_size)
+
+        next_states_quantiles_actions = self(
+            params, samples["next_state"], samples["next_key"], samples["n_quantiles_target"]
+        )  # output (batch_size, n_quantiles_target, n_actions)
+        # mapping first over the states and then over the quantiles
+        next_states_quantiles = jax.vmap(
+            jax.vmap(lambda quantile_actions, action: quantile_actions[action], (0, None))
+        )(
+            next_states_quantiles_actions, next_states_action
+        )  # output (batch_size, n_quantiles_target)
+
+        # mapping over the quantiles
+        return jax.vmap(
+            lambda rewards, absorbings, next_states_quantile: rewards
+            + (1 - absorbings) * self.gamma * next_states_quantile,
+            (None, None, 1),
+            1,
+        )(
+            samples["reward"], samples["absorbing"], next_states_quantiles
+        )  # output (batch_size, n_quantiles_target)
+
+
 class BaseMultiHeadQ(BaseQ):
     def __init__(
         self,
         n_heads: int,
-        state_shape: list,
+        q_inputs: dict,
         n_actions: int,
         gamma: float,
         network: nn.Module,
@@ -182,7 +231,7 @@ class BaseMultiHeadQ(BaseQ):
     ) -> None:
         self.n_heads = n_heads
         super().__init__(
-            state_shape, n_actions, gamma, network, network_key, learning_rate, n_training_steps_per_online_update
+            q_inputs, n_actions, gamma, network, network_key, learning_rate, n_training_steps_per_online_update
         )
 
     @partial(jax.jit, static_argnames="self")
@@ -241,7 +290,7 @@ class iDQN(BaseMultiHeadQ):
 
         super().__init__(
             len(importance_iteration) + 1,
-            state_shape,
+            {"state": jnp.zeros(state_shape, dtype=jnp.float32)},
             n_actions,
             gamma,
             network,
@@ -260,14 +309,6 @@ class iDQN(BaseMultiHeadQ):
 
         error = (predictions - targets) * jnp.repeat(self.importance_iteration[None, :], targets.shape[0], axis=0)
         return self.metric(error, ord="2")
-
-    @partial(jax.jit, static_argnames="self")
-    def bellman_error(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict) -> jnp.float32:
-        targets = self.compute_target(params_target, samples)
-        predictions = self(params, samples["state"])[jnp.arange(samples["state"].shape[0]), :, samples["action"]]
-
-        error = predictions - targets
-        return self.metric(error, ord="sum")
 
     def best_action(self, key: jax.random.PRNGKey, q_params: FrozenDict, state: jnp.ndarray) -> jnp.int8:
         idx_head = self.random_head(key, self.head_behaviorial_probability)

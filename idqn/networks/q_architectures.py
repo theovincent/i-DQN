@@ -117,7 +117,9 @@ class AtariIQNNet(nn.Module):
             key, n_quantiles, states_features.shape[0]
         )  # output (batch_size, n_quantiles, n_features)
 
-        return self.head(quantile_features * jnp.repeat(states_features[:, jnp.newaxis], n_quantiles, axis=1))
+        return self.head(
+            quantile_features * jnp.repeat(states_features[:, jnp.newaxis], n_quantiles, axis=1)
+        )  # output (batch_size, n_quantiles, n_actions)
 
 
 class AtariIQN(DQN):
