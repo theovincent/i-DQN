@@ -4,7 +4,7 @@ from flax.core import FrozenDict
 import jax
 import jax.numpy as jnp
 
-from idqn.networks.base_q import DQN, iDQN
+from idqn.networks.base_q import DQN, IQN, iDQN
 
 
 class Torso(nn.Module):
@@ -64,17 +64,19 @@ class QuantileEmbedding(nn.Module):
         quantile_embedding = nn.Dense(features=self.n_features, kernel_init=initializer)(
             jnp.cos(jnp.pi * quantiles @ arange)
         )
-        return nn.relu(quantile_embedding)
+        return (
+            nn.relu(quantile_embedding),
+            quantiles[:, :, 0],
+        )  # output (batch_size, n_quantiles, n_features) | (batch_size, n_quantiles)
 
 
-class AtariQNet(nn.Module):
+class AtariDQNNet(nn.Module):
     n_actions: int
 
     def setup(self):
         self.torso = Torso()
         self.head = Head(self.n_actions)
 
-    @nn.compact
     def __call__(self, state):
         return self.head(self.torso(state))
 
@@ -94,7 +96,7 @@ class AtariDQN(DQN):
             state_shape,
             n_actions,
             gamma,
-            AtariQNet(n_actions),
+            AtariDQNNet(n_actions),
             network_key,
             learning_rate,
             n_training_steps_per_online_update,
@@ -110,19 +112,26 @@ class AtariIQNNet(nn.Module):
         self.quantile_embedding = QuantileEmbedding()
         self.head = Head(self.n_actions, dqn_initialisation=False)
 
-    @nn.compact
     def __call__(self, state, key, n_quantiles):
         states_features = self.torso(state)  # output (batch_size, n_features)
-        quantile_features = self.quantile_embedding(
+        quantiles_features, quantiles = self.quantile_embedding(
             key, n_quantiles, states_features.shape[0]
         )  # output (batch_size, n_quantiles, n_features)
 
-        return self.head(
-            quantile_features * jnp.repeat(states_features[:, jnp.newaxis], n_quantiles, axis=1)
-        )  # output (batch_size, n_quantiles, n_actions)
+        # mapping first over the states and then over the quantiles
+        multiplied_features = jax.vmap(
+            jax.vmap(lambda quantile_features, state_features: quantile_features * state_features, (0, None))
+        )(
+            quantiles_features, states_features
+        )  # output (batch_size, n_quantiles, n_features)
+
+        return (
+            self.head(multiplied_features),
+            quantiles,
+        )  # output (batch_size, n_quantiles, n_actions) | (batch_size, n_quantiles)
 
 
-class AtariIQN(DQN):
+class AtariIQN(IQN):
     def __init__(
         self,
         state_shape: list,
@@ -149,7 +158,7 @@ class AtariMultiQNet:
     def __init__(self, n_heads: int, n_actions: int) -> None:
         self.n_heads = n_heads
         self.n_actions = n_actions
-        self.atari_q_net = AtariQNet(self.n_actions)
+        self.atari_q_net = AtariDQNNet(self.n_actions)
 
     def init(self, key: jax.random.PRNGKey, state: jnp.ndarray) -> FrozenDict:
         return jax.vmap(self.atari_q_net.init, in_axes=[0, None])(jax.random.split(key, self.n_heads), state)
@@ -181,6 +190,7 @@ class AtariSharedMultiQNet:
 
         return FrozenDict(**torso_params, **head_params)
 
+    @partial(jax.jit, static_argnames="self")
     def apply(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
         features_0 = self.torso.apply(params["torso_params_0"], state)
         features_1 = self.torso.apply(params["torso_params_1"], state)

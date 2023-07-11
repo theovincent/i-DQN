@@ -1,11 +1,9 @@
-import os
 import unittest
 import jax
 import jax.numpy as jnp
-from flax.core import FrozenDict
 import numpy as np
 
-from idqn.networks.q_architectures import AtariDQN, AtariiDQN
+from idqn.networks.q_architectures import AtariDQN, AtariIQN, AtariiDQN
 
 
 class TestAtariDQN(unittest.TestCase):
@@ -61,7 +59,7 @@ class TestAtariDQN(unittest.TestCase):
         q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
 
         states = jax.random.uniform(self.key, (10,) + self.state_shape)
-        actions = jax.random.uniform(self.key, (10,))
+        actions = jax.random.randint(self.key, (10,), minval=0, maxval=self.n_actions)
         key, _ = jax.random.split(self.key)
         rewards = jax.random.uniform(key, (10,))
         absorbings = jax.random.randint(key, (10,), 0, 2)
@@ -94,37 +92,128 @@ class TestAtariDQN(unittest.TestCase):
 
         state = jax.random.uniform(self.key, self.state_shape)
 
-        computed_best_action = q.best_action(None, q.params, state)
+        computed_best_action = q.best_action(q.params, state, None)
 
         best_action = jnp.argmax(q(q.params, state)[0]).astype(jnp.int8)
         self.assertEqual(best_action, computed_best_action)
 
-    def test_save_load(self) -> None:
-        q_to_save = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, 1, None, None)
-        q_to_save.save("tests/Q")
 
-        key, _ = jax.random.split(self.key)
-        q_to_load = AtariDQN(self.state_shape, self.n_actions, self.gamma, key, 1, None, None)
-        q_to_load.load("tests/Q")
+class TestAtariIQN(unittest.TestCase):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.random_seed = np.random.randint(1000)
+        print(f"random seed {self.random_seed}")
+        self.key = jax.random.PRNGKey(self.random_seed)
+        self.state_shape = (4, 84, 84)
+        self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
+        self.gamma = jax.random.uniform(self.key)
 
-        def check_null(frozen_dict):
-            if isinstance(frozen_dict, FrozenDict):
-                for values in frozen_dict.values():
-                    check_null(values)
-            else:
-                self.assertEqual(frozen_dict, 0)
+    def test_output(self) -> None:
+        q = AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
 
-        diff_params = jax.tree_util.tree_map(lambda x, y: jnp.linalg.norm(x - y), q_to_save.params, q_to_load.params)
-        diff_target_params = jax.tree_util.tree_map(
-            lambda x, y: jnp.linalg.norm(x - y), q_to_save.target_params, q_to_load.target_params
+        state = jax.random.uniform(self.key, self.state_shape)
+        state_copy = state.copy()
+
+        output, quantiles = q.apply_n_quantiles(q.params, state, self.key)
+        output_batch, batch_quantiles = q.apply_n_quantiles_target(
+            q.params, jax.random.uniform(self.key, (50,) + self.state_shape), self.key
         )
 
-        check_null(diff_params)
-        check_null(diff_target_params)
+        self.assertGreater(np.linalg.norm(output), 0)
+        self.assertGreater(np.linalg.norm(output_batch), 0)
 
-        os.remove("tests/Q_online_params")
-        os.remove("tests/Q_target_params")
-        os.remove("tests/Q_optimizer")
+        self.assertEqual(quantiles.shape, (1, q.n_quantiles))
+        self.assertEqual(batch_quantiles.shape, (50, q.n_quantiles_target))
+
+        self.assertEqual(output.shape, (1, q.n_quantiles, self.n_actions))
+        self.assertEqual(output_batch.shape, (50, q.n_quantiles_target, self.n_actions))
+
+        # test if the input has been changed
+        self.assertEqual(np.linalg.norm(state - state_copy), 0)
+        self.assertEqual(state.shape, state_copy.shape)
+
+    def test_compute_target(self) -> None:
+        q = AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
+
+        rewards = jax.random.uniform(self.key, (10,))
+        absorbings = jax.random.randint(self.key, (10,), 0, 2)
+        next_states = jax.random.uniform(self.key, (10,) + self.state_shape)
+        samples = {
+            "reward": jnp.array(rewards, dtype=jnp.float32),
+            "next_state": jnp.array(next_states, dtype=jnp.float32),
+            "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
+        }
+        samples["key"], samples["next_key"], samples["policy_key"] = jax.random.split(self.key, 3)
+
+        computed_targets = q.compute_target(q.params, samples)
+
+        quantiles_policy, _ = q.apply_n_quantiles_policy(q.target_params, next_states, samples["policy_key"])
+        quantiles_targets, _ = q.apply_n_quantiles_target(q.target_params, next_states, samples["next_key"])
+
+        for idx_sample in range(10):
+            value_policy = jnp.mean(quantiles_policy[idx_sample], axis=0)
+            action = jnp.argmax(value_policy)
+
+            target = (
+                rewards[idx_sample]
+                + (1 - absorbings[idx_sample]) * self.gamma * quantiles_targets[idx_sample, :, action]
+            )
+            self.assertAlmostEqual(jnp.linalg.norm(computed_targets[idx_sample] - target), 0)
+
+    def test_loss(self) -> None:
+        q = AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
+        q.n_quantiles = 13
+        q.n_quantiles_target = 9
+
+        states = jax.random.uniform(self.key, (10,) + self.state_shape)
+        actions = jax.random.randint(self.key, (10,), minval=0, maxval=self.n_actions)
+        key, _ = jax.random.split(self.key)
+        rewards = jax.random.uniform(key, (10,))
+        absorbings = jax.random.randint(key, (10,), 0, 2)
+        next_states = jax.random.uniform(key, (10,) + self.state_shape)
+        samples = {
+            "state": jnp.array(states, dtype=jnp.float32),
+            "action": jnp.array(actions, dtype=jnp.int8),
+            "reward": jnp.array(rewards, dtype=jnp.float32),
+            "next_state": jnp.array(next_states, dtype=jnp.float32),
+            "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
+        }
+        samples["key"], samples["next_key"], samples["policy_key"] = jax.random.split(self.key, 3)
+
+        computed_loss = q.loss(q.params, q.params, samples)
+
+        targets = q.compute_target(q.params, samples)
+        predictions, quantiles = q.apply_n_quantiles(q.params, states, samples["key"])
+
+        loss = 0
+
+        for idx_sample in range(10):
+            for idx_quantile in range(q.n_quantiles):
+                for idx_quantile_target in range(q.n_quantiles_target):
+                    bellman_error = (
+                        targets[idx_sample, idx_quantile_target]
+                        - predictions[idx_sample, idx_quantile, actions[idx_sample]]
+                    )
+                    huber_loss = (
+                        1 / 2 * bellman_error**2 if jnp.abs(bellman_error) < 1 else jnp.abs(bellman_error) - 1 / 2
+                    )
+                    loss += (quantiles[idx_sample, idx_quantile] - (bellman_error < 0)) * huber_loss
+        loss /= 10 * q.n_quantiles_target
+
+        self.assertAlmostEqual(computed_loss, loss, places=5)
+
+    def test_best_action(self) -> None:
+        q = AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
+
+        state = jax.random.uniform(self.key, self.state_shape)
+
+        computed_best_action = q.best_action(q.params, state, self.key)
+
+        quantiles_policy, _ = q.apply_n_quantiles_policy(q.params, state, self.key)
+        value_policy = jnp.mean(quantiles_policy, axis=1)[0]
+        best_action = jnp.argmax(value_policy)
+
+        self.assertEqual(best_action, computed_best_action)
 
 
 class TestAtariiDQN(unittest.TestCase):
@@ -216,7 +305,7 @@ class TestAtariiDQN(unittest.TestCase):
             None,
         )
         states = jax.random.uniform(self.key, (10,) + self.state_shape)
-        actions = jax.random.uniform(self.key, (10,))
+        actions = jax.random.randint(self.key, (10,), minval=0, maxval=self.n_actions)
         key, _ = jax.random.split(self.key)
         rewards = jax.random.uniform(key, (10,))
         absorbings = jax.random.randint(key, (10,), 0, 2)
@@ -257,7 +346,7 @@ class TestAtariiDQN(unittest.TestCase):
         )
         state = jax.random.uniform(self.key, self.state_shape)
 
-        computed_best_action = q.best_action(self.key, q.params, state)
+        computed_best_action = q.best_action(q.params, state, self.key)
 
         # -1 since head behavioral policy equals to [0, ..., 0, 1]
         best_action = jnp.argmax(q(q.params, state)[0, -1]).astype(jnp.int8)
