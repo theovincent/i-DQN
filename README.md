@@ -1,7 +1,7 @@
 # Iterated Deep Q-Network: Efficient Learning of Bellman Iterations for Deep Reinforcement Learning
 
 ## User installation
-We recommend using Python 3.8|3.9|3.10.
+We recommend using Python 3.9|3.10.
 A GPU is needed to run the experiments. In the folder where the code is, create a Python virtual environment, activate it, updae pip and install the package and its dependencies in editable mode:
 ```bash
 python3 -m venv env

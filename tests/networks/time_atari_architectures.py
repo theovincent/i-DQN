@@ -160,7 +160,7 @@ class TimeAtariDQN(TimeAtariQ):
         self.state_shape = (4, 84, 84)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.gamma = jax.random.uniform(self.key)
-        super().__init__(AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None))
+        super().__init__(AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None))
 
 
 class TimeAtariIQN(TimeAtariQ):
@@ -171,7 +171,7 @@ class TimeAtariIQN(TimeAtariQ):
         self.state_shape = (4, 84, 84)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.gamma = jax.random.uniform(self.key)
-        super().__init__(AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None))
+        super().__init__(AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None))
 
     def time_inference(self) -> None:
         state_key = self.key
@@ -212,6 +212,7 @@ class TimeAtariiDQN(TimeAtariQ):
                 self.gamma,
                 self.key,
                 self.head_behaviorial_probability,
+                None,
                 None,
                 None,
                 None,

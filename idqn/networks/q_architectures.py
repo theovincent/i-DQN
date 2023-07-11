@@ -89,6 +89,7 @@ class AtariDQN(DQN):
         gamma: float,
         network_key: jax.random.PRNGKeyArray,
         learning_rate: float,
+        epsilon_optimizer: float,
         n_training_steps_per_online_update: int,
         n_training_steps_per_target_update: int,
     ) -> None:
@@ -99,6 +100,7 @@ class AtariDQN(DQN):
             AtariDQNNet(n_actions),
             network_key,
             learning_rate,
+            epsilon_optimizer,
             n_training_steps_per_online_update,
             n_training_steps_per_target_update,
         )
@@ -139,6 +141,7 @@ class AtariIQN(IQN):
         gamma: float,
         network_key: jax.random.PRNGKeyArray,
         learning_rate: float,
+        epsilon_optimizer: float,
         n_training_steps_per_online_update: int,
         n_training_steps_per_target_update: int,
     ) -> None:
@@ -149,6 +152,7 @@ class AtariIQN(IQN):
             AtariIQNNet(n_actions),
             network_key,
             learning_rate,
+            epsilon_optimizer,
             n_training_steps_per_online_update,
             n_training_steps_per_target_update,
         )
@@ -233,6 +237,7 @@ class AtariiDQN(iDQN):
         network_key: jax.random.PRNGKeyArray,
         head_behaviorial_probability: jnp.ndarray,
         learning_rate: float,
+        epsilon_optimizer: float,
         n_training_steps_per_online_update: int,
         n_training_steps_per_target_update: int,
         n_training_steps_per_head_update: int,
@@ -246,6 +251,7 @@ class AtariiDQN(iDQN):
             network_key,
             head_behaviorial_probability,
             learning_rate,
+            epsilon_optimizer,
             n_training_steps_per_online_update,
             n_training_steps_per_target_update,
             n_training_steps_per_head_update,

@@ -17,7 +17,7 @@ class TestAtariDQN(unittest.TestCase):
         self.gamma = jax.random.uniform(self.key)
 
     def test_output(self) -> None:
-        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
+        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
 
         state = jax.random.uniform(self.key, self.state_shape)
         state_copy = state.copy()
@@ -36,7 +36,7 @@ class TestAtariDQN(unittest.TestCase):
         self.assertEqual(state.shape, state_copy.shape)
 
     def test_compute_target(self) -> None:
-        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
+        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
 
         rewards = jax.random.uniform(self.key, (10,))
         absorbings = jax.random.randint(self.key, (10,), 0, 2)
@@ -56,7 +56,7 @@ class TestAtariDQN(unittest.TestCase):
             self.assertAlmostEqual(computed_targets[idx_sample], target)
 
     def test_loss(self) -> None:
-        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
+        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
 
         states = jax.random.uniform(self.key, (10,) + self.state_shape)
         actions = jax.random.randint(self.key, (10,), minval=0, maxval=self.n_actions)
@@ -83,12 +83,12 @@ class TestAtariDQN(unittest.TestCase):
         self.assertAlmostEqual(computed_loss, np.square(targets - predictions).mean(), places=6)
 
     def test_random_action(self) -> None:
-        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
+        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
 
         self.assertEqual(q.random_action(self.key).dtype, jnp.int8)
 
     def test_best_action(self) -> None:
-        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
+        q = AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
 
         state = jax.random.uniform(self.key, self.state_shape)
 
@@ -109,7 +109,7 @@ class TestAtariIQN(unittest.TestCase):
         self.gamma = jax.random.uniform(self.key)
 
     def test_output(self) -> None:
-        q = AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
+        q = AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
 
         state = jax.random.uniform(self.key, self.state_shape)
         state_copy = state.copy()
@@ -133,7 +133,7 @@ class TestAtariIQN(unittest.TestCase):
         self.assertEqual(state.shape, state_copy.shape)
 
     def test_compute_target(self) -> None:
-        q = AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
+        q = AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
 
         rewards = jax.random.uniform(self.key, (10,))
         absorbings = jax.random.randint(self.key, (10,), 0, 2)
@@ -161,7 +161,7 @@ class TestAtariIQN(unittest.TestCase):
             self.assertAlmostEqual(jnp.linalg.norm(computed_targets[idx_sample] - target), 0)
 
     def test_loss(self) -> None:
-        q = AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
+        q = AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
         q.n_quantiles = 13
         q.n_quantiles_target = 9
 
@@ -203,7 +203,7 @@ class TestAtariIQN(unittest.TestCase):
         self.assertAlmostEqual(computed_loss, loss, places=5)
 
     def test_best_action(self) -> None:
-        q = AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None)
+        q = AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
 
         state = jax.random.uniform(self.key, self.state_shape)
 
@@ -241,6 +241,7 @@ class TestAtariiDQN(unittest.TestCase):
             None,
             None,
             None,
+            None,
         )
 
         state = jax.random.uniform(self.key, self.state_shape)
@@ -267,6 +268,7 @@ class TestAtariiDQN(unittest.TestCase):
             self.gamma,
             self.key,
             self.head_behaviorial_probability,
+            None,
             None,
             None,
             None,
@@ -299,6 +301,7 @@ class TestAtariiDQN(unittest.TestCase):
             self.gamma,
             self.key,
             self.head_behaviorial_probability,
+            None,
             None,
             None,
             None,
@@ -343,6 +346,7 @@ class TestAtariiDQN(unittest.TestCase):
             None,
             None,
             None,
+            None,
         )
         state = jax.random.uniform(self.key, self.state_shape)
 
@@ -360,6 +364,7 @@ class TestAtariiDQN(unittest.TestCase):
             self.gamma,
             self.key,
             self.head_behaviorial_probability,
+            None,
             None,
             None,
             None,

@@ -19,6 +19,7 @@ class BaseQ:
         network: nn.Module,
         network_key: jax.random.PRNGKeyArray,
         learning_rate: float,
+        epsilon_optimizer: float,
         n_training_steps_per_online_update: int,
     ) -> None:
         self.n_actions = n_actions
@@ -33,7 +34,7 @@ class BaseQ:
 
         if learning_rate is not None:
             self.learning_rate = learning_rate
-            self.optimizer = optax.adam(self.learning_rate, eps=1.5e-4)
+            self.optimizer = optax.adam(self.learning_rate, eps=epsilon_optimizer)
             self.optimizer_state = self.optimizer.init(self.params)
 
     def compute_target(self, params: FrozenDict, samples: FrozenDict) -> jnp.ndarray:
@@ -102,11 +103,19 @@ class BaseSingleQ(BaseQ):
         network: nn.Module,
         network_key: jax.random.PRNGKeyArray,
         learning_rate: float,
+        epsilon_optimizer: float,
         n_training_steps_per_online_update: int,
         n_training_steps_per_target_update: int,
     ) -> None:
         super().__init__(
-            q_inputs, n_actions, gamma, network, network_key, learning_rate, n_training_steps_per_online_update
+            q_inputs,
+            n_actions,
+            gamma,
+            network,
+            network_key,
+            learning_rate,
+            epsilon_optimizer,
+            n_training_steps_per_online_update,
         )
 
         self.n_training_steps_per_target_update = n_training_steps_per_target_update
@@ -125,6 +134,7 @@ class DQN(BaseSingleQ):
         network: nn.Module,
         network_key: jax.random.PRNGKeyArray,
         learning_rate: float,
+        epsilon_optimizer: float,
         n_training_steps_per_online_update: int,
         n_training_steps_per_target_update: int,
     ) -> None:
@@ -135,6 +145,7 @@ class DQN(BaseSingleQ):
             network,
             network_key,
             learning_rate,
+            epsilon_optimizer,
             n_training_steps_per_online_update,
             n_training_steps_per_target_update,
         )
@@ -175,6 +186,7 @@ class IQN(BaseSingleQ):
         network: nn.Module,
         network_key: jax.random.PRNGKeyArray,
         learning_rate: float,
+        epsilon_optimizer: float,
         n_training_steps_per_online_update: int,
         n_training_steps_per_target_update: int,
     ) -> None:
@@ -185,6 +197,7 @@ class IQN(BaseSingleQ):
             network,
             network_key,
             learning_rate,
+            epsilon_optimizer,
             n_training_steps_per_online_update,
             n_training_steps_per_target_update,
         )
@@ -304,11 +317,19 @@ class BaseMultiHeadQ(BaseQ):
         network: nn.Module,
         network_key: jax.random.PRNGKeyArray,
         learning_rate: float,
+        epsilon_optimizer: float,
         n_training_steps_per_online_update: int,
     ) -> None:
         self.n_heads = n_heads
         super().__init__(
-            q_inputs, n_actions, gamma, network, network_key, learning_rate, n_training_steps_per_online_update
+            q_inputs,
+            n_actions,
+            gamma,
+            network,
+            network_key,
+            learning_rate,
+            epsilon_optimizer,
+            n_training_steps_per_online_update,
         )
 
     @partial(jax.jit, static_argnames="self")
@@ -360,6 +381,7 @@ class iDQN(BaseMultiHeadQ):
         network_key: jax.random.PRNGKeyArray,
         head_behaviorial_probability: jnp.ndarray,
         learning_rate: float,
+        epsilon_optimizer: float,
         n_training_steps_per_online_update: int,
         n_training_steps_per_target_update: int,
         n_training_steps_per_head_update: int,
@@ -377,6 +399,7 @@ class iDQN(BaseMultiHeadQ):
             network,
             network_key,
             learning_rate,
+            epsilon_optimizer,
             n_training_steps_per_online_update,
         )
 
