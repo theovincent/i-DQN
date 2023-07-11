@@ -4,8 +4,8 @@
 We recommend using Python 3.8|3.9|3.10.
 A GPU is needed to run the experiments. In the folder where the code is, create a Python virtual environment, activate it, updae pip and install the package and its dependencies in editable mode:
 ```bash
-python3 -m venv env_gpu
-source env_gpu/bin/activate
+python3 -m venv env
+source env/bin/activate
 pip install --upgrade pip
 pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 pip install -e .
