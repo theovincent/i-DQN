@@ -74,7 +74,7 @@ def train(
 
             argmax_j = idx_epoch
             max_j = js[idx_epoch]
-            q.save(f"{experiment_path}Q_{args.seed}_{argmax_j}_best", online_params_only=True)
+            q.save(f"{experiment_path}Q_{args.seed}_{argmax_j}_best")
 
         if args.bellman_iterations_scope is not None and p.get("compute_head_std", False):
             stds[idx_epoch] = q.compute_standard_deviation_head(replay_buffer, key)
