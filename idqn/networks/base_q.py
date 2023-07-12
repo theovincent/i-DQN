@@ -33,8 +33,7 @@ class BaseQ:
         self.loss_and_grad = jax.jit(jax.value_and_grad(self.loss))
 
         if learning_rate is not None:
-            self.learning_rate = learning_rate
-            self.optimizer = optax.adam(self.learning_rate, eps=epsilon_optimizer)
+            self.optimizer = optax.adam(learning_rate, eps=epsilon_optimizer)
             self.optimizer_state = self.optimizer.init(self.params)
 
     def compute_target(self, params: FrozenDict, samples: FrozenDict) -> jnp.ndarray:
@@ -285,7 +284,7 @@ class IQN(BaseSingleQ):
         # mapping first over the states and then over the target quantiles
         quantile_losses = jax.vmap(
             jax.vmap(
-                lambda quantile, bellman_error, huber_loss: (
+                lambda quantile, bellman_error, huber_loss: jnp.abs(
                     quantile - jax.lax.stop_gradient(bellman_error < 0).astype(jnp.float32)
                 )
                 * huber_loss,
@@ -296,7 +295,7 @@ class IQN(BaseSingleQ):
             quantiles, bellman_errors, huber_losses
         )  # output (batch_size, n_quantiles_target, n_quantiles)
 
-        # sum over the quantiles and mean over the batch and the target quantiles
+        # sum over the quantiles and mean over the target quantiles and the batch
         return jnp.mean(jnp.sum(quantile_losses, axis=2))
 
     @partial(jax.jit, static_argnames="self")
