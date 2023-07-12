@@ -13,12 +13,9 @@ EXPERIMENT_GENERAL_NAME=${split_experiment_name[0]}
 [ -d experiments/atari/figures/$EXPERIMENT_NAME/DQN ] || mkdir experiments/atari/figures/$EXPERIMENT_NAME/DQN
 
 
-for (( seed=$FIRST_SEED; seed<=$LAST_SEED; seed++ ))
-do
-    seed_command="export SLURM_ARRAY_TASK_ID=$seed"
+seed_command="export SLURM_ARRAY_TASK_ID=$FIRST_SEED"
 
-    # DQN
-    echo "launch train idqn"
-    train_command="launch_job/atari/train_dqn.sh -e $EXPERIMENT_NAME -g -ns $N_PARALLEL_SEEDS"
-    tmux send-keys -t train "$seed_command" ENTER "$train_command" ENTER
-done
+# DQN
+echo "launch train dqn"
+train_command="launch_job/atari/train_dqn.sh -e $EXPERIMENT_NAME -ns $N_PARALLEL_SEEDS"
+tmux send-keys -t train "$seed_command" ENTER "$train_command" ENTER

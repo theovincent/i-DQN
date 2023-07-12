@@ -52,4 +52,12 @@ def run_cli(argvs=sys.argv[1:]):
         p["idqn_n_training_steps_per_head_update"],
     )
 
-    train(train_key, "atari", args, p, q, env, replay_buffer)
+    train(
+        train_key,
+        f"experiments/atari/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_",
+        args,
+        p,
+        q,
+        env,
+        replay_buffer,
+    )

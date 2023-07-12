@@ -12,21 +12,13 @@ from idqn.environments.atari import AtariEnv
 
 def train(
     key: jax.random.PRNGKey,
-    environment_name: str,
+    experiment_path: str,
     args: Namespace,
     p: dict,
     q: BaseQ,
     env: AtariEnv,
     replay_buffer: ReplayBuffer,
 ) -> None:
-    # if DQN
-    if args.bellman_iterations_scope is None:
-        experiment_path = f"experiments/{environment_name}/figures/{args.experiment_name}/DQN/"
-    else:
-        experiment_path = (
-            f"experiments/{environment_name}/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_"
-        )
-
     sample_key, exploration_key = jax.random.split(key)
     n_training_steps = 0
     losses = np.zeros((p["n_epochs"], p["n_training_steps_per_epoch"])) * np.nan

@@ -43,9 +43,10 @@ def run_cli(argvs=sys.argv[1:]):
         env.n_actions,
         p["gamma"],
         q_key,
-        p["dqn_learning_rate"],
+        p["iqn_learning_rate"],
+        p["iqn_optimizer_eps"],
         p["n_training_steps_per_online_update"],
-        p["dqn_n_training_steps_per_target_update"],
+        p["iqn_n_training_steps_per_target_update"],
     )
 
-    train(train_key, "atari", args, p, q, env, replay_buffer)
+    train(train_key, f"experiments/atari/figures/{args.experiment_name}/IQN/", args, p, q, env, replay_buffer)
