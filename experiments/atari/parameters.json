@@ -24,6 +24,5 @@
     "idqn_optimizer_eps": 1.5e-4,
     "idqn_n_training_steps_per_target_update": 30,
     "idqn_n_training_steps_per_head_update": 6000,
-    "idqn_importance_iteration": "uniform",
     "idqn_head_behaviorial_policy": "uniform"
 }

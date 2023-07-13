@@ -158,19 +158,6 @@ class AtariIQN(IQN):
         )
 
 
-class AtariMultiQNet:
-    def __init__(self, n_heads: int, n_actions: int) -> None:
-        self.n_heads = n_heads
-        self.n_actions = n_actions
-        self.atari_q_net = AtariDQNNet(self.n_actions)
-
-    def init(self, key: jax.random.PRNGKey, state: jnp.ndarray) -> FrozenDict:
-        return jax.vmap(self.atari_q_net.init, in_axes=[0, None])(jax.random.split(key, self.n_heads), state)
-
-    def apply(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
-        return jax.vmap(self.atari_q_net.apply, in_axes=[0, None], out_axes=1)(params, state)
-
-
 class AtariSharedMultiQNet:
     def __init__(self, n_heads: int, n_actions: int) -> None:
         self.n_heads = n_heads
@@ -194,7 +181,6 @@ class AtariSharedMultiQNet:
 
         return FrozenDict(**torso_params, **head_params)
 
-    @partial(jax.jit, static_argnames="self")
     def apply(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
         features_0 = self.torso.apply(params["torso_params_0"], state)
         features_1 = self.torso.apply(params["torso_params_1"], state)
@@ -208,29 +194,27 @@ class AtariSharedMultiQNet:
 
         return output
 
-    def apply_specific_head(self, params: FrozenDict, state: jnp.ndarray, idx_head: int) -> jnp.ndarray:
-        if idx_head == 0:
-            return self.apply_first_head(params, state)
-        else:
-            return self.apply_other_head(params, params[f"head_params_{idx_head}"], state)
+    def apply_specific_head(self, torso_params: FrozenDict, head_params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
+        features = self.torso.apply(torso_params, state)
 
-    @partial(jax.jit, static_argnames="self")
-    def apply_first_head(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
-        features_0 = self.torso.apply(params["torso_params_0"], state)
+        return self.head.apply(head_params, features)
 
-        return self.head.apply(params["head_params_0"], features_0)
+    def update_heads(self, params: FrozenDict) -> FrozenDict:
+        unfrozen_params = params.unfreeze()
+        # The shared params of the first head takes the shared params of the other heads
+        unfrozen_params["torso_params_0"] = params["torso_params_1"]
 
-    @partial(jax.jit, static_argnames="self")
-    def apply_other_head(self, params: FrozenDict, params_head: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
-        features_1 = self.torso.apply(params["torso_params_1"], state)
+        # Each head takes the params of the following one
+        for idx_head in range(self.n_heads - 1):
+            unfrozen_params[f"head_params_{idx_head}"] = params[f"head_params_{idx_head + 1}"]
 
-        return self.head.apply(params_head, features_1)
+        return FrozenDict(unfrozen_params)
 
 
 class AtariiDQN(iDQN):
     def __init__(
         self,
-        importance_iteration: jnp.ndarray,
+        n_heads: int,
         state_shape: list,
         n_actions: int,
         gamma: float,
@@ -243,11 +227,11 @@ class AtariiDQN(iDQN):
         n_training_steps_per_head_update: int,
     ) -> None:
         super().__init__(
-            importance_iteration,
+            n_heads,
             state_shape,
             n_actions,
             gamma,
-            AtariSharedMultiQNet(len(importance_iteration) + 1, n_actions),
+            AtariSharedMultiQNet(n_heads, n_actions),
             network_key,
             head_behaviorial_probability,
             learning_rate,
@@ -256,15 +240,3 @@ class AtariiDQN(iDQN):
             n_training_steps_per_target_update,
             n_training_steps_per_head_update,
         )
-
-    @partial(jax.jit, static_argnames="self")
-    def update_heads(self, params: FrozenDict) -> FrozenDict:
-        unfrozen_params = params.unfreeze()
-        # The shared params of the first head takes the shared params of the other heads
-        unfrozen_params["torso_params_0"] = params["torso_params_1"]
-
-        # Each head takes the params of the following one
-        for idx_head in range(self.n_heads - 1):
-            unfrozen_params[f"head_params_{idx_head}"] = params[f"head_params_{idx_head + 1}"]
-
-        return FrozenDict(unfrozen_params)

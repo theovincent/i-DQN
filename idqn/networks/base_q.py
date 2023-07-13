@@ -42,6 +42,17 @@ class BaseQ:
     def loss(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict, ord: int = 2) -> jnp.float32:
         raise NotImplementedError
 
+    @staticmethod
+    def metric(error: jnp.ndarray, ord: str) -> jnp.float32:
+        if ord == "huber":
+            return optax.huber_loss(error, 0).mean()
+        elif ord == "1":
+            return jnp.abs(error).mean()
+        elif ord == "2":
+            return jnp.square(error).mean()
+        elif ord == "sum":
+            return jnp.square(error).sum()
+
     @partial(jax.jit, static_argnames="self")
     def learn_on_batch(
         self, params: FrozenDict, params_target: FrozenDict, optimizer_state: Tuple, batch_samples: jnp.ndarray
@@ -71,22 +82,11 @@ class BaseQ:
     def update_target_params(self, step: int) -> None:
         raise NotImplementedError
 
-    @staticmethod
-    def metric(error: jnp.ndarray, ord: str) -> jnp.float32:
-        if ord == "huber":
-            return optax.huber_loss(error, 0).mean()
-        elif ord == "1":
-            return jnp.abs(error).mean()
-        elif ord == "2":
-            return jnp.square(error).mean()
-        elif ord == "sum":
-            return jnp.square(error).sum()
-
     @partial(jax.jit, static_argnames="self")
     def random_action(self, key: jax.random.PRNGKeyArray) -> jnp.int8:
         return jax.random.choice(key, jnp.arange(self.n_actions)).astype(jnp.int8)
 
-    def best_action(self, q_params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey) -> jnp.int8:
+    def best_action(self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey) -> jnp.int8:
         raise NotImplementedError
 
     def save(self, path: str) -> None:
@@ -150,30 +150,29 @@ class DQN(BaseSingleQ):
         )
 
     @partial(jax.jit, static_argnames="self")
-    def __call__(self, params: FrozenDict, states: jnp.ndarray) -> jnp.ndarray:
+    def apply(self, params: FrozenDict, states: jnp.ndarray) -> jnp.ndarray:
         return self.network.apply(params, states)
 
     @partial(jax.jit, static_argnames="self")
     def compute_target(self, params: FrozenDict, samples: FrozenDict) -> jnp.ndarray:
-        return samples["reward"] + (1 - samples["absorbing"]) * self.gamma * self(params, samples["next_state"]).max(
-            axis=1
-        )
+        return samples["reward"] + (1 - samples["absorbing"]) * self.gamma * self.apply(
+            params, samples["next_state"]
+        ).max(axis=1)
 
     @partial(jax.jit, static_argnames="self")
     def loss(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict) -> jnp.float32:
         targets = self.compute_target(params_target, samples)
-        q_states_actions = self(params, samples["state"])
+        q_states_actions = self.apply(params, samples["state"])
         predictions = jax.vmap(lambda q_state_actions, action: q_state_actions[action])(
             q_states_actions, samples["action"]
         )
 
-        error = predictions - targets
-        return self.metric(error, ord="2")
+        return self.metric(predictions - targets, ord="2")
 
     @partial(jax.jit, static_argnames="self")
-    def best_action(self, q_params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey) -> jnp.int8:
+    def best_action(self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey) -> jnp.int8:
         # key is not used here
-        return jnp.argmax(self(q_params, jnp.array(state, dtype=jnp.float32))[0]).astype(jnp.int8)
+        return jnp.argmax(self.apply(params, jnp.array(state, dtype=jnp.float32))[0]).astype(jnp.int8)
 
 
 class IQN(BaseSingleQ):
@@ -299,8 +298,8 @@ class IQN(BaseSingleQ):
         return jnp.mean(jnp.sum(quantile_losses, axis=2))
 
     @partial(jax.jit, static_argnames="self")
-    def best_action(self, q_params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey) -> jnp.int8:
-        state_quantiles, _ = self.apply_n_quantiles_policy(q_params, jnp.array(state, dtype=jnp.float32), key)
+    def best_action(self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey) -> jnp.int8:
+        state_quantiles, _ = self.apply_n_quantiles_policy(params, jnp.array(state, dtype=jnp.float32), key)
         state_values = jnp.mean(state_quantiles, axis=(0, 1))
 
         return jnp.argmax(state_values).astype(jnp.int8)
@@ -318,8 +317,9 @@ class BaseMultiHeadQ(BaseQ):
         learning_rate: float,
         epsilon_optimizer: float,
         n_training_steps_per_online_update: int,
+        n_training_steps_per_target_update: int,
+        n_training_steps_per_head_update: int,
     ) -> None:
-        self.n_heads = n_heads
         super().__init__(
             q_inputs,
             n_actions,
@@ -330,20 +330,99 @@ class BaseMultiHeadQ(BaseQ):
             epsilon_optimizer,
             n_training_steps_per_online_update,
         )
+        self.n_heads = n_heads
+        self.n_training_steps_per_target_update = n_training_steps_per_target_update
+        self.n_training_steps_per_head_update = n_training_steps_per_head_update
 
     @partial(jax.jit, static_argnames="self")
-    def __call__(self, params: FrozenDict, states: jnp.ndarray) -> jnp.ndarray:
+    def random_head(self, key: jax.random.PRNGKeyArray, head_probability: jnp.ndarray) -> jnp.int8:
+        return jax.random.choice(key, jnp.arange(self.n_heads), p=head_probability)
+
+    def update_target_params(self, step: int) -> None:
+        if (step % self.n_training_steps_per_target_update == 0) or (step % self.n_training_steps_per_head_update == 0):
+            self.target_params = self.params
+
+
+class iDQN(BaseMultiHeadQ):
+    def __init__(
+        self,
+        n_heads: int,
+        state_shape: list,
+        n_actions: int,
+        gamma: float,
+        network: nn.Module,
+        network_key: jax.random.PRNGKeyArray,
+        head_behaviorial_probability: jnp.ndarray,
+        learning_rate: float,
+        epsilon_optimizer: float,
+        n_training_steps_per_online_update: int,
+        n_training_steps_per_target_update: int,
+        n_training_steps_per_head_update: int,
+    ) -> None:
+        super().__init__(
+            n_heads,
+            {"state": jnp.zeros(state_shape, dtype=jnp.float32)},
+            n_actions,
+            gamma,
+            network,
+            network_key,
+            learning_rate,
+            epsilon_optimizer,
+            n_training_steps_per_online_update,
+            n_training_steps_per_target_update,
+            n_training_steps_per_head_update,
+        )
+        self.head_behaviorial_probability = head_behaviorial_probability
+
+    @partial(jax.jit, static_argnames="self")
+    def apply(self, params: FrozenDict, states: jnp.ndarray) -> jnp.ndarray:
         return self.network.apply(params, states)
+
+    @partial(jax.jit, static_argnames="self")
+    def apply_specific_head(self, torso_params: FrozenDict, head_params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
+        return self.network.apply_specific_head(torso_params, head_params, state)
 
     @partial(jax.jit, static_argnames="self")
     def compute_target(self, params: FrozenDict, samples: FrozenDict) -> jnp.ndarray:
         return jnp.repeat(samples["reward"][:, None], self.n_heads, axis=1) + jnp.repeat(
             1 - samples["absorbing"][:, None], self.n_heads, axis=1
-        ) * self.gamma * self(params, samples["next_state"]).max(axis=2)
+        ) * self.gamma * self.apply(params, samples["next_state"]).max(axis=2)
 
     @partial(jax.jit, static_argnames="self")
-    def random_head(self, key: jax.random.PRNGKeyArray, head_probability: jnp.ndarray) -> jnp.int8:
-        return jax.random.choice(key, jnp.arange(self.n_heads), p=head_probability)
+    def loss(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict) -> jnp.float32:
+        targets = self.compute_target(params_target, samples)[:, :-1]
+        predictions = self.apply(params, samples["state"])[jnp.arange(samples["state"].shape[0]), 1:, samples["action"]]
+
+        return self.metric(predictions - targets, ord="2")
+
+    def best_action(self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey) -> jnp.int8:
+        idx_head = self.random_head(key, self.head_behaviorial_probability)
+
+        possible_actions = self.apply_specific_head(
+            params["torso_params_0" if idx_head == 0 else "torso_params_1"],
+            params[f"head_params_{idx_head}"],
+            state,
+            idx_head,
+        )
+
+        return self.argmax_0(possible_actions)
+
+    @staticmethod
+    @jax.jit
+    def argmax_0(possible_actions):
+        return jnp.argmax(possible_actions[0]).astype(jnp.int8)
+
+    @partial(jax.jit, static_argnames="self")
+    def update_heads(self, params: FrozenDict) -> FrozenDict:
+        return self.network.update_heads(params)
+
+    def update_online_params(self, step: int, replay_buffer: ReplayBuffer, key: jax.random.PRNGKeyArray) -> jnp.float32:
+        loss = super().update_online_params(step, replay_buffer, key)
+
+        if step % self.n_training_steps_per_head_update == 0:
+            self.params = self.update_heads(self.params)
+
+        return loss
 
     def compute_standard_deviation_head(self, replay_buffer: ReplayBuffer, key: jax.random.PRNGKeyArray) -> jnp.float32:
         standard_deviation = 0
@@ -367,72 +446,3 @@ class BaseMultiHeadQ(BaseQ):
             approximation_error += self.metric(predictions - targets, ord="sum")
 
         return approximation_error / (500 * replay_buffer.batch_size)
-
-
-class iDQN(BaseMultiHeadQ):
-    def __init__(
-        self,
-        importance_iteration: jnp.ndarray,
-        state_shape: list,
-        n_actions: int,
-        gamma: float,
-        network: nn.Module,
-        network_key: jax.random.PRNGKeyArray,
-        head_behaviorial_probability: jnp.ndarray,
-        learning_rate: float,
-        epsilon_optimizer: float,
-        n_training_steps_per_online_update: int,
-        n_training_steps_per_target_update: int,
-        n_training_steps_per_head_update: int,
-    ) -> None:
-        self.importance_iteration = importance_iteration
-        self.head_behaviorial_probability = head_behaviorial_probability
-        self.n_training_steps_per_target_update = n_training_steps_per_target_update
-        self.n_training_steps_per_head_update = n_training_steps_per_head_update
-
-        super().__init__(
-            len(importance_iteration) + 1,
-            {"state": jnp.zeros(state_shape, dtype=jnp.float32)},
-            n_actions,
-            gamma,
-            network,
-            network_key,
-            learning_rate,
-            epsilon_optimizer,
-            n_training_steps_per_online_update,
-        )
-
-    def update_heads(self, params: FrozenDict) -> FrozenDict:
-        raise NotImplementedError
-
-    @partial(jax.jit, static_argnames="self")
-    def loss(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict) -> jnp.float32:
-        targets = self.compute_target(params_target, samples)[:, :-1]
-        predictions = self(params, samples["state"])[jnp.arange(samples["state"].shape[0]), 1:, samples["action"]]
-
-        error = (predictions - targets) * jnp.repeat(self.importance_iteration[None, :], targets.shape[0], axis=0)
-        return self.metric(error, ord="2")
-
-    def best_action(self, q_params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey) -> jnp.int8:
-        idx_head = self.random_head(key, self.head_behaviorial_probability)
-
-        possible_actions = self.network.apply_specific_head(q_params, state, idx_head)
-
-        return self.argmax_0(possible_actions)
-
-    @staticmethod
-    @jax.jit
-    def argmax_0(possible_actions):
-        return jnp.argmax(possible_actions[0]).astype(jnp.int8)
-
-    def update_online_params(self, step: int, replay_buffer: ReplayBuffer, key: jax.random.PRNGKeyArray) -> jnp.float32:
-        loss = super().update_online_params(step, replay_buffer, key)
-
-        if step % self.n_training_steps_per_head_update == 0:
-            self.params = self.update_heads(self.params)
-
-        return loss
-
-    def update_target_params(self, step: int) -> None:
-        if (step % self.n_training_steps_per_target_update == 0) or (step % self.n_training_steps_per_head_update == 0):
-            self.target_params = self.params

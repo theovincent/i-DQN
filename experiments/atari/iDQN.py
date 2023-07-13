@@ -24,7 +24,7 @@ def run_cli(argvs=sys.argv[1:]):
     from idqn.environments.atari import AtariEnv
     from idqn.sample_collection.replay_buffer import ReplayBuffer
     from idqn.networks.q_architectures import AtariiDQN
-    from idqn.utils.importance_iteration import importance_iteration
+    from idqn.utils.head_behaviorial_policy import head_behaviorial_policy
     from experiments.base.DQN import train
 
     q_key, train_key = generate_keys(args.seed)
@@ -40,12 +40,12 @@ def run_cli(argvs=sys.argv[1:]):
     )
 
     q = AtariiDQN(
-        importance_iteration(p["idqn_importance_iteration"], p["gamma"], args.bellman_iterations_scope),
+        args.bellman_iterations_scope + 1,
         (env.n_stacked_frames, env.state_height, env.state_width),
         env.n_actions,
         p["gamma"],
         q_key,
-        importance_iteration(p["idqn_head_behaviorial_policy"], p["gamma"], args.bellman_iterations_scope + 1),
+        head_behaviorial_policy(p["idqn_head_behaviorial_policy"], args.bellman_iterations_scope + 1),
         p["idqn_learning_rate"],
         p["n_training_steps_per_online_update"],
         p["idqn_n_training_steps_per_target_update"],

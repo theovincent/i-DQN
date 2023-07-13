@@ -1,7 +1,7 @@
 import json
 import jax
 from idqn.utils.pickle import load_pickled_data
-from idqn.utils.importance_iteration import importance_iteration
+from idqn.utils.head_behaviorial_policy import head_behaviorial_policy
 from idqn.environments.atari import AtariEnv
 from idqn.networks.q_architectures import AtariDQN, AtariiDQN
 
@@ -35,12 +35,12 @@ if algorithm == "DQN":
     )
 else:
     q = AtariiDQN(
-        importance_iteration(p["idqn_importance_iteration"], p["gamma"], bellman_iterations_scope),
+        bellman_iterations_scope + 1,
         (env.n_stacked_frames, env.state_height, env.state_width),
         env.n_actions,
         p["gamma"],
         jax.random.PRNGKey(0),
-        importance_iteration(p["idqn_head_behaviorial_policy"], p["gamma"], bellman_iterations_scope + 1),
+        head_behaviorial_policy(p["idqn_head_behaviorial_policy"], bellman_iterations_scope + 1),
         None,
         None,
         None,
