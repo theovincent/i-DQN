@@ -22,8 +22,8 @@ class TestAtariDQN(unittest.TestCase):
         state = jax.random.uniform(self.key, self.state_shape, minval=-1, maxval=1)
         state_copy = state.copy()
 
-        output = q(q.params, state)
-        output_batch = q(q.params, jax.random.uniform(self.key, (50,) + self.state_shape, minval=-1, maxval=1))
+        output = q.apply(q.params, state)
+        output_batch = q.apply(q.params, jax.random.uniform(self.key, (50,) + self.state_shape, minval=-1, maxval=1))
 
         self.assertGreater(np.linalg.norm(output), 0)
         self.assertGreater(np.linalg.norm(output_batch), 0)
@@ -51,7 +51,7 @@ class TestAtariDQN(unittest.TestCase):
 
         for idx_sample in range(10):
             target = rewards[idx_sample] + (1 - absorbings[idx_sample]) * self.gamma * jnp.max(
-                q(q.params, next_states[idx_sample])
+                q.apply(q.params, next_states[idx_sample])
             )
             self.assertAlmostEqual(computed_targets[idx_sample], target)
 
@@ -78,7 +78,7 @@ class TestAtariDQN(unittest.TestCase):
         predictions = np.zeros(10) * np.nan
 
         for idx_sample in range(10):
-            predictions[idx_sample] = q(q.params, states[idx_sample])[0, actions.astype(jnp.int8)[idx_sample]]
+            predictions[idx_sample] = q.apply(q.params, states[idx_sample])[0, actions.astype(jnp.int8)[idx_sample]]
 
         self.assertAlmostEqual(computed_loss, np.square(targets - predictions).mean(), places=6)
 
@@ -94,14 +94,14 @@ class TestAtariDQN(unittest.TestCase):
 
         computed_best_action = q.best_action(q.params, state, None)
 
-        best_action = jnp.argmax(q(q.params, state)[0]).astype(jnp.int8)
+        best_action = jnp.argmax(q.apply(q.params, state)[0]).astype(jnp.int8)
         self.assertEqual(best_action, computed_best_action)
 
 
 class TestAtariIQN(unittest.TestCase):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.random_seed = 984  # np.random.randint(1000)
+        self.random_seed = np.random.randint(1000)
         print(f"random seed {self.random_seed}")
         self.key = jax.random.PRNGKey(self.random_seed)
         self.state_shape = (4, 84, 84)
@@ -223,8 +223,7 @@ class TestAtariiDQN(unittest.TestCase):
         self.random_seed = np.random.randint(1000)
         print(f"random seed {self.random_seed}")
         self.key = jax.random.PRNGKey(self.random_seed)
-        self.n_heads = jax.random.randint(self.key, (), minval=2, maxval=50)
-        self.importance_iteration = jax.random.uniform(self.key, (self.n_heads - 1,), minval=1, maxval=10)
+        self.n_heads = int(jax.random.randint(self.key, (), minval=2, maxval=50))
         self.state_shape = (4, 84, 84)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.gamma = jax.random.uniform(self.key)
@@ -232,7 +231,7 @@ class TestAtariiDQN(unittest.TestCase):
 
     def test_output(self) -> None:
         q = AtariiDQN(
-            self.importance_iteration,
+            self.n_heads,
             self.state_shape,
             self.n_actions,
             self.gamma,
@@ -248,8 +247,8 @@ class TestAtariiDQN(unittest.TestCase):
         state = jax.random.uniform(self.key, self.state_shape, minval=-1, maxval=1)
         state_copy = state.copy()
 
-        output = q(q.params, state)
-        output_batch = q(q.params, jax.random.uniform(self.key, (50,) + self.state_shape, minval=-1, maxval=1))
+        output = q.apply(q.params, state)
+        output_batch = q.apply(q.params, jax.random.uniform(self.key, (50,) + self.state_shape, minval=-1, maxval=1))
 
         self.assertGreater(np.linalg.norm(output), 0)
         self.assertGreater(np.linalg.norm(output_batch), 0)
@@ -263,7 +262,7 @@ class TestAtariiDQN(unittest.TestCase):
 
     def test_compute_target(self) -> None:
         q = AtariiDQN(
-            self.importance_iteration,
+            self.n_heads,
             self.state_shape,
             self.n_actions,
             self.gamma,
@@ -290,13 +289,13 @@ class TestAtariiDQN(unittest.TestCase):
         for idx_sample in range(10):
             for idx_head in range(self.n_heads):
                 target = rewards[idx_sample] + (1 - absorbings[idx_sample]) * self.gamma * jnp.max(
-                    q(q.params, next_states[idx_sample])[:, idx_head]
+                    q.apply(q.params, next_states[idx_sample])[:, idx_head]
                 )
                 self.assertAlmostEqual(computed_targets[idx_sample, idx_head], target)
 
     def test_loss(self) -> None:
         q = AtariiDQN(
-            jnp.ones(self.n_heads - 1),
+            self.n_heads,
             self.state_shape,
             self.n_actions,
             self.gamma,
@@ -329,7 +328,7 @@ class TestAtariiDQN(unittest.TestCase):
 
         for idx_sample in range(10):
             for idx_head in range(self.n_heads):
-                predictions[idx_sample, idx_head] = q(q.params, states[idx_sample])[
+                predictions[idx_sample, idx_head] = q.apply(q.params, states[idx_sample])[
                     0, idx_head, actions.astype(jnp.int8)[idx_sample]
                 ]
 
@@ -337,7 +336,7 @@ class TestAtariiDQN(unittest.TestCase):
 
     def test_best_action(self) -> None:
         q = AtariiDQN(
-            self.importance_iteration,
+            self.n_heads,
             self.state_shape,
             self.n_actions,
             self.gamma,
@@ -354,12 +353,12 @@ class TestAtariiDQN(unittest.TestCase):
         computed_best_action = q.best_action(q.params, state, self.key)
 
         # -1 since head behavioral policy equals to [0, ..., 0, 1]
-        best_action = jnp.argmax(q(q.params, state)[0, -1]).astype(jnp.int8)
+        best_action = jnp.argmax(q.apply(q.params, state)[0, -1]).astype(jnp.int8)
         self.assertEqual(best_action, computed_best_action)
 
     def test_update_heads(self) -> None:
         q = AtariiDQN(
-            self.importance_iteration,
+            self.n_heads,
             self.state_shape,
             self.n_actions,
             self.gamma,
@@ -373,10 +372,10 @@ class TestAtariiDQN(unittest.TestCase):
         )
         state = jax.random.uniform(self.key, (50,) + self.state_shape, minval=-1, maxval=1)
 
-        output = q(q.params, state)
+        output = q.apply(q.params, state)
 
         q.params = q.update_heads(q.params)
 
-        forward_output = q(q.params, state)
+        forward_output = q.apply(q.params, state)
 
         self.assertAlmostEqual(np.linalg.norm(forward_output[:, :-1] - output[:, 1:]), 0, places=8)

@@ -399,10 +399,7 @@ class iDQN(BaseMultiHeadQ):
         idx_head = self.random_head(key, self.head_behaviorial_probability)
 
         possible_actions = self.apply_specific_head(
-            params["torso_params_0" if idx_head == 0 else "torso_params_1"],
-            params[f"head_params_{idx_head}"],
-            state,
-            idx_head,
+            params["torso_params_0" if idx_head == 0 else "torso_params_1"], params[f"head_params_{idx_head}"], state
         )
 
         return self.argmax_0(possible_actions)

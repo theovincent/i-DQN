@@ -45,13 +45,13 @@ class TimeAtariQ:
         state_key = self.key
 
         # Outside of the count: time to jit the __call__ function
-        jax.block_until_ready(self.q(self.q.params, jax.random.uniform(state_key, self.state_shape)))
+        jax.block_until_ready(self.q.apply(self.q.params, jax.random.uniform(state_key, self.state_shape)))
 
         t_begin = time()
 
         for _ in range(self.n_runs):
             state_key, key = jax.random.split(state_key)
-            jax.block_until_ready(self.q(self.q.params, jax.random.uniform(key, self.state_shape)))
+            jax.block_until_ready(self.q.apply(self.q.params, jax.random.uniform(key, self.state_shape)))
 
         print("Time inference: ", (time() - t_begin) / self.n_runs)
 
@@ -197,16 +197,15 @@ class TimeAtariiDQN(TimeAtariQ):
         self.random_seed = np.random.randint(1000)
         print(f"random seed {self.random_seed}", end=" ")
         self.key = jax.random.PRNGKey(self.random_seed)
-        self.n_heads = jax.random.randint(self.key, (), minval=5, maxval=20)
+        self.n_heads = int(jax.random.randint(self.key, (), minval=5, maxval=20))
         print(f"{self.n_heads} heads")
-        self.importance_iteration = jax.random.uniform(self.key, (self.n_heads - 1,), minval=1, maxval=10)
         self.state_shape = (4, 84, 84)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.gamma = jax.random.uniform(self.key)
         self.head_behaviorial_probability = jax.random.uniform(self.key, (self.n_heads,), minval=1, maxval=10)
         super().__init__(
             q=AtariiDQN(
-                self.importance_iteration,
+                self.n_heads,
                 self.state_shape,
                 self.n_actions,
                 self.gamma,

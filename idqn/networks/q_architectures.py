@@ -1,4 +1,3 @@
-from functools import partial
 import flax.linen as nn
 from flax.core import FrozenDict
 import jax
