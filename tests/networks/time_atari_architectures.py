@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from idqn.networks.base_q import BaseQ
-from idqn.networks.q_architectures import AtariDQN, AtariIQN, AtariiDQN
+from idqn.networks.q_architectures import AtariDQN, AtariIQN, AtariiDQN, AtariiIQN
 
 
 def run_cli():
@@ -31,6 +31,14 @@ def run_cli():
     time_atari_idqn.time_compute_target()
     time_atari_idqn.time_loss()
     time_atari_idqn.time_best_action()
+
+    print("\n\nTime iIQN")
+    time_atari_iiqn = TimeAtariiIQN()
+
+    time_atari_iiqn.time_inference()
+    time_atari_iiqn.time_compute_target()
+    time_atari_iiqn.time_loss()
+    time_atari_iiqn.time_best_action()
 
 
 class TimeAtariQ:
@@ -218,3 +226,49 @@ class TimeAtariiDQN(TimeAtariQ):
                 None,
             )
         )
+
+
+class TimeAtariiIQN(TimeAtariQ):
+    def __init__(self) -> None:
+        self.random_seed = np.random.randint(1000)
+        print(f"random seed {self.random_seed}", end=" ")
+        self.key = jax.random.PRNGKey(self.random_seed)
+        self.n_heads = int(jax.random.randint(self.key, (), minval=5, maxval=20))
+        print(f"{self.n_heads} heads")
+        self.state_shape = (4, 84, 84)
+        self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
+        self.gamma = jax.random.uniform(self.key)
+        self.head_behaviorial_probability = jax.random.uniform(self.key, (self.n_heads,), minval=1, maxval=10)
+        super().__init__(
+            q=AtariiIQN(
+                self.n_heads,
+                self.state_shape,
+                self.n_actions,
+                self.gamma,
+                self.key,
+                self.head_behaviorial_probability,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
+        )
+
+    def time_inference(self) -> None:
+        state_key = self.key
+
+        # Outside of the count: time to jit the __call__ function
+        jax.block_until_ready(
+            self.q.apply_n_quantiles(self.q.params, jax.random.uniform(state_key, self.state_shape), self.q.network_key)
+        )
+
+        t_begin = time()
+
+        for _ in range(self.n_runs):
+            state_key, key = jax.random.split(state_key)
+            jax.block_until_ready(
+                self.q.apply_n_quantiles(self.q.params, jax.random.uniform(key, self.state_shape), self.q.network_key)
+            )
+
+        print("Time inference: ", (time() - t_begin) / self.n_runs)

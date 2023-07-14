@@ -163,6 +163,8 @@ class DQN(BaseSingleQ):
     def loss(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict) -> jnp.float32:
         targets = self.compute_target(params_target, samples)
         q_states_actions = self.apply(params, samples["state"])
+
+        # mapping over the states
         predictions = jax.vmap(lambda q_state_actions, action: q_state_actions[action])(
             q_states_actions, samples["action"]
         )
@@ -240,19 +242,15 @@ class IQN(BaseSingleQ):
             params, samples["next_state"], samples["next_key"]
         )  # output (batch_size, n_quantiles_target, n_actions)
 
-        # mapping first over the states and then over the quantiles
-        next_states_quantiles = jax.vmap(
-            jax.vmap(lambda quantile_actions, action: quantile_actions[action], (0, None))
-        )(
+        # mapping over the states
+        next_states_quantiles = jax.vmap(lambda quantiles_actions, action: quantiles_actions[:, action])(
             next_states_quantiles_actions, next_states_action
         )  # output (batch_size, n_quantiles_target)
 
-        # mapping over the quantiles
+        # mapping over the states
         return jax.vmap(
-            lambda rewards, absorbings, next_states_quantile: rewards
-            + (1 - absorbings) * self.gamma * next_states_quantile,
-            (None, None, 1),
-            1,
+            lambda reward, absorbing, next_states_quantiles_: reward
+            + (1 - absorbing) * self.gamma * next_states_quantiles_
         )(
             samples["reward"], samples["absorbing"], next_states_quantiles
         )  # output (batch_size, n_quantiles_target)
@@ -264,8 +262,8 @@ class IQN(BaseSingleQ):
         states_quantiles_actions, quantiles = self.apply_n_quantiles(
             params, samples["state"], samples["key"]
         )  # output (batch_size, n_quantiles, n_actions) | (batch_size, n_quantiles)
-        # mapping first over the states and then over the quantiles
-        predictions = jax.vmap(jax.vmap(lambda quantile_actions, action: quantile_actions[action], (0, None)))(
+        # mapping over the states
+        predictions = jax.vmap(lambda quantiles_actions, action: quantiles_actions[:, action])(
             states_quantiles_actions, samples["action"]
         )  # output (batch_size, n_quantiles)
 
@@ -280,21 +278,19 @@ class IQN(BaseSingleQ):
             huber_losses_quadratic_case + huber_losses_linear_case
         )  # output (batch_size, n_quantiles_target, n_quantiles)
 
-        # mapping first over the states and then over the target quantiles
+        # mapping over the target quantiles
         quantile_losses = jax.vmap(
-            jax.vmap(
-                lambda quantile, bellman_error, huber_loss: jnp.abs(
-                    quantile - jax.lax.stop_gradient(bellman_error < 0).astype(jnp.float32)
-                )
-                * huber_loss,
-                (0, 1, 1),
-                1,
+            lambda quantile, bellman_error, huber_loss: jnp.abs(
+                quantile - jax.lax.stop_gradient(bellman_error < 0).astype(jnp.float32)
             )
+            * huber_loss,
+            (None, 1, 1),
+            1,
         )(
             quantiles, bellman_errors, huber_losses
         )  # output (batch_size, n_quantiles_target, n_quantiles)
 
-        # sum over the quantiles and mean over the target quantiles and the batch
+        # sum over the quantiles and mean over the target quantiles and the states
         return jnp.mean(jnp.sum(quantile_losses, axis=2))
 
     @partial(jax.jit, static_argnames="self")
@@ -379,35 +375,36 @@ class iDQN(BaseMultiHeadQ):
         return self.network.apply(params, states)
 
     @partial(jax.jit, static_argnames="self")
-    def apply_specific_head(self, torso_params: FrozenDict, head_params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
-        return self.network.apply_specific_head(torso_params, head_params, state)
+    def best_action_from_head(
+        self, torso_params: FrozenDict, head_params: FrozenDict, state: jnp.ndarray
+    ) -> jnp.ndarray:
+        """This function is supposed to take a single state and not a batch"""
+        return jnp.argmax(self.network.apply_specific_head(torso_params, head_params, state)[0]).astype(jnp.int8)
 
     @partial(jax.jit, static_argnames="self")
     def compute_target(self, params: FrozenDict, samples: FrozenDict) -> jnp.ndarray:
-        return jnp.repeat(samples["reward"][:, None], self.n_heads, axis=1) + jnp.repeat(
-            1 - samples["absorbing"][:, None], self.n_heads, axis=1
-        ) * self.gamma * self.apply(params, samples["next_state"]).max(axis=2)
+        # mapping over the states
+        return jax.vmap(
+            lambda reward, absorbing, max_next_states: reward + (1 - absorbing) * self.gamma * max_next_states,
+        )(samples["reward"], samples["absorbing"], jnp.max(self.apply(params, samples["next_state"]), axis=2))
 
     @partial(jax.jit, static_argnames="self")
     def loss(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict) -> jnp.float32:
         targets = self.compute_target(params_target, samples)[:, :-1]
-        predictions = self.apply(params, samples["state"])[jnp.arange(samples["state"].shape[0]), 1:, samples["action"]]
+        values_actions = self.apply(params, samples["state"])
+        # mapping over the states
+        predictions = jax.vmap(lambda value_actions, action: value_actions[1:, action])(
+            values_actions, samples["action"]
+        )
 
         return self.metric(predictions - targets, ord="2")
 
     def best_action(self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey) -> jnp.int8:
         idx_head = self.random_head(key, self.head_behaviorial_probability)
 
-        possible_actions = self.apply_specific_head(
+        return self.best_action_from_head(
             params["torso_params_0" if idx_head == 0 else "torso_params_1"], params[f"head_params_{idx_head}"], state
         )
-
-        return self.argmax_0(possible_actions)
-
-    @staticmethod
-    @jax.jit
-    def argmax_0(possible_actions):
-        return jnp.argmax(possible_actions[0]).astype(jnp.int8)
 
     @partial(jax.jit, static_argnames="self")
     def update_heads(self, params: FrozenDict) -> FrozenDict:
@@ -437,9 +434,180 @@ class iDQN(BaseMultiHeadQ):
             batch_samples = replay_buffer.sample_random_batch(key)
 
             targets = self.compute_target(self.target_params, batch_samples)[:, 0]
-            predictions = self(self.params, batch_samples["state"])[
-                jnp.arange(batch_samples["state"].shape[0]), 1, batch_samples["action"]
-            ]
+            values_actions = self.apply(self.params, batch_samples["state"])
+            # mapping over the states
+            predictions = jax.vmap(lambda value_actions, action: value_actions[1, action])(
+                values_actions, batch_samples["action"]
+            )
             approximation_error += self.metric(predictions - targets, ord="sum")
 
         return approximation_error / (500 * replay_buffer.batch_size)
+
+
+class iIQN(BaseMultiHeadQ):
+    def __init__(
+        self,
+        n_heads: int,
+        state_shape: list,
+        n_actions: int,
+        gamma: float,
+        network: nn.Module,
+        network_key: jax.random.PRNGKeyArray,
+        head_behaviorial_probability: jnp.ndarray,
+        learning_rate: float,
+        epsilon_optimizer: float,
+        n_training_steps_per_online_update: int,
+        n_training_steps_per_target_update: int,
+        n_training_steps_per_head_update: int,
+    ) -> None:
+        super().__init__(
+            n_heads,
+            {"state": jnp.zeros(state_shape, dtype=jnp.float32), "key": jax.random.PRNGKey(0), "n_quantiles": 32},
+            n_actions,
+            gamma,
+            network,
+            network_key,
+            learning_rate,
+            epsilon_optimizer,
+            n_training_steps_per_online_update,
+            n_training_steps_per_target_update,
+            n_training_steps_per_head_update,
+        )
+        self.head_behaviorial_probability = head_behaviorial_probability
+        self.n_quantiles_policy = 32
+        self.n_quantiles = 64
+        self.n_quantiles_target = 64
+
+    @partial(jax.jit, static_argnames="self")
+    def apply_n_quantiles_policy(
+        self, params: FrozenDict, states: jnp.ndarray, key: jax.random.PRNGKeyArray
+    ) -> Tuple[jnp.ndarray, jnp.ndarray]:
+        return self.network.apply(params, states, key, self.n_quantiles_policy)
+
+    @partial(jax.jit, static_argnames="self")
+    def apply_n_quantiles(
+        self, params: FrozenDict, states: jnp.ndarray, key: jax.random.PRNGKeyArray
+    ) -> Tuple[jnp.ndarray, jnp.ndarray]:
+        return self.network.apply(params, states, key, self.n_quantiles)
+
+    @partial(jax.jit, static_argnames="self")
+    def apply_n_quantiles_target(
+        self, params: FrozenDict, states: jnp.ndarray, key: jax.random.PRNGKeyArray
+    ) -> Tuple[jnp.ndarray, jnp.ndarray]:
+        return self.network.apply(params, states, key, self.n_quantiles_target)
+
+    @partial(jax.jit, static_argnames="self")
+    def best_action_from_head(
+        self,
+        torso_params: FrozenDict,
+        quantiles_params: FrozenDict,
+        head_params: FrozenDict,
+        state: jnp.ndarray,
+        key: jax.random.PRNGKey,
+    ) -> jnp.ndarray:
+        """This function is supposed to take a single state and not a batch"""
+        return jnp.argmax(
+            jnp.mean(
+                self.network.apply_specific_head(
+                    torso_params, quantiles_params, head_params, state, key, self.n_quantiles_policy
+                )[0],
+                axis=0,
+            )
+        ).astype(jnp.int8)
+
+    def add_keys(self, samples):
+        self.network_key, samples["key"], samples["next_key"], samples["policy_key"] = jax.random.split(
+            self.network_key, 4
+        )
+
+    @partial(jax.jit, static_argnames="self")
+    def compute_target(self, params: FrozenDict, samples: FrozenDict) -> jnp.ndarray:
+        next_states_policy_quantiles_actions, _ = self.apply_n_quantiles_policy(
+            params, samples["next_state"], samples["policy_key"]
+        )  # output (batch_size, n_heads, n_quantiles_policy, n_actions)
+        next_states_policy_values_actions = jnp.mean(
+            next_states_policy_quantiles_actions, axis=2
+        )  # output (batch_size, n_heads, n_actions)
+        next_states_action = jnp.argmax(next_states_policy_values_actions, axis=2)  # output (batch_size, n_heads)
+
+        next_states_quantiles_actions, _ = self.apply_n_quantiles_target(
+            params, samples["next_state"], samples["next_key"]
+        )  # output (batch_size, n_heads, n_quantiles_target, n_actions)
+
+        # mapping first over the states and then over the heads
+        next_states_quantiles = jax.vmap(jax.vmap(lambda quantiles_actions, action: quantiles_actions[:, action]))(
+            next_states_quantiles_actions, next_states_action
+        )  # output (batch_size, n_heads, n_quantiles_target)
+
+        # mapping over the states
+        return jax.vmap(
+            lambda reward, absorbing, next_states_quantiles_: reward
+            + (1 - absorbing) * self.gamma * next_states_quantiles_,
+        )(
+            samples["reward"], samples["absorbing"], next_states_quantiles
+        )  # output (batch_size, n_heads, n_quantiles_target)
+
+    @partial(jax.jit, static_argnames="self")
+    def loss(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict) -> jnp.float32:
+        targets = self.compute_target(params_target, samples)  # output (batch_size, n_heads, n_quantiles_target)
+
+        states_quantiles_actions, quantiles = self.apply_n_quantiles(
+            params, samples["state"], samples["key"]
+        )  # output (batch_size, n_heads, n_quantiles, n_actions) | (batch_size, n_quantiles)
+        # mapping over the states
+        predictions = jax.vmap(lambda quantiles_actions, action: quantiles_actions[:, :, action])(
+            states_quantiles_actions, samples["action"]
+        )  # output (batch_size, n_heads, n_quantiles)
+
+        # cross difference
+        bellman_errors = (
+            targets[:, :-1, :, jnp.newaxis] - predictions[:, 1:, jnp.newaxis]
+        )  # output (batch_size, n_heads - 1, n_quantiles_target, n_quantiles)
+
+        huber_losses_quadratic_case = (jnp.abs(bellman_errors) <= 1).astype(jnp.float32) * 0.5 * bellman_errors**2
+        huber_losses_linear_case = (jnp.abs(bellman_errors) > 1).astype(jnp.float32) * (jnp.abs(bellman_errors) - 0.5)
+        huber_losses = (
+            huber_losses_quadratic_case + huber_losses_linear_case
+        )  # output (batch_size, n_heads - 1, n_quantiles_target, n_quantiles)
+
+        # mapping first over the heads and then over the target quantiles
+        quantile_losses = jax.vmap(
+            jax.vmap(
+                lambda quantile, bellman_errors_, huber_losses_: jnp.abs(
+                    quantile - jax.lax.stop_gradient(bellman_errors_ < 0).astype(jnp.float32)
+                )
+                * huber_losses_,
+                (None, 1, 1),
+                1,
+            ),
+            (None, 1, 1),
+            1,
+        )(
+            quantiles, bellman_errors, huber_losses
+        )  # output (batch_size, n_heads - 1, n_quantiles_target, n_quantiles)
+
+        # sum over the quantiles and mean over the target quantiles, the heads and the states
+        return jnp.mean(jnp.sum(quantile_losses, axis=3))
+
+    def best_action(self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey) -> jnp.int8:
+        idx_head = self.random_head(key, self.head_behaviorial_probability)
+
+        return self.best_action_from_head(
+            params["torso_params_0" if idx_head == 0 else "torso_params_1"],
+            params["quantiles_params_0" if idx_head == 0 else "quantiles_params_1"],
+            params[f"head_params_{idx_head}"],
+            state,
+            key,
+        )
+
+    @partial(jax.jit, static_argnames="self")
+    def update_heads(self, params: FrozenDict) -> FrozenDict:
+        return self.network.update_heads(params)
+
+    def update_online_params(self, step: int, replay_buffer: ReplayBuffer, key: jax.random.PRNGKeyArray) -> jnp.float32:
+        loss = super().update_online_params(step, replay_buffer, key)
+
+        if step % self.n_training_steps_per_head_update == 0:
+            self.params = self.update_heads(self.params)
+
+        return loss
