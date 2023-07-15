@@ -375,6 +375,10 @@ class iDQN(BaseMultiHeadQ):
         return self.network.apply(params, states)
 
     @partial(jax.jit, static_argnames="self")
+    def apply_other_heads(self, params: FrozenDict, states: jnp.ndarray) -> jnp.ndarray:
+        return self.network.apply_other_heads(params, states)
+
+    @partial(jax.jit, static_argnames="self")
     def best_action_from_head(
         self, torso_params: FrozenDict, head_params: FrozenDict, state: jnp.ndarray
     ) -> jnp.ndarray:
@@ -391,9 +395,9 @@ class iDQN(BaseMultiHeadQ):
     @partial(jax.jit, static_argnames="self")
     def loss(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict) -> jnp.float32:
         targets = self.compute_target(params_target, samples)[:, :-1]
-        values_actions = self.apply(params, samples["state"])
+        values_actions = self.apply_other_heads(params, samples["state"])
         # mapping over the states
-        predictions = jax.vmap(lambda value_actions, action: value_actions[1:, action])(
+        predictions = jax.vmap(lambda value_actions, action: value_actions[:, action])(
             values_actions, samples["action"]
         )
 
@@ -403,7 +407,7 @@ class iDQN(BaseMultiHeadQ):
         idx_head = self.random_head(key, self.head_behaviorial_probability)
 
         return self.best_action_from_head(
-            params["torso_params_0" if idx_head == 0 else "torso_params_1"], params[f"head_params_{idx_head}"], state
+            params[f"torso_params_{0 if idx_head == 0 else 1}"], params[f"head_params_{idx_head}"], state
         )
 
     @partial(jax.jit, static_argnames="self")
@@ -488,7 +492,7 @@ class iIQN(BaseMultiHeadQ):
     def apply_n_quantiles(
         self, params: FrozenDict, states: jnp.ndarray, key: jax.random.PRNGKeyArray
     ) -> Tuple[jnp.ndarray, jnp.ndarray]:
-        return self.network.apply(params, states, key, self.n_quantiles)
+        return self.network.apply_other_heads(params, states, key, self.n_quantiles)
 
     @partial(jax.jit, static_argnames="self")
     def apply_n_quantiles_target(
@@ -553,15 +557,15 @@ class iIQN(BaseMultiHeadQ):
 
         states_quantiles_actions, quantiles = self.apply_n_quantiles(
             params, samples["state"], samples["key"]
-        )  # output (batch_size, n_heads, n_quantiles, n_actions) | (batch_size, n_quantiles)
+        )  # output (batch_size, n_heads - 1, n_quantiles, n_actions) | (batch_size, n_quantiles)
         # mapping over the states
         predictions = jax.vmap(lambda quantiles_actions, action: quantiles_actions[:, :, action])(
             states_quantiles_actions, samples["action"]
-        )  # output (batch_size, n_heads, n_quantiles)
+        )  # output (batch_size, n_heads - 1, n_quantiles)
 
         # cross difference
         bellman_errors = (
-            targets[:, :-1, :, jnp.newaxis] - predictions[:, 1:, jnp.newaxis]
+            targets[:, :-1, :, jnp.newaxis] - predictions[:, :, jnp.newaxis]
         )  # output (batch_size, n_heads - 1, n_quantiles_target, n_quantiles)
 
         huber_losses_quadratic_case = (jnp.abs(bellman_errors) <= 1).astype(jnp.float32) * 0.5 * bellman_errors**2

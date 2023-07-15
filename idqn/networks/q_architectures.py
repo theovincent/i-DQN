@@ -193,6 +193,17 @@ class AtariSharediDQNNet:
 
         return output
 
+    def apply_other_heads(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
+        features_1 = self.torso.apply(params["torso_params_1"], state)
+
+        # batch_size = features_1.shape[0]
+        output = jnp.zeros((features_1.shape[0], self.n_heads - 1, self.n_actions))
+
+        for idx_head in range(1, self.n_heads):
+            output = output.at[:, idx_head - 1].set(self.head.apply(params[f"head_params_{idx_head}"], features_1))
+
+        return output
+
     def apply_specific_head(self, torso_params: FrozenDict, head_params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
         features = self.torso.apply(torso_params, state)
 
@@ -299,7 +310,7 @@ class AtariSharediIQNet:
         )  # output (batch_size, n_quantiles, n_features)
         # We use the same key for the quantiles here so that the 'apply' function computes the same quantiles over all the heads.
         quantiles_features_1, _ = self.quantile_embedding.apply(
-            params["quantiles_params_1"], key, n_quantiles, state_features_0.shape[0]
+            params["quantiles_params_1"], key, n_quantiles, state_features_1.shape[0]
         )  # output (batch_size, n_quantiles, n_features)
 
         multiplied_features_0 = jax.vmap(
@@ -320,6 +331,31 @@ class AtariSharediIQNet:
         )  # output (batch_size, n_quantiles, n_actions)
         for idx_head in range(1, self.n_heads):
             output = output.at[:, idx_head].set(
+                self.head.apply(params[f"head_params_{idx_head}"], multiplied_features_1)
+            )  # output (batch_size, n_quantiles, n_actions)
+
+        return output, quantiles  # output (batch_size, n_heads, n_quantiles, n_actions) | (batch_size, n_quantiles)
+
+    def apply_other_heads(
+        self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey, n_quantiles: int
+    ) -> jnp.ndarray:
+        state_features_1 = self.torso.apply(params["torso_params_1"], state)  # output (batch_size, n_features)
+
+        # batch_size = features_1.shape[0]
+        quantiles_features_1, quantiles = self.quantile_embedding.apply(
+            params["quantiles_params_1"], key, n_quantiles, state_features_1.shape[0]
+        )  # output (batch_size, n_quantiles, n_features)
+
+        multiplied_features_1 = jax.vmap(
+            jax.vmap(lambda quantile_features, state_features_: quantile_features * state_features_, (0, None))
+        )(
+            quantiles_features_1, state_features_1
+        )  # output (batch_size, n_quantiles, n_features)
+
+        output = jnp.zeros((state_features_1.shape[0], self.n_heads - 1, n_quantiles, self.n_actions))
+
+        for idx_head in range(1, self.n_heads):
+            output = output.at[:, idx_head - 1].set(
                 self.head.apply(params[f"head_params_{idx_head}"], multiplied_features_1)
             )  # output (batch_size, n_quantiles, n_actions)
 
