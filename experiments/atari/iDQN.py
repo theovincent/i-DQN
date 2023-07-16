@@ -47,6 +47,7 @@ def run_cli(argvs=sys.argv[1:]):
         q_key,
         head_behaviorial_policy(p["idqn_head_behaviorial_policy"], args.bellman_iterations_scope + 1),
         p["idqn_learning_rate"],
+        p["idqn_optimizer_eps"],
         p["n_training_steps_per_online_update"],
         p["idqn_n_training_steps_per_target_update"],
         p["idqn_n_training_steps_per_head_update"],
