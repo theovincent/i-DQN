@@ -422,7 +422,7 @@ class TestAtariiIQN(unittest.TestCase):
         self.assertEqual(quantiles.shape, (1, q.n_quantiles))
         self.assertEqual(batch_quantiles.shape, (50, q.n_quantiles_target))
 
-        self.assertEqual(output.shape, (1, self.n_heads, q.n_quantiles, self.n_actions))
+        self.assertEqual(output.shape, (1, self.n_heads - 1, q.n_quantiles, self.n_actions))
         self.assertEqual(output_batch.shape, (50, self.n_heads, q.n_quantiles_target, self.n_actions))
 
         # test if the input has been changed
@@ -456,8 +456,8 @@ class TestAtariiIQN(unittest.TestCase):
 
         computed_targets = q.compute_target(q.params, samples)
 
-        quantiles_policy, _ = q.apply_n_quantiles_policy(q.target_params, next_states, samples["policy_key"])
-        quantiles_targets, _ = q.apply_n_quantiles_target(q.target_params, next_states, samples["next_key"])
+        quantiles_policy, _ = q.network.apply(q.target_params, next_states, samples["policy_key"], q.n_quantiles_policy)
+        quantiles_targets, _ = q.network.apply(q.target_params, next_states, samples["next_key"], q.n_quantiles_target)
 
         for idx_sample in range(10):
             for idx_head in range(self.n_heads):
@@ -506,7 +506,7 @@ class TestAtariiIQN(unittest.TestCase):
         computed_loss = q.loss(q.params, q.params, samples)
 
         targets = q.compute_target(q.params, samples)
-        predictions, quantiles = q.apply_n_quantiles(q.params, states, samples["key"])
+        predictions, quantiles = q.network.apply(q.params, states, samples["key"], q.n_quantiles)
 
         loss = 0
 

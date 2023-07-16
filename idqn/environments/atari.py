@@ -150,7 +150,7 @@ class AtariEnv:
         if absorbing or self.n_steps >= horizon:
             self.reset()
 
-        return reward, absorbing or self.n_steps >= horizon
+        return reward, absorbing or self.n_steps == 0
 
     def evaluate_one_simulation(
         self,
