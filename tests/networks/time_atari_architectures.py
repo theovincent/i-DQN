@@ -6,6 +6,8 @@ import numpy as np
 from idqn.networks.base_q import BaseQ
 from idqn.networks.q_architectures import AtariDQN, AtariIQN, AtariiDQN, AtariiIQN
 
+RANDOM_SEED = np.random.randint(1000)
+
 
 def run_cli():
     print("Time DQN")
@@ -162,7 +164,7 @@ class TimeAtariQ:
 
 class TimeAtariDQN(TimeAtariQ):
     def __init__(self) -> None:
-        self.random_seed = np.random.randint(1000)
+        self.random_seed = RANDOM_SEED
         print(f"random seed {self.random_seed}")
         self.key = jax.random.PRNGKey(self.random_seed)
         self.state_shape = (4, 84, 84)
@@ -173,7 +175,7 @@ class TimeAtariDQN(TimeAtariQ):
 
 class TimeAtariIQN(TimeAtariQ):
     def __init__(self) -> None:
-        self.random_seed = np.random.randint(1000)
+        self.random_seed = RANDOM_SEED
         print(f"random seed {self.random_seed}")
         self.key = jax.random.PRNGKey(self.random_seed)
         self.state_shape = (4, 84, 84)
@@ -202,7 +204,7 @@ class TimeAtariIQN(TimeAtariQ):
 
 class TimeAtariiDQN(TimeAtariQ):
     def __init__(self) -> None:
-        self.random_seed = np.random.randint(1000)
+        self.random_seed = RANDOM_SEED
         print(f"random seed {self.random_seed}", end=" ")
         self.key = jax.random.PRNGKey(self.random_seed)
         self.n_heads = int(jax.random.randint(self.key, (), minval=5, maxval=20))
@@ -230,7 +232,7 @@ class TimeAtariiDQN(TimeAtariQ):
 
 class TimeAtariiIQN(TimeAtariQ):
     def __init__(self) -> None:
-        self.random_seed = np.random.randint(1000)
+        self.random_seed = RANDOM_SEED
         print(f"random seed {self.random_seed}", end=" ")
         self.key = jax.random.PRNGKey(self.random_seed)
         self.n_heads = int(jax.random.randint(self.key, (), minval=5, maxval=20))
@@ -252,6 +254,9 @@ class TimeAtariiIQN(TimeAtariQ):
                 None,
                 None,
                 None,
+                32,
+                24,
+                24,
             )
         )
 

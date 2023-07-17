@@ -307,19 +307,20 @@ class AtariSharediIQNet:
         # batch_size = features_0.shape[0]
         quantiles_features_0, quantiles = self.quantile_embedding.apply(
             params["quantiles_params_0"], key, n_quantiles, state_features_0.shape[0]
-        )  # output (batch_size, n_quantiles, n_features)
+        )  # output (batch_size, n_quantiles, n_features) | (batch_size, n_quantiles)
         # We use the same key for the quantiles here so that the 'apply' function computes the same quantiles over all the heads.
         quantiles_features_1, _ = self.quantile_embedding.apply(
             params["quantiles_params_1"], key, n_quantiles, state_features_1.shape[0]
         )  # output (batch_size, n_quantiles, n_features)
 
+        # mapping over the quantiles
         multiplied_features_0 = jax.vmap(
-            jax.vmap(lambda quantile_features, state_features_: quantile_features * state_features_, (0, None))
+            lambda quantile_features, state_features_: quantile_features * state_features_, (1, None), 1
         )(
             quantiles_features_0, state_features_0
         )  # output (batch_size, n_quantiles, n_features)
         multiplied_features_1 = jax.vmap(
-            jax.vmap(lambda quantile_features, state_features_: quantile_features * state_features_, (0, None))
+            lambda quantile_features, state_features_: quantile_features * state_features_, (1, None), 1
         )(
             quantiles_features_1, state_features_1
         )  # output (batch_size, n_quantiles, n_features)
@@ -344,10 +345,11 @@ class AtariSharediIQNet:
         # batch_size = features_1.shape[0]
         quantiles_features_1, quantiles = self.quantile_embedding.apply(
             params["quantiles_params_1"], key, n_quantiles, state_features_1.shape[0]
-        )  # output (batch_size, n_quantiles, n_features)
+        )  # output (batch_size, n_quantiles, n_features) | (batch_size, n_quantiles)
 
+        # mapping over the quantiles
         multiplied_features_1 = jax.vmap(
-            jax.vmap(lambda quantile_features, state_features_: quantile_features * state_features_, (0, None))
+            lambda quantile_features, state_features_: quantile_features * state_features_, (1, None), 1
         )(
             quantiles_features_1, state_features_1
         )  # output (batch_size, n_quantiles, n_features)
@@ -377,8 +379,9 @@ class AtariSharediIQNet:
             quantiles_params, key, n_quantiles, state_features.shape[0]
         )  # output (batch_size, n_quantiles, n_features)
 
+        # mapping over the quantiles
         multiplied_features = jax.vmap(
-            jax.vmap(lambda quantile_features, state_features: quantile_features * state_features, (0, None))
+            lambda quantile_features, state_features: quantile_features * state_features, (1, None), 1
         )(
             quantiles_features, state_features
         )  # output (batch_size, n_quantiles, n_features)
@@ -412,6 +415,9 @@ class AtariiIQN(iIQN):
         n_training_steps_per_online_update: int,
         n_training_steps_per_target_update: int,
         n_training_steps_per_head_update: int,
+        n_quantiles_policy: int,
+        n_quantiles: int,
+        n_quantiles_target: int,
     ) -> None:
         super().__init__(
             n_heads,
@@ -426,4 +432,7 @@ class AtariiIQN(iIQN):
             n_training_steps_per_online_update,
             n_training_steps_per_target_update,
             n_training_steps_per_head_update,
+            n_quantiles_policy,
+            n_quantiles,
+            n_quantiles_target,
         )

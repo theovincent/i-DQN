@@ -24,5 +24,14 @@
     "idqn_optimizer_eps": 1.5e-4,
     "idqn_n_training_steps_per_target_update": 30,
     "idqn_n_training_steps_per_head_update": 6000,
-    "idqn_head_behaviorial_policy": "uniform"
+    "idqn_head_behaviorial_policy": "uniform",
+    "---- iIQNs ---": "----------------------------",
+    "iiqn_learning_rate": 0.00005,
+    "iiqn_optimizer_eps": 0.0003125,
+    "iiqn_n_training_steps_per_target_update": 30,
+    "iiqn_n_training_steps_per_head_update": 6000,
+    "iiqn_head_behaviorial_policy": "uniform",
+    "iiqn_n_quantiles_policy": 32,
+    "iiqn_n_quantiles": 24,
+    "iiqn_n_quantiles_target": 24
 }

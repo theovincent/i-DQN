@@ -460,6 +460,9 @@ class iIQN(BaseMultiHeadQ):
         n_training_steps_per_online_update: int,
         n_training_steps_per_target_update: int,
         n_training_steps_per_head_update: int,
+        n_quantiles_policy: int,
+        n_quantiles: int,
+        n_quantiles_target: int,
     ) -> None:
         super().__init__(
             n_heads,
@@ -475,9 +478,9 @@ class iIQN(BaseMultiHeadQ):
             n_training_steps_per_head_update,
         )
         self.head_behaviorial_probability = head_behaviorial_probability
-        self.n_quantiles_policy = 32
-        self.n_quantiles = 64
-        self.n_quantiles_target = 64
+        self.n_quantiles_policy = n_quantiles_policy
+        self.n_quantiles = n_quantiles
+        self.n_quantiles_target = n_quantiles_target
 
     @partial(jax.jit, static_argnames="self")
     def apply_n_quantiles_policy(
@@ -495,7 +498,7 @@ class iIQN(BaseMultiHeadQ):
     def apply_n_quantiles_target(
         self, params: FrozenDict, states: jnp.ndarray, key: jax.random.PRNGKeyArray
     ) -> Tuple[jnp.ndarray, jnp.ndarray]:
-        return self.network.apply(params, states, key, self.n_quantiles_target)
+        return self.network.apply(params, states, key, self.n_quantiles_policy + self.n_quantiles_target)
 
     @partial(jax.jit, static_argnames="self")
     def best_action_from_head(
@@ -517,27 +520,21 @@ class iIQN(BaseMultiHeadQ):
         ).astype(jnp.int8)
 
     def add_keys(self, samples):
-        self.network_key, samples["key"], samples["next_key"], samples["policy_key"] = jax.random.split(
-            self.network_key, 4
-        )
+        self.network_key, samples["key"], samples["next_key"] = jax.random.split(self.network_key, 3)
 
     @partial(jax.jit, static_argnames="self")
     def compute_target(self, params: FrozenDict, samples: FrozenDict) -> jnp.ndarray:
-        next_states_policy_quantiles_actions, _ = self.apply_n_quantiles_policy(
-            params, samples["next_state"], samples["policy_key"]
-        )  # output (batch_size, n_heads, n_quantiles_policy, n_actions)
+        next_states_policy_quantiles_quantiles_actions, _ = self.apply_n_quantiles_target(
+            params, samples["next_state"], samples["next_key"]
+        )  # output (batch_size, n_heads, n_quantiles_policy + n_quantiles_target, n_actions)
         next_states_policy_values_actions = jnp.mean(
-            next_states_policy_quantiles_actions, axis=2
+            next_states_policy_quantiles_quantiles_actions[:, :, : self.n_quantiles_policy], axis=2
         )  # output (batch_size, n_heads, n_actions)
         next_states_action = jnp.argmax(next_states_policy_values_actions, axis=2)  # output (batch_size, n_heads)
 
-        next_states_quantiles_actions, _ = self.apply_n_quantiles_target(
-            params, samples["next_state"], samples["next_key"]
-        )  # output (batch_size, n_heads, n_quantiles_target, n_actions)
-
         # mapping first over the states and then over the heads
         next_states_quantiles = jax.vmap(jax.vmap(lambda quantiles_actions, action: quantiles_actions[:, action]))(
-            next_states_quantiles_actions, next_states_action
+            next_states_policy_quantiles_quantiles_actions[:, :, self.n_quantiles_policy :], next_states_action
         )  # output (batch_size, n_heads, n_quantiles_target)
 
         # mapping over the states
@@ -564,9 +561,12 @@ class iIQN(BaseMultiHeadQ):
         bellman_errors = (
             targets[:, :-1, :, jnp.newaxis] - predictions[:, :, jnp.newaxis]
         )  # output (batch_size, n_heads - 1, n_quantiles_target, n_quantiles)
+        abs_bellman_errors_mask_low = jax.lax.stop_gradient((jnp.abs(bellman_errors) <= 1).astype(jnp.float32))
+        abs_bellman_errors_mask_high = jax.lax.stop_gradient((jnp.abs(bellman_errors) > 1).astype(jnp.float32))
+        bellman_errors_mask_low = jax.lax.stop_gradient(bellman_errors < 0).astype(jnp.float32)
 
-        huber_losses_quadratic_case = (jnp.abs(bellman_errors) <= 1).astype(jnp.float32) * 0.5 * bellman_errors**2
-        huber_losses_linear_case = (jnp.abs(bellman_errors) > 1).astype(jnp.float32) * (jnp.abs(bellman_errors) - 0.5)
+        huber_losses_quadratic_case = abs_bellman_errors_mask_low * 0.5 * bellman_errors**2
+        huber_losses_linear_case = abs_bellman_errors_mask_high * (jnp.abs(bellman_errors) - 0.5)
         huber_losses = (
             huber_losses_quadratic_case + huber_losses_linear_case
         )  # output (batch_size, n_heads - 1, n_quantiles_target, n_quantiles)
@@ -574,9 +574,7 @@ class iIQN(BaseMultiHeadQ):
         # mapping first over the heads and then over the target quantiles
         quantile_losses = jax.vmap(
             jax.vmap(
-                lambda quantile, bellman_errors_, huber_losses_: jnp.abs(
-                    quantile - jax.lax.stop_gradient(bellman_errors_ < 0).astype(jnp.float32)
-                )
+                lambda quantile, bellman_error_mask_low, huber_losses_: jnp.abs(quantile - bellman_error_mask_low)
                 * huber_losses_,
                 (None, 1, 1),
                 1,
@@ -584,7 +582,7 @@ class iIQN(BaseMultiHeadQ):
             (None, 1, 1),
             1,
         )(
-            quantiles, bellman_errors, huber_losses
+            quantiles, bellman_errors_mask_low, huber_losses
         )  # output (batch_size, n_heads - 1, n_quantiles_target, n_quantiles)
 
         # sum over the quantiles and mean over the target quantiles, the heads and the states

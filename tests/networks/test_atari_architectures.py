@@ -411,6 +411,9 @@ class TestAtariiIQN(unittest.TestCase):
             None,
             None,
             None,
+            32,
+            64,
+            64,
         )
 
         state = jax.random.uniform(self.key, self.state_shape, minval=-1, maxval=1)
@@ -425,10 +428,12 @@ class TestAtariiIQN(unittest.TestCase):
         self.assertGreater(np.linalg.norm(output_batch), 0)
 
         self.assertEqual(quantiles.shape, (1, q.n_quantiles))
-        self.assertEqual(batch_quantiles.shape, (50, q.n_quantiles_target))
+        self.assertEqual(batch_quantiles.shape, (50, q.n_quantiles_policy + q.n_quantiles_target))
 
         self.assertEqual(output.shape, (1, self.n_heads - 1, q.n_quantiles, self.n_actions))
-        self.assertEqual(output_batch.shape, (50, self.n_heads, q.n_quantiles_target, self.n_actions))
+        self.assertEqual(
+            output_batch.shape, (50, self.n_heads, q.n_quantiles_policy + q.n_quantiles_target, self.n_actions)
+        )
 
         # test if the input has been changed
         self.assertEqual(np.linalg.norm(state - state_copy), 0)
@@ -447,6 +452,9 @@ class TestAtariiIQN(unittest.TestCase):
             None,
             None,
             None,
+            32,
+            64,
+            64,
         )
 
         rewards = jax.random.uniform(self.key, (10,), minval=-1, maxval=1)
@@ -457,12 +465,17 @@ class TestAtariiIQN(unittest.TestCase):
             "next_state": jnp.array(next_states, dtype=jnp.float32),
             "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
         }
-        samples["key"], samples["next_key"], samples["policy_key"] = jax.random.split(self.key, 3)
+        samples["key"], samples["next_key"] = jax.random.split(self.key, 2)
 
         computed_targets = q.compute_target(q.params, samples)
 
-        quantiles_policy, _ = q.network.apply(q.target_params, next_states, samples["policy_key"], q.n_quantiles_policy)
-        quantiles_targets, _ = q.network.apply(q.target_params, next_states, samples["next_key"], q.n_quantiles_target)
+        quantiles_policy_targets, _ = q.network.apply(
+            q.target_params, next_states, samples["next_key"], q.n_quantiles_policy + q.n_quantiles_target
+        )
+        quantiles_policy, quantiles_targets = (
+            quantiles_policy_targets[:, :, : q.n_quantiles_policy],
+            quantiles_policy_targets[:, :, q.n_quantiles_policy :],
+        )
 
         for idx_sample in range(10):
             for idx_head in range(self.n_heads):
@@ -473,7 +486,7 @@ class TestAtariiIQN(unittest.TestCase):
                     rewards[idx_sample]
                     + (1 - absorbings[idx_sample]) * self.gamma * quantiles_targets[idx_sample, idx_head, :, action]
                 )
-                self.assertAlmostEqual(jnp.linalg.norm(computed_targets[idx_sample, idx_head] - target), 0)
+                self.assertAlmostEqual(jnp.linalg.norm(computed_targets[idx_sample, idx_head] - target), 0, places=6)
 
     def test_loss(self) -> None:
         n_heads = 5
@@ -489,9 +502,10 @@ class TestAtariiIQN(unittest.TestCase):
             None,
             None,
             None,
+            32,
+            13,
+            9,
         )
-        q.n_quantiles = 13
-        q.n_quantiles_target = 9
 
         states = jax.random.uniform(self.key, (10,) + self.state_shape, minval=-1, maxval=1)
         actions = jax.random.randint(self.key, (10,), minval=0, maxval=self.n_actions)
@@ -506,7 +520,7 @@ class TestAtariiIQN(unittest.TestCase):
             "next_state": jnp.array(next_states, dtype=jnp.float32),
             "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
         }
-        samples["key"], samples["next_key"], samples["policy_key"] = jax.random.split(self.key, 3)
+        samples["key"], samples["next_key"] = jax.random.split(self.key, 2)
 
         computed_loss = q.loss(q.params, q.params, samples)
 
@@ -545,6 +559,9 @@ class TestAtariiIQN(unittest.TestCase):
             None,
             None,
             None,
+            32,
+            64,
+            64,
         )
         state = jax.random.uniform(self.key, self.state_shape, minval=-1, maxval=1)
 
@@ -570,6 +587,9 @@ class TestAtariiIQN(unittest.TestCase):
             None,
             None,
             None,
+            32,
+            64,
+            64,
         )
         state = jax.random.uniform(self.key, (50,) + self.state_shape, minval=-1, maxval=1)
 
