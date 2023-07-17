@@ -45,9 +45,9 @@ def run_cli(argvs=sys.argv[1:]):
         env.n_actions,
         p["gamma"],
         q_key,
-        head_behaviorial_policy(p["idqn_head_behaviorial_policy"], args.bellman_iterations_scope + 1),
-        p["idqn_learning_rate"],
-        p["idqn_optimizer_eps"],
+        head_behaviorial_policy(p["iiqn_head_behaviorial_policy"], args.bellman_iterations_scope + 1),
+        p["iiqn_learning_rate"],
+        p["iiqn_optimizer_eps"],
         p["n_training_steps_per_online_update"],
         p["iiqn_n_training_steps_per_target_update"],
         p["iiqn_n_training_steps_per_head_update"],
@@ -58,7 +58,7 @@ def run_cli(argvs=sys.argv[1:]):
 
     train(
         train_key,
-        f"experiments/atari/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_",
+        f"experiments/atari/figures/{args.experiment_name}/iIQN/{args.bellman_iterations_scope}_",
         args,
         p,
         q,
