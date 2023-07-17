@@ -119,9 +119,9 @@ class AtariIQNNet(nn.Module):
             key, n_quantiles, state_features.shape[0]
         )  # output (batch_size, n_quantiles, n_features)
 
-        # mapping first over the states and then over the quantiles
+        # mapping over the quantiles
         multiplied_features = jax.vmap(
-            jax.vmap(lambda quantile_features, state_features_: quantile_features * state_features_, (0, None))
+            lambda quantile_features, state_features_: quantile_features * state_features_, (1, None), 1
         )(
             quantiles_features, state_features
         )  # output (batch_size, n_quantiles, n_features)
