@@ -44,6 +44,7 @@ def run_cli(argvs=sys.argv[1:]):
         p["gamma"],
         q_key,
         p["dqn_learning_rate"],
+        p["dqn_optimizer_eps"],
         p["n_training_steps_per_online_update"],
         p["dqn_n_training_steps_per_target_update"],
     )

@@ -32,6 +32,6 @@
     "iiqn_n_training_steps_per_head_update": 6000,
     "iiqn_head_behaviorial_policy": "uniform",
     "iiqn_n_quantiles_policy": 32,
-    "iiqn_n_quantiles": 24,
-    "iiqn_n_quantiles_target": 24
+    "iiqn_n_quantiles": 32,
+    "iiqn_n_quantiles_target": 32
 }

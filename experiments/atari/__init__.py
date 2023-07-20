@@ -176,6 +176,7 @@ EXPERIMENTED_GAME = [
 ]
 
 AVAILABLE_COLORS = {
+    "black": "#000000",
     "blue": "#377eb8",
     "green": "#4daf4a",
     "purple": "#984ea3",
@@ -190,6 +191,7 @@ AVAILABLE_COLORS = {
 
 COLORS = {
     "iDQN_ut30_uh6000_5": AVAILABLE_COLORS["blue"],
+    "iIQN_ut30_uh6000_5": AVAILABLE_COLORS["black"],
     "iDQN_ablation_study_K_5": AVAILABLE_COLORS["blue"],
     "iDQN_ablation_study_K_10": AVAILABLE_COLORS["orange"],
     "iDQN_ut30_uh6000_k1_5_5": AVAILABLE_COLORS["blue"],
@@ -220,6 +222,7 @@ COLORS = {
 
 LABEL = {
     "iDQN_ut30_uh6000_5": "iDQN K=5",
+    "iIQN_ut30_uh6000_5": "iDQN K=5",
     "iDQN_ablation_study_K_5": "iDQN K=5",
     "iDQN_ablation_study_K_10": "iDQN K=10",
     "iDQN_ut30_uh6000_k1_5_5": "iDQN uniform sampling",
@@ -250,6 +253,7 @@ LABEL = {
 
 ORDER = {
     "iDQN_ut30_uh6000_5": 11,
+    "iIQN_ut30_uh6000_5": 11,
     "iDQN_ablation_study_K_5": 11,
     "iDQN_ablation_study_K_10": 12,
     "iDQN_ut30_uh6000_k1_5_5": 11,

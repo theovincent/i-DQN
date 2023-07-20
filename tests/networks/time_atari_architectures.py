@@ -255,8 +255,8 @@ class TimeAtariiIQN(TimeAtariQ):
                 None,
                 None,
                 32,
-                24,
-                24,
+                32,
+                32,
             )
         )
 
