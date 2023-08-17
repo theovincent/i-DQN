@@ -1,4 +1,4 @@
-from typing import Dict, Type
+from typing import Dict, Type, Callable
 from functools import partial
 import numpy as np
 import jax
@@ -6,7 +6,9 @@ import jax.numpy as jnp
 
 
 class ReplayBuffer:
-    def __init__(self, max_size: int, batch_size: int, state_shape: list, state_dtype: Type, clipping) -> None:
+    def __init__(
+        self, max_size: int, batch_size: int, state_shape: list, state_dtype: Type, clipping: Callable
+    ) -> None:
         self.max_size = max_size
         self.batch_size = batch_size
         self.state_shape = state_shape
@@ -86,3 +88,57 @@ class ReplayBuffer:
 
         self.len = np.load(path + "_len.npy").astype(int)
         self.idx = np.load(path + "_idx.npy").astype(int)
+
+
+class NStepsReplayBuffer(ReplayBuffer):
+    def __init__(
+        self,
+        n_steps_return: int,
+        gamma: float,
+        max_size: int,
+        batch_size: int,
+        state_shape: list,
+        state_dtype: Type,
+        clipping: Callable,
+    ) -> None:
+        super().__init__(max_size, batch_size, state_shape, state_dtype, clipping)
+        self.n_steps_return = n_steps_return
+        self.gamma = gamma
+
+    def reset_steps_buffer(self) -> None:
+        self.states_steps = np.zeros((self.n_steps_return,) + self.state_shape, dtype=self.state_dtype)
+        self.actions_steps = np.zeros(self.n_steps_return, dtype=self.action_dtype)
+        self.rewards_steps = np.zeros(self.n_steps_return, dtype=self.reward_dtype) * np.nan
+
+        self.position = 0
+        self.discounts_steps = np.zeros(self.n_steps_return, dtype=self.reward_dtype)
+        self.discounts_steps[self.position] = 1
+
+    def add(
+        self,
+        state: np.ndarray,
+        action: np.ndarray,
+        reward: np.ndarray,
+        next_state: np.ndarray,
+        absorbing: np.ndarray,
+    ) -> None:
+        self.rewards_steps[self.position] = state
+        self.actions_steps[self.position] = action
+        self.rewards_steps += self.discounts_steps * reward
+
+        self.position = (self.position + 1) % self.n_steps_return
+
+        if self.rewards_steps[self.position] is not None:
+            super().add(
+                self.states_steps[self.position],
+                self.actions_steps[self.position],
+                self.rewards_steps[self.position],
+                next_state,
+                absorbing,
+            )
+
+        if absorbing:
+            self.reset_steps_buffer()
+        else:
+            self.discounts_steps *= self.gamma
+            self.discounts_steps[self.position] = 1
