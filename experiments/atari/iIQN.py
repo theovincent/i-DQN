@@ -31,7 +31,7 @@ def run_cli(argvs=sys.argv[1:]):
 
     env = AtariEnv(args.experiment_name.split("/")[1])
 
-    if p["n_step_return"] == 1:
+    if p["iiqn_n_step_return"] == 1:
         replay_buffer = ReplayBuffer(
             p["replay_buffer_size"],
             p["batch_size"],

@@ -123,9 +123,10 @@ class AtariEnv:
             action = jax.random.choice(key, jnp.arange(self.n_actions))
             next_state, reward, absorbing, _ = self.step(action)
 
-            replay_buffer.add(state, action, reward, next_state, absorbing)
+            truncated = self.n_steps >= horizon
+            replay_buffer.add(state, action, reward, next_state, absorbing, truncated)
 
-            if absorbing or self.n_steps >= horizon:
+            if absorbing or truncated:
                 self.reset()
 
     def collect_one_sample(
