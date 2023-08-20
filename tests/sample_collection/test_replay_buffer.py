@@ -3,7 +3,7 @@ import unittest
 import jax
 import numpy as np
 
-from idqn.sample_collection.replay_buffer import ReplayBuffer
+from idqn.sample_collection.replay_buffer import ReplayBuffer, NStepReplayBuffer
 
 
 class TestReplayBuffer(unittest.TestCase):
@@ -29,7 +29,7 @@ class TestReplayBuffer(unittest.TestCase):
         key, _ = jax.random.split(self.key)
         next_state = np.array(jax.random.randint(key, replay_buffer.state_shape, 0, 256, replay_buffer.state_dtype))
 
-        replay_buffer.add(state, action, reward, next_state, absorbing)
+        replay_buffer.add(state, action, reward, next_state, absorbing, None)  # Truncated is not relevant here
 
         # Check if only the reference have been stored
         state_copy = state.copy()
@@ -66,7 +66,7 @@ class TestReplayBuffer(unittest.TestCase):
             key, _ = jax.random.split(key)
             next_state = np.array(jax.random.randint(key, replay_buffer.state_shape, 1, 256, replay_buffer.state_dtype))
 
-            replay_buffer.add(state, action, reward, next_state, absorbing)
+            replay_buffer.add(state, action, reward, next_state, absorbing, None)  # Truncated is not relevant here
 
         batch = replay_buffer.sample_random_batch(self.key)
 
@@ -92,7 +92,7 @@ class TestReplayBuffer(unittest.TestCase):
             key, _ = jax.random.split(key)
             next_state = np.array(jax.random.randint(key, replay_buffer.state_shape, 1, 256, replay_buffer.state_dtype))
 
-            replay_buffer.add(state, action, reward, next_state, absorbing)
+            replay_buffer.add(state, action, reward, next_state, absorbing, None)  # Truncated is not relevant here
 
         replay_buffer.save(self.path)
 
@@ -136,3 +136,74 @@ class TestReplayBuffer(unittest.TestCase):
         os.remove(self.path + "_absorbings.npy")
         os.remove(self.path + "_idx.npy")
         os.remove(self.path + "_len.npy")
+
+
+class TestNStepReplayBuffer(unittest.TestCase):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.random_seed = np.random.randint(1000)
+        print(f"random seed {self.random_seed}")
+        self.key = jax.random.PRNGKey(self.random_seed)
+        self.n_steps_return = jax.random.randint(self.key, (), minval=1, maxval=10)
+        self.gamma = np.float32(jax.random.uniform(self.key))
+        self.max_size = jax.random.randint(self.key, (), minval=50, maxval=1000)
+        self.batch_size = jax.random.randint(self.key, (), minval=1, maxval=self.max_size)
+        self.state_shape = (4, 84, 84)
+        self.state_dtype = np.uint8
+        self.identity = lambda x: x
+
+    def test_add(self) -> None:
+        replay_buffer = NStepReplayBuffer(
+            self.n_steps_return,
+            self.gamma,
+            self.max_size,
+            self.batch_size,
+            self.state_shape,
+            self.state_dtype,
+            self.identity,
+        )
+        n_samples = 50
+
+        states = np.array(
+            jax.random.randint(self.key, (n_samples,) + replay_buffer.state_shape, 0, 256, replay_buffer.state_dtype)
+        )
+        actions = np.array(jax.random.randint(self.key, (n_samples,), 0, 10, replay_buffer.action_dtype))
+        rewards = np.array(jax.random.uniform(self.key, (n_samples,), replay_buffer.reward_dtype, 0, 1000))
+        absorbings = np.array(jax.random.randint(self.key, (n_samples,), 0, 2), dtype=replay_buffer.absorbing_dtype)
+        # We enforce the last sample to be absorbing so that n_samples are added to the replay buffer,
+        # i.e. at the end of an episode, the replay buffer should add all samples from the step buffer to the "real" buffer.
+        absorbings[-1] = True
+        key_truncateds, keys_next_states = jax.random.split(self.key)
+        truncateds = np.array(
+            jax.random.randint(key_truncateds, (n_samples,), 0, 2), dtype=replay_buffer.absorbing_dtype
+        )
+        next_states = np.array(
+            jax.random.randint(
+                keys_next_states, (n_samples,) + replay_buffer.state_shape, 0, 256, replay_buffer.state_dtype
+            )
+        )
+
+        for idx_sample in range(n_samples):
+            replay_buffer.add(
+                states[idx_sample],
+                actions[idx_sample],
+                rewards[idx_sample],
+                next_states[idx_sample],
+                absorbings[idx_sample],
+                truncateds[idx_sample],
+            )
+
+        for idx_sample in range(n_samples):
+            self.assertEqual(np.linalg.norm(states[idx_sample] - replay_buffer.states[idx_sample]), 0)
+            self.assertEqual(np.linalg.norm(actions[idx_sample] - replay_buffer.actions[idx_sample]), 0)
+
+            # Compute the number of n-steps that the sample should have access to
+            reward = rewards[idx_sample]
+            i = 1
+            while i < self.n_steps_return and not absorbings[idx_sample + i - 1] and not truncateds[idx_sample + i - 1]:
+                reward += self.gamma**i * rewards[idx_sample + i]
+                i += 1
+
+            self.assertAlmostEqual(reward, replay_buffer.rewards[idx_sample], places=3)
+            self.assertEqual(np.linalg.norm(next_states[idx_sample + i - 1] - replay_buffer.next_states[idx_sample]), 0)
+            self.assertEqual(absorbings[idx_sample + i - 1], replay_buffer.absorbings[idx_sample])

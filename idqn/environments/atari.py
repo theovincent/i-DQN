@@ -145,12 +145,13 @@ class AtariEnv:
 
         next_state, reward, absorbing, _ = self.step(action)
 
-        replay_buffer.add(state, action, reward, next_state, absorbing)
+        truncated = self.n_steps >= horizon
+        replay_buffer.add(state, action, reward, next_state, absorbing, truncated)
 
-        if absorbing or self.n_steps >= horizon:
+        if absorbing or truncated:
             self.reset()
 
-        return reward, absorbing or self.n_steps == 0
+        return reward, absorbing or truncated
 
     def evaluate_one_simulation(
         self,
