@@ -180,11 +180,11 @@ AVAILABLE_COLORS = {
     "black": "#000000",
     "blue": "#1F77B4",
     "light_blue": "#AEC7E8",
-    "orange": "#FFBB78",
+    "orange": "#FF7F0E",
     "light_orange": "#FFBB78",
     "green": "#2CA02C",
     "light_green": "#98DF8A",
-    "red": "#D62728",
+    "red": "#D1797A",
     "light_red": "#FF9896",
     "purple": "#9467BD",
     "light_purple": "#C5B0D5",
@@ -195,45 +195,45 @@ AVAILABLE_COLORS = {
     "grey": "#7F7F7F",
     "light_grey": "#C7C7C7",
     "yellow": "#DEDE00",
-    "light_yellow": "#EBCB8B",
+    "light_yellow": "#F0E886",
     "cyan": "#17BECF",
     "light_cyan": "#9EDAE5",
 }
 
 COLORS = {
     # iDQN
-    "DQN_sanity_check": AVAILABLE_COLORS["light_grey"],
-    "iDQN_sanity_check_1": AVAILABLE_COLORS["light_blue"],
-    "iDQN_ut30_uh6000_5": AVAILABLE_COLORS["light_blue"],
+    "DQN_sanity_check": AVAILABLE_COLORS["light_brown"],
+    "iDQN_sanity_check_1": AVAILABLE_COLORS["blue"],
+    "iDQN_ut30_uh6000_5": AVAILABLE_COLORS["blue"],
     # iIQN
-    "IQN_sanity_check": AVAILABLE_COLORS["light_grey"],
+    "IQN_sanity_check": AVAILABLE_COLORS["light_brown"],
     "iIQN_sanity_check_1": AVAILABLE_COLORS["green"],
     "iIQN_ut30_uh6000_3": AVAILABLE_COLORS["green"],
     "iIQN_ut30_uh6000_5": AVAILABLE_COLORS["green"],
     # iDQN + 3-step return
-    "DQN_sanity_check_3_steps": AVAILABLE_COLORS["light_grey"],
-    "iDQN_sanity_check_3_steps_1": AVAILABLE_COLORS["blue"],
-    "iDQN_ut30_uh6000_3_step_5": AVAILABLE_COLORS["blue"],
+    "DQN_sanity_check_3_steps": AVAILABLE_COLORS["light_brown"],
+    "iDQN_sanity_check_3_steps_1": AVAILABLE_COLORS["cyan"],
+    "iDQN_ut30_uh6000_3_step_5": AVAILABLE_COLORS["cyan"],
     # Ablations K
-    "iDQN_ablation_study_K_5": AVAILABLE_COLORS["light_purple"],
-    "iDQN_ablation_study_K_10": AVAILABLE_COLORS["light_orange"],
+    "iDQN_ablation_study_K_5": AVAILABLE_COLORS["blue"],
+    "iDQN_ablation_study_K_10": AVAILABLE_COLORS["orange"],
     # Ablations behavioral policy
-    "iDQN_ut30_uh6000_k1_5_5": AVAILABLE_COLORS["light_blue"],
-    "iDQN_ut30_uh6000_k1_5": AVAILABLE_COLORS["light_brown"],
-    "iDQN_ut30_uh6000_k5_5": AVAILABLE_COLORS["light_pink"],
+    "iDQN_ut30_uh6000_k1_5_5": AVAILABLE_COLORS["blue"],
+    "iDQN_ut30_uh6000_k1_5": AVAILABLE_COLORS["orange"],
+    "iDQN_ut30_uh6000_k5_5": AVAILABLE_COLORS["pink"],
     # Ablations head std
-    "iDQN_head_std_5": AVAILABLE_COLORS["light_brown"],
+    "iDQN_head_std_5": AVAILABLE_COLORS["brown"],
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": AVAILABLE_COLORS["grey"],
-    "Quantile (JAX)_dopamine": AVAILABLE_COLORS["red"],
-    "DQN (Adam)": AVAILABLE_COLORS["light_pink"],
-    "DQN + n-step return": AVAILABLE_COLORS["pink"],  # Only on a few games
-    "C51": AVAILABLE_COLORS["light_purple"],
-    "REM": AVAILABLE_COLORS["light_brown"],
-    "Rainbow": AVAILABLE_COLORS["purple"],
-    "IQN_pure": AVAILABLE_COLORS["light_orange"],  # Only on a few games
-    "IQN": AVAILABLE_COLORS["orange"],
-    "M-IQN": AVAILABLE_COLORS["yellow"],
+    "Quantile (JAX)_dopamine": AVAILABLE_COLORS["light_red"],
+    "DQN (Adam)": AVAILABLE_COLORS["pink"],
+    "DQN + n-step return": AVAILABLE_COLORS["light_pink"],  # Only on a few games
+    "C51": AVAILABLE_COLORS["purple"],
+    "REM": AVAILABLE_COLORS["brown"],
+    "Rainbow": AVAILABLE_COLORS["light_purple"],
+    "IQN_pure": AVAILABLE_COLORS["orange"],  # Only on a few games
+    "IQN": AVAILABLE_COLORS["light_orange"],
+    "M-IQN": AVAILABLE_COLORS["light_yellow"],
     # Baselines from dopamine
     # "DQN_dopamine": AVAILABLE_COLORS["grey"],
     # "DQN (Adam + MSE in JAX)_dopamine": AVAILABLE_COLORS["light_pink"],
