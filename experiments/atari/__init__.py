@@ -250,8 +250,8 @@ LABEL = {
     # iIQN
     "IQN_sanity_check": "IQN (our implementation)",
     "iIQN_sanity_check_1": "iIQN K=1",
-    "iIQN_ut30_uh6000_3": "iIQN K=3",
-    "iIQN_ut30_uh6000_5": "iIQN K=5",
+    "iIQN_ut30_uh6000_3": "iIQN K=3 (iDQN + IQN)",
+    "iIQN_ut30_uh6000_5": "iIQN K=5 (iDQN + IQN)",
     # iDQN + 3-step return
     "DQN_sanity_check_3_steps": "DQN + 3-step return (our implementation)",
     "iDQN_sanity_check_3_steps_1": "iDQN K=1 + 3-step return",
