@@ -1,4 +1,4 @@
-from typing import Dict, Type
+from typing import Dict, Type, Callable, Union
 from functools import partial
 import numpy as np
 import jax
@@ -6,7 +6,9 @@ import jax.numpy as jnp
 
 
 class ReplayBuffer:
-    def __init__(self, max_size: int, batch_size: int, state_shape: list, state_dtype: Type, clipping) -> None:
+    def __init__(
+        self, max_size: int, batch_size: int, state_shape: list, state_dtype: Type, clipping: Callable
+    ) -> None:
         self.max_size = max_size
         self.batch_size = batch_size
         self.state_shape = state_shape
@@ -32,7 +34,11 @@ class ReplayBuffer:
         reward: np.ndarray,
         next_state: np.ndarray,
         absorbing: np.ndarray,
+        truncated: Union[np.ndarray, None],
     ) -> None:
+        """
+        Trucated is only used with n-step return
+        """
         self.states[self.idx] = state
         self.actions[self.idx] = action
         self.rewards[self.idx] = self.clipping(reward)
@@ -86,3 +92,81 @@ class ReplayBuffer:
 
         self.len = np.load(path + "_len.npy").astype(int)
         self.idx = np.load(path + "_idx.npy").astype(int)
+
+
+class NStepReplayBuffer(ReplayBuffer):
+    def __init__(
+        self,
+        n_steps_return: int,
+        gamma: float,
+        max_size: int,
+        batch_size: int,
+        state_shape: list,
+        state_dtype: Type,
+        clipping: Callable,
+    ) -> None:
+        super().__init__(max_size, batch_size, state_shape, state_dtype, clipping)
+        self.n_steps_return = n_steps_return
+        self.gamma = gamma
+        self.reset_steps_buffer()
+
+    def reset_steps_buffer(self) -> None:
+        self.position_steps = 0
+
+        self.states_steps = np.zeros((self.n_steps_return,) + self.state_shape, dtype=self.state_dtype)
+        self.actions_steps = np.zeros(self.n_steps_return, dtype=self.action_dtype)
+        self.rewards_steps = np.zeros(self.n_steps_return, dtype=self.reward_dtype) * np.nan
+        self.rewards_steps[self.position_steps] = 0
+        self.discounts_steps = np.zeros(self.n_steps_return, dtype=self.reward_dtype)
+        self.discounts_steps[self.position_steps] = 1
+
+    def add(
+        self,
+        state: np.ndarray,
+        action: np.ndarray,
+        reward: np.ndarray,
+        next_state: np.ndarray,
+        absorbing: np.ndarray,
+        truncated: np.ndarray,
+    ) -> None:
+        self.states_steps[self.position_steps] = state
+        self.actions_steps[self.position_steps] = action
+        self.rewards_steps += self.discounts_steps * reward
+
+        self.position_steps = (self.position_steps + 1) % self.n_steps_return
+
+        # if one round has been done, the following element in the discount array is not nan
+        if not np.isnan(self.rewards_steps[self.position_steps]):
+            super().add(
+                self.states_steps[self.position_steps],
+                self.actions_steps[self.position_steps],
+                self.rewards_steps[self.position_steps],
+                next_state,
+                absorbing,
+                None,
+            )
+
+        # either we store all samples and reset the step buffer
+        if absorbing or truncated:
+            # add the samples even if the n follwing steps are not available
+            # the sample at position_step has already been added
+            for position in range(self.position_steps + 1, self.position_steps + self.n_steps_return):
+                position_ = position % self.n_steps_return
+                # we skip the samples where the reward is nan
+                if not np.isnan(self.rewards_steps[position_]):
+                    super().add(
+                        self.states_steps[position_],
+                        self.actions_steps[position_],
+                        self.rewards_steps[position_],
+                        next_state,
+                        absorbing,
+                        None,
+                    )
+            self.reset_steps_buffer()
+        # or we update the discount factors to prepare for the next step
+        else:
+            self.discounts_steps *= self.gamma
+            self.discounts_steps[self.position_steps] = 1
+
+        # In all cases, a new reward will be computed at that position
+        self.rewards_steps[self.position_steps] = 0

@@ -123,9 +123,10 @@ class AtariEnv:
             action = jax.random.choice(key, jnp.arange(self.n_actions))
             next_state, reward, absorbing, _ = self.step(action)
 
-            replay_buffer.add(state, action, reward, next_state, absorbing)
+            truncated = self.n_steps >= horizon
+            replay_buffer.add(state, action, reward, next_state, absorbing, truncated)
 
-            if absorbing or self.n_steps >= horizon:
+            if absorbing or truncated:
                 self.reset()
 
     def collect_one_sample(
@@ -141,16 +142,17 @@ class AtariEnv:
         if exploration_schedule.explore():
             action = q.random_action(exploration_schedule.key)
         else:
-            action = q.best_action(exploration_schedule.key, q_params, self.state)
+            action = q.best_action(q_params, self.state, exploration_schedule.key)
 
         next_state, reward, absorbing, _ = self.step(action)
 
-        replay_buffer.add(state, action, reward, next_state, absorbing)
+        truncated = self.n_steps >= horizon
+        replay_buffer.add(state, action, reward, next_state, absorbing, truncated)
 
-        if absorbing or self.n_steps >= horizon:
+        if absorbing or truncated:
             self.reset()
 
-        return reward, absorbing or self.n_steps >= horizon
+        return reward, absorbing or truncated
 
     def evaluate_one_simulation(
         self,
@@ -176,7 +178,7 @@ class AtariEnv:
             if jax.random.uniform(key) < eps_eval:
                 action = q.random_action(key)
             else:
-                action = q.best_action(key, q_params, self.state)
+                action = q.best_action(q_params, self.state, key)
 
             _, reward, absorbing, _ = self.step(action)
 

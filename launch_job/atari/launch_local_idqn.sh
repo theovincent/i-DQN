@@ -13,14 +13,9 @@ EXPERIMENT_GENERAL_NAME=${split_experiment_name[0]}
 [ -d experiments/atari/figures/$EXPERIMENT_NAME/iDQN ] || mkdir experiments/atari/figures/$EXPERIMENT_NAME/iDQN
 
 
-for (( seed=$FIRST_SEED; seed<=$LAST_SEED; seed++ ))
-do
-    seed_command="export SLURM_ARRAY_TASK_ID=$seed"
-    for bellman_iterations_scope in "${LIST_BELLMAN_ITERATIONS_SCOPE[@]}"
-    do
-        # iDQN
-        echo "launch train idqn"
-        train_command="launch_job/atari/train_idqn.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope -g -ns $N_PARALLEL_SEEDS"
-        tmux send-keys -t train "$seed_command" ENTER "$train_command" ENTER
-    done
-done
+seed_command="export SLURM_ARRAY_TASK_ID=$FIRST_SEED"
+
+# iDQN
+echo "launch train idqn"
+train_command="launch_job/atari/train_idqn.sh -e $EXPERIMENT_NAME -b ${LIST_BELLMAN_ITERATIONS_SCOPE[0]} -ns $N_PARALLEL_SEEDS"
+tmux send-keys -t train "$seed_command" ENTER "$train_command" ENTER

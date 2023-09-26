@@ -12,21 +12,13 @@ from idqn.environments.atari import AtariEnv
 
 def train(
     key: jax.random.PRNGKey,
-    environment_name: str,
+    experiment_path: str,
     args: Namespace,
     p: dict,
     q: BaseQ,
     env: AtariEnv,
     replay_buffer: ReplayBuffer,
 ) -> None:
-    # if DQN
-    if args.bellman_iterations_scope is None:
-        experiment_path = f"experiments/{environment_name}/figures/{args.experiment_name}/DQN/"
-    else:
-        experiment_path = (
-            f"experiments/{environment_name}/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_"
-        )
-
     sample_key, exploration_key = jax.random.split(key)
     n_training_steps = 0
     losses = np.zeros((p["n_epochs"], p["n_training_steps_per_epoch"])) * np.nan
@@ -82,7 +74,7 @@ def train(
 
             argmax_j = idx_epoch
             max_j = js[idx_epoch]
-            q.save(f"{experiment_path}Q_{args.seed}_{argmax_j}_best", online_params_only=True)
+            q.save(f"{experiment_path}Q_{args.seed}_{argmax_j}_best")
 
         if args.bellman_iterations_scope is not None and p.get("compute_head_std", False):
             stds[idx_epoch] = q.compute_standard_deviation_head(replay_buffer, key)

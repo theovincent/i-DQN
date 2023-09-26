@@ -1,20 +1,20 @@
 import json
 import jax
 from idqn.utils.pickle import load_pickled_data
-from idqn.utils.importance_iteration import importance_iteration
+from idqn.utils.head_behaviorial_policy import head_behaviorial_policy
 from idqn.environments.atari import AtariEnv
-from idqn.networks.q_architectures import AtariDQN, AtariiDQN
+from idqn.networks.q_architectures import AtariDQN, AtariIQN, AtariiDQN
 
 
 # ------- To modify ------- #
-experiment = "ut30_uh6000"
-algorithm = "iDQN"
-game = "Pitfall"
-bellman_iterations_scope = 5
-parameters = "Q_11_146_best"
+experiment = "sanity_check"
+algorithm = "IQN"
+game = "Frostbite"
+bellman_iterations_scope = None
+parameters = "Q_21_152_best"
 # ------------------------- #
 
-if algorithm == "DQN":
+if bellman_iterations_scope is None:
     params_path = f"{experiment}/{game}/{algorithm}/{parameters}"
 else:
     params_path = f"{experiment}/{game}/{algorithm}/{bellman_iterations_scope}_{parameters}"
@@ -32,15 +32,28 @@ if algorithm == "DQN":
         None,
         None,
         None,
+        None,
     )
-else:
-    q = AtariiDQN(
-        importance_iteration(p["idqn_importance_iteration"], p["gamma"], bellman_iterations_scope),
+elif algorithm == "IQN":
+    q = AtariIQN(
         (env.n_stacked_frames, env.state_height, env.state_width),
         env.n_actions,
         p["gamma"],
         jax.random.PRNGKey(0),
-        importance_iteration(p["idqn_head_behaviorial_policy"], p["gamma"], bellman_iterations_scope + 1),
+        None,
+        None,
+        None,
+        None,
+    )
+else:
+    q = AtariiDQN(
+        bellman_iterations_scope + 1,
+        (env.n_stacked_frames, env.state_height, env.state_width),
+        env.n_actions,
+        p["gamma"],
+        jax.random.PRNGKey(0),
+        head_behaviorial_policy(p["idqn_head_behaviorial_policy"], bellman_iterations_scope + 1),
+        None,
         None,
         None,
         None,

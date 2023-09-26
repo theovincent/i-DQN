@@ -1,13 +1,13 @@
 # Iterated Deep Q-Network: Efficient Learning of Bellman Iterations for Deep Reinforcement Learning
 
 ## User installation
-We recommend using Python 3.8|3.9|3.10.
-A GPU is needed to run the experiments. In the folder where the code is, create a Python virtual environment, activate it, updae pip and install the package and its dependencies in editable mode:
+We recommend using Python 3.9|3.10.
+A GPU is needed to run the experiments. In the folder where the code is, create a Python virtual environment, activate it, update pip and install the package and its dependencies in editable mode:
 ```bash
-python3 -m venv env_gpu
-source env_gpu/bin/activate
+python3 -m venv env
+source env/bin/activate
 pip install --upgrade pip
-pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+pip install --upgrade "jax[cuda12_pip]==0.4.13" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 pip install -e .
 ```
 
@@ -36,14 +36,16 @@ pytest
 The tests should take around 1 minute to run.
 
 ## Baseline scores
-Get the google bucket provided in https://github.com/google-research/rliable to have the scores of the baselines. For that you might need to install the google cloud SDK https://cloud.google.com/sdk/docs/downloads-interactive?hl=en#linux-mac and run:
+Get the google bucket provided in https://github.com/google-research/rliable to have the scores of the baselines. For that, you need to install the google cloud SDK https://cloud.google.com/sdk/docs/downloads-interactive?hl=en#linux-mac and run:
 ```bash
-gsutil -m cp -R gs://rl-benchmark-data/ALE experiments/atari/baselines_scores
+gsutil -m cp -R gs://rl-benchmark-data/ALE experiments/atari/baselines_scores/
 ```
-The file *atari_200_iters_scores.npy* is the one used to plot the figures. 
+The file *atari_200_iters_scores.npy* is the one used to plot the figures. Please bring this file to the *experiments/atari/baselines_scores/* folder:
+```bash
+cp experiments/atari/baselines_scores/ALE/atari_200_iters_scores.npy experiments/atari/baselines_scores/
+```
 
-## Details on the Atari environment
-The wrapped environment is build on Gymnasium with no frame kipping, with 25% of probability that the previous action is played instead of the current one and with a reduced subset of actions. 
+The wrapped environment is build on top of Gymnasium with no frame kipping, with 25% of probability that the previous action is played instead of the current one and with a reduced subset of actions. 
 One step of the wrapped environment is composed of:
 - 4 steps of the gymnasium environment.
 - Max pooling over the 2 last greyscale frames.
@@ -57,5 +59,3 @@ Each episode ends when the _game over_ signal is sent.
 If JAX cannot access the GPU, we recomment using docker. A [Dockerfile](Dockerfile) has been developped for that purpose.
 
 Restraining the GPU memory pre allocation by setting ```XLA_PYTHON_CLIENT_MEM_FRACTION``` to ```0.4``` in line 15 of file *launch_job/atari/train_idqn.sh* might solve the issue as well.
-
-Now you can go back to the [user installation](#user-installation) guidelines.

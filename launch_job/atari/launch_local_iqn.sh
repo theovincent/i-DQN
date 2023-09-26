@@ -10,9 +10,12 @@ EXPERIMENT_GENERAL_NAME=${split_experiment_name[0]}
 
 [ -d experiments/atari/figures/$EXPERIMENT_NAME ] || mkdir -p experiments/atari/figures/$EXPERIMENT_NAME
 [ -f experiments/atari/figures/$EXPERIMENT_GENERAL_NAME/parameters.json ] || cp experiments/atari/parameters.json experiments/atari/figures/$EXPERIMENT_GENERAL_NAME/parameters.json
-[ -d experiments/atari/figures/$EXPERIMENT_NAME/DQN ] || mkdir experiments/atari/figures/$EXPERIMENT_NAME/DQN
+[ -d experiments/atari/figures/$EXPERIMENT_NAME/IQN ] || mkdir experiments/atari/figures/$EXPERIMENT_NAME/IQN
 
 
-# DQN
-echo "launch train dqn"
-submission_train_dqn_1=$(sbatch -J $EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=$(( 6 * $N_PARALLEL_SEEDS )) --mem-per-cpu=10G --time=3-00:00:00 --gres=gpu:1 -p gpu --output=/dev/null launch_job/docker_launcher.sh launch_job/atari/train_dqn.sh -e $EXPERIMENT_NAME -ns $N_PARALLEL_SEEDS)
+seed_command="export SLURM_ARRAY_TASK_ID=$FIRST_SEED"
+
+# IQN
+echo "launch train iqn"
+train_command="launch_job/atari/train_iqn.sh -e $EXPERIMENT_NAME -ns $N_PARALLEL_SEEDS"
+tmux send-keys -t train "$seed_command" ENTER "$train_command" ENTER

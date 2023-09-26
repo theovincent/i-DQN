@@ -12,10 +12,10 @@ def run_cli(argvs=sys.argv[1:]):
 
     warnings.simplefilter(action="ignore", category=FutureWarning)
 
-    parser = argparse.ArgumentParser("Train DQN on Atari.")
+    parser = argparse.ArgumentParser("Train iIQN on Atari.")
     addparse(parser)
     args = parser.parse_args(argvs)
-    print_info(args.experiment_name, "DQN", "Atari", args.bellman_iterations_scope, args.seed)
+    print_info(args.experiment_name, "iIQN", "Atari", args.bellman_iterations_scope, args.seed)
     p = json.load(
         open(f"experiments/atari/figures/{args.experiment_name.split('/')[0]}/parameters.json")
     )  # p for parameters
@@ -23,14 +23,15 @@ def run_cli(argvs=sys.argv[1:]):
     from experiments.atari.utils import generate_keys
     from idqn.environments.atari import AtariEnv
     from idqn.sample_collection.replay_buffer import ReplayBuffer, NStepReplayBuffer
-    from idqn.networks.q_architectures import AtariDQN
+    from idqn.networks.q_architectures import AtariiIQN
+    from idqn.utils.head_behaviorial_policy import head_behaviorial_policy
     from experiments.base.DQN import train
 
     q_key, train_key = generate_keys(args.seed)
 
     env = AtariEnv(args.experiment_name.split("/")[1])
 
-    if p["dqn_n_step_return"] == 1:
+    if p["iiqn_n_step_return"] == 1:
         replay_buffer = ReplayBuffer(
             p["replay_buffer_size"],
             p["batch_size"],
@@ -40,7 +41,7 @@ def run_cli(argvs=sys.argv[1:]):
         )
     else:
         replay_buffer = NStepReplayBuffer(
-            p["dqn_n_step_return"],
+            p["iiqn_n_step_return"],
             p["gamma"],
             p["replay_buffer_size"],
             p["batch_size"],
@@ -49,15 +50,29 @@ def run_cli(argvs=sys.argv[1:]):
             lambda x: np.clip(x, -1, 1),
         )
 
-    q = AtariDQN(
+    q = AtariiIQN(
+        args.bellman_iterations_scope + 1,
         (env.n_stacked_frames, env.state_height, env.state_width),
         env.n_actions,
         p["gamma"],
         q_key,
-        p["dqn_learning_rate"],
-        p["dqn_optimizer_eps"],
+        head_behaviorial_policy(p["iiqn_head_behaviorial_policy"], args.bellman_iterations_scope + 1),
+        p["iiqn_learning_rate"],
+        p["iiqn_optimizer_eps"],
         p["n_training_steps_per_online_update"],
-        p["dqn_n_training_steps_per_target_update"],
+        p["iiqn_n_training_steps_per_target_update"],
+        p["iiqn_n_training_steps_per_head_update"],
+        p["iiqn_n_quantiles_policy"],
+        p["iiqn_n_quantiles"],
+        p["iiqn_n_quantiles_target"],
     )
 
-    train(train_key, f"experiments/atari/figures/{args.experiment_name}/DQN/", args, p, q, env, replay_buffer)
+    train(
+        train_key,
+        f"experiments/atari/figures/{args.experiment_name}/iIQN/{args.bellman_iterations_scope}_",
+        args,
+        p,
+        q,
+        env,
+        replay_buffer,
+    )

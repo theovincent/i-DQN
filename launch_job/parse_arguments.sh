@@ -51,7 +51,7 @@ function parse_arguments() {
         exit
     elif ( [[ $FIRST_SEED != "" ]] && [[ $LAST_SEED = "" ]] ) || ( [[ $FIRST_SEED == "" ]] && [[ $LAST_SEED != "" ]] )
     then
-        echo "you need to specify -fs and -ls, not only one" >&2
+        echo "you need to specify the first and last seed, use -fs and -ls" >&2
         exit
     fi
     if [[ $N_PARALLEL_SEEDS == "" ]]

@@ -22,34 +22,54 @@ def run_cli(argvs=sys.argv[1:]):
 
     from experiments.atari.utils import generate_keys
     from idqn.environments.atari import AtariEnv
-    from idqn.sample_collection.replay_buffer import ReplayBuffer
+    from idqn.sample_collection.replay_buffer import ReplayBuffer, NStepReplayBuffer
     from idqn.networks.q_architectures import AtariiDQN
-    from idqn.utils.importance_iteration import importance_iteration
+    from idqn.utils.head_behaviorial_policy import head_behaviorial_policy
     from experiments.base.DQN import train
 
     q_key, train_key = generate_keys(args.seed)
 
     env = AtariEnv(args.experiment_name.split("/")[1])
 
-    replay_buffer = ReplayBuffer(
-        p["replay_buffer_size"],
-        p["batch_size"],
-        (env.n_stacked_frames, env.state_height, env.state_width),
-        np.uint8,
-        lambda x: np.clip(x, -1, 1),
-    )
+    if p["idqn_n_step_return"] == 1:
+        replay_buffer = ReplayBuffer(
+            p["replay_buffer_size"],
+            p["batch_size"],
+            (env.n_stacked_frames, env.state_height, env.state_width),
+            np.uint8,
+            lambda x: np.clip(x, -1, 1),
+        )
+    else:
+        replay_buffer = NStepReplayBuffer(
+            p["idqn_n_step_return"],
+            p["gamma"],
+            p["replay_buffer_size"],
+            p["batch_size"],
+            (env.n_stacked_frames, env.state_height, env.state_width),
+            np.uint8,
+            lambda x: np.clip(x, -1, 1),
+        )
 
     q = AtariiDQN(
-        importance_iteration(p["idqn_importance_iteration"], p["gamma"], args.bellman_iterations_scope),
+        args.bellman_iterations_scope + 1,
         (env.n_stacked_frames, env.state_height, env.state_width),
         env.n_actions,
         p["gamma"],
         q_key,
-        importance_iteration(p["idqn_head_behaviorial_policy"], p["gamma"], args.bellman_iterations_scope + 1),
+        head_behaviorial_policy(p["idqn_head_behaviorial_policy"], args.bellman_iterations_scope + 1),
         p["idqn_learning_rate"],
+        p["idqn_optimizer_eps"],
         p["n_training_steps_per_online_update"],
         p["idqn_n_training_steps_per_target_update"],
         p["idqn_n_training_steps_per_head_update"],
     )
 
-    train(train_key, "atari", args, p, q, env, replay_buffer)
+    train(
+        train_key,
+        f"experiments/atari/figures/{args.experiment_name}/iDQN/{args.bellman_iterations_scope}_",
+        args,
+        p,
+        q,
+        env,
+        replay_buffer,
+    )
