@@ -25,7 +25,7 @@ env = AtariEnv(game)
 
 if algorithm == "DQN":
     q = AtariDQN(
-        (env.n_stacked_frames, env.state_height, env.state_width),
+        (env.state_height, env.state_width, env.n_stacked_frames),
         env.n_actions,
         p["gamma"],
         jax.random.PRNGKey(0),
@@ -36,7 +36,7 @@ if algorithm == "DQN":
     )
 elif algorithm == "IQN":
     q = AtariIQN(
-        (env.n_stacked_frames, env.state_height, env.state_width),
+        (env.state_height, env.state_width, env.n_stacked_frames),
         env.n_actions,
         p["gamma"],
         jax.random.PRNGKey(0),
@@ -48,7 +48,7 @@ elif algorithm == "IQN":
 else:
     q = AtariiDQN(
         bellman_iterations_scope + 1,
-        (env.n_stacked_frames, env.state_height, env.state_width),
+        (env.state_height, env.state_width, env.n_stacked_frames),
         env.n_actions,
         p["gamma"],
         jax.random.PRNGKey(0),

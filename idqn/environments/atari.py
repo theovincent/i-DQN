@@ -45,7 +45,8 @@ class AtariEnv:
 
     @property
     def state(self) -> np.ndarray:
-        return np.array(self.stacked_frames)
+        # Channel last fashion
+        return np.moveaxis(self.stacked_frames, 0, -1)
 
     def reset(self) -> np.ndarray:
         self.env.reset()

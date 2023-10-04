@@ -35,7 +35,7 @@ def run_cli(argvs=sys.argv[1:]):
         replay_buffer = ReplayBuffer(
             p["replay_buffer_size"],
             p["batch_size"],
-            (env.n_stacked_frames, env.state_height, env.state_width),
+            (env.state_height, env.state_width, env.n_stacked_frames),
             np.uint8,
             lambda x: np.clip(x, -1, 1),
         )
@@ -45,14 +45,14 @@ def run_cli(argvs=sys.argv[1:]):
             p["gamma"],
             p["replay_buffer_size"],
             p["batch_size"],
-            (env.n_stacked_frames, env.state_height, env.state_width),
+            (env.state_height, env.state_width, env.n_stacked_frames),
             np.uint8,
             lambda x: np.clip(x, -1, 1),
         )
 
     q = AtariiIQN(
         args.bellman_iterations_scope + 1,
-        (env.n_stacked_frames, env.state_height, env.state_width),
+        (env.state_height, env.state_width, env.n_stacked_frames),
         env.n_actions,
         p["gamma"],
         q_key,

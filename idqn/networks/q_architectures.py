@@ -18,8 +18,8 @@ class Torso(nn.Module):
                 scale=1.0 / jnp.sqrt(3.0), mode="fan_in", distribution="uniform"
             )
 
-        # scale -> at least 4 dimensions -> transpose to channel last
-        preprocessed_state = jnp.array(state / 255.0, ndmin=4).transpose((0, 2, 3, 1))
+        # scale -> at least 4 dimensions
+        preprocessed_state = jnp.array(state / 255.0, ndmin=4)
         x = nn.Conv(features=32, kernel_size=(8, 8), strides=(4, 4), kernel_init=initializer)(preprocessed_state)
         x = nn.relu(x)
         x = nn.Conv(features=64, kernel_size=(4, 4), strides=(2, 2), kernel_init=initializer)(x)
