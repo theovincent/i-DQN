@@ -56,8 +56,11 @@ class AtariEnv:
         self.env.ale.getScreenGrayscale(self.screen_buffer[0])
         self.screen_buffer[1].fill(0)
 
+        first_sample = np.zeros((self.n_stacked_frames, self.state_height, self.state_width))
+        first_sample[-1] = self.resize()
+
         self.stacked_frames = deque(
-            np.repeat(self.resize()[None, ...], self.n_stacked_frames, axis=0),
+            first_sample,
             maxlen=self.n_stacked_frames,
         )
 
