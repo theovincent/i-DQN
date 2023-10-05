@@ -66,13 +66,13 @@ class BaseQ:
 
         return params, optimizer_state, loss
 
-    def add_keys(self, samples):
-        pass
+    def add_keys(self, samples: Tuple[jnp.ndarray]) -> Tuple[jnp.ndarray]:
+        return samples
 
     def update_online_params(self, step: int, replay_buffer: ReplayBuffer) -> jnp.float32:
         if step % self.n_training_steps_per_online_update == 0:
             batch_samples = replay_buffer.sample_transition_batch()
-            self.add_keys(batch_samples)
+            batch_samples = self.add_keys(batch_samples)
 
             self.params, self.optimizer_state, loss = self.learn_on_batch(
                 self.params, self.target_params, self.optimizer_state, batch_samples
@@ -230,9 +230,11 @@ class IQN(BaseSingleQ):
         """
         return self.network.apply(params, states, key, self.n_quantiles_policy + self.n_quantiles_target)
 
-    def add_keys(self, samples: Tuple[jnp.ndarray]):
+    def add_keys(self, samples: Tuple[jnp.ndarray]) -> Tuple[jnp.ndarray]:
         self.network_key, key, next_key = jax.random.split(self.network_key, 3)
         samples += (key, next_key)
+
+        return samples
 
     @partial(jax.jit, static_argnames="self")
     def compute_target(self, params: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.ndarray:
@@ -527,9 +529,11 @@ class iIQN(BaseMultiHeadQ):
             )
         ).astype(jnp.int8)
 
-    def add_keys(self, samples: Tuple[jnp.ndarray]):
+    def add_keys(self, samples: Tuple[jnp.ndarray]) -> Tuple[jnp.ndarray]:
         self.network_key, key, next_key = jax.random.split(self.network_key, 3)
         samples += (key, next_key)
+
+        return samples
 
     @partial(jax.jit, static_argnames="self")
     def compute_target(self, params: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.ndarray:
