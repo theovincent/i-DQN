@@ -70,7 +70,7 @@ class TimeAtariQ:
 
         # Outside of the count: time to jit the __call__ function
         rewards = jax.random.uniform(batch_key, (self.batch_size,))
-        absorbings = jax.random.randint(batch_key, (self.batch_size,), 0, 2)
+        terminals = jax.random.randint(batch_key, (self.batch_size,), 0, 2)
         next_states = jax.random.uniform(batch_key, (self.batch_size,) + self.state_shape)
         samples = (
             0,  # state
@@ -79,7 +79,7 @@ class TimeAtariQ:
             jnp.array(next_states, dtype=jnp.float32),  # next_state
             0,  # next_action
             0,  # next_reward
-            jnp.array(absorbings, dtype=jnp.bool_),  # terminal
+            jnp.array(terminals, dtype=jnp.bool_),  # terminal
             0,  # indices
         )
         samples = self.q.add_keys(samples)
@@ -98,7 +98,7 @@ class TimeAtariQ:
                 jnp.array(next_states, dtype=jnp.float32),  # next_state
                 0,  # next_action
                 0,  # next_reward
-                jnp.array(absorbings, dtype=jnp.bool_),  # terminal
+                jnp.array(terminals, dtype=jnp.bool_),  # terminal
                 0,  # indices
             )
             samples = self.q.add_keys(samples)
@@ -115,7 +115,7 @@ class TimeAtariQ:
         actions = jax.random.uniform(batch_key, (self.batch_size,))
         batch_key, key = jax.random.split(batch_key)
         rewards = jax.random.uniform(key, (self.batch_size,))
-        absorbings = jax.random.randint(key, (self.batch_size,), 0, 2)
+        terminals = jax.random.randint(key, (self.batch_size,), 0, 2)
         next_states = jax.random.uniform(key, (self.batch_size,) + self.state_shape)
         samples = (
             jnp.array(states, dtype=jnp.float32),  # state
@@ -124,7 +124,8 @@ class TimeAtariQ:
             jnp.array(next_states, dtype=jnp.float32),  # next_state
             0,  # next_action
             0,  # next_reward
-            jnp.array(absorbings, dtype=jnp.bool_),  # terminal
+            jnp.array(terminals, dtype=jnp.bool_),  # terminal
+            0,  # indices
         )
         samples = self.q.add_keys(samples)
 
@@ -138,7 +139,7 @@ class TimeAtariQ:
             actions = jax.random.uniform(key, (self.batch_size,))
             batch_key, key = jax.random.split(batch_key)
             rewards = jax.random.uniform(key, (self.batch_size,))
-            absorbings = jax.random.randint(key, (self.batch_size,), 0, 2)
+            terminals = jax.random.randint(key, (self.batch_size,), 0, 2)
             next_states = jax.random.uniform(key, (self.batch_size,) + self.state_shape)
             samples = (
                 jnp.array(states, dtype=jnp.float32),  # state
@@ -147,7 +148,8 @@ class TimeAtariQ:
                 jnp.array(next_states, dtype=jnp.float32),  # next_state
                 0,  # next_action
                 0,  # next_reward
-                jnp.array(absorbings, dtype=jnp.bool_),  # terminal
+                jnp.array(terminals, dtype=jnp.bool_),  # terminal
+                0,  # indices
             )
             samples = self.q.add_keys(samples)
 

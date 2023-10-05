@@ -158,7 +158,7 @@ class DQN(BaseSingleQ):
 
     @partial(jax.jit, static_argnames="self")
     def compute_target(self, params: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.ndarray:
-        return samples[IDX_RB["reward"]] + (1 - samples[IDX_RB["absorbing"]]) * self.gamma * self.apply(
+        return samples[IDX_RB["reward"]] + (1 - samples[IDX_RB["terminal"]]) * self.gamma * self.apply(
             params, samples[IDX_RB["next_state"]]
         ).max(axis=1)
 
@@ -248,11 +248,11 @@ class IQN(BaseSingleQ):
 
         # mapping over the states
         return jax.vmap(
-            lambda reward, absorbing, next_states_quantiles_actions_, action: reward
-            + (1 - absorbing) * self.gamma * next_states_quantiles_actions_[:, action]
+            lambda reward, terminal, next_states_quantiles_actions_, action: reward
+            + (1 - terminal) * self.gamma * next_states_quantiles_actions_[:, action]
         )(
             samples[IDX_RB["reward"]],
-            samples[IDX_RB["absorbing"]],
+            samples[IDX_RB["terminal"]],
             next_states_policy_quantiles_quantiles_actions[:, self.n_quantiles_policy :],
             next_states_action,
         )  # output (batch_size, n_quantiles_target)
@@ -392,10 +392,10 @@ class iDQN(BaseMultiHeadQ):
     def compute_target(self, params: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.ndarray:
         # mapping over the states
         return jax.vmap(
-            lambda reward, absorbing, max_next_states: reward + (1 - absorbing) * self.gamma * max_next_states,
+            lambda reward, terminal, max_next_states: reward + (1 - terminal) * self.gamma * max_next_states,
         )(
             samples[IDX_RB["reward"]],
-            samples[IDX_RB["absorbing"]],
+            samples[IDX_RB["terminal"]],
             jnp.max(self.apply(params, samples[IDX_RB["next_state"]]), axis=2),
         )
 
@@ -552,11 +552,11 @@ class iIQN(BaseMultiHeadQ):
 
         # mapping over the states
         return jax.vmap(
-            lambda reward, absorbing, next_states_quantiles_: reward
-            + (1 - absorbing) * self.gamma * next_states_quantiles_,
+            lambda reward, terminal, next_states_quantiles_: reward
+            + (1 - terminal) * self.gamma * next_states_quantiles_,
         )(
             samples[IDX_RB["reward"]],
-            samples[IDX_RB["absorbing"]],
+            samples[IDX_RB["terminal"]],
             next_states_quantiles,
         )  # output (batch_size, n_heads, n_quantiles_target)
 

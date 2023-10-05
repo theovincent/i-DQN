@@ -64,7 +64,7 @@ class AtariEnv:
         reward = 0
 
         for idx_frame in range(self.n_skipped_frames):
-            _, reward_, absorbing, _, _ = self.env.step(action)
+            _, reward_, terminal, _, _ = self.env.step(action)
 
             reward += reward_
 
@@ -72,7 +72,7 @@ class AtariEnv:
                 t = idx_frame - (self.n_skipped_frames - 2)
                 self.env.ale.getScreenGrayscale(self.screen_buffer[t])
 
-            if absorbing:
+            if terminal:
                 break
 
         self.state_ = np.roll(self.state_, -1, axis=-1)
@@ -80,7 +80,7 @@ class AtariEnv:
 
         self.n_steps += 1
 
-        return reward, absorbing, _
+        return reward, terminal, _
 
     def pool_and_resize(self) -> np.ndarray:
         np.maximum(self.screen_buffer[0], self.screen_buffer[1], out=self.screen_buffer[0])
@@ -103,10 +103,10 @@ class AtariEnv:
 
             sample_key, key = jax.random.split(sample_key)
             action = jax.random.choice(key, jnp.arange(self.n_actions))
-            reward, absorbing, _ = self.step(action)
+            reward, terminal, _ = self.step(action)
 
-            episode_end = absorbing or self.n_steps >= horizon
-            replay_buffer.add(observation, action, reward, absorbing, episode_end=episode_end)
+            episode_end = terminal or self.n_steps >= horizon
+            replay_buffer.add(observation, action, reward, terminal, episode_end=episode_end)
 
             if episode_end:
                 self.reset()
@@ -126,10 +126,10 @@ class AtariEnv:
         else:
             action = q.best_action(q_params, self.state, exploration_schedule.key)
 
-        reward, absorbing, _ = self.step(action)
+        reward, terminal, _ = self.step(action)
 
-        episode_end = absorbing or self.n_steps >= horizon
-        replay_buffer.add(observation, action, reward, absorbing, episode_end=episode_end)
+        episode_end = terminal or self.n_steps >= horizon
+        replay_buffer.add(observation, action, reward, terminal, episode_end=episode_end)
 
         if episode_end:
             self.reset()
@@ -149,10 +149,10 @@ class AtariEnv:
             self.env, path=f"experiments/atari/figures/{video_path}.mp4", disable_logger=True
         )
         sun_reward = 0
-        absorbing = False
+        terminal = False
         self.reset()
 
-        while not absorbing and self.n_steps < horizon:
+        while not terminal and self.n_steps < horizon:
             self.env.render()
             video.capture_frame()
 
@@ -162,11 +162,11 @@ class AtariEnv:
             else:
                 action = q.best_action(q_params, self.state, key)
 
-            reward, absorbing, _ = self.step(action)
+            reward, terminal, _ = self.step(action)
 
             sun_reward += reward
 
         video.close()
         os.remove(f"experiments/atari/figures/{video_path}.meta.json")
 
-        return sun_reward, absorbing
+        return sun_reward, terminal

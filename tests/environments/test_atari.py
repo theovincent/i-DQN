@@ -29,12 +29,12 @@ class TestAtariEnv(unittest.TestCase):
     def test_step_frame_stacking(self) -> None:
         action_key = self.key
         self.env.reset()
-        absorbing = False
+        terminal = False
 
-        while not absorbing:
+        while not terminal:
             action_key, key = jax.random.split(action_key)
             action = jax.random.randint(key, shape=(), minval=0, maxval=self.env.n_actions)
-            _, absorbing, _ = self.env.step(action)
+            _, terminal, _ = self.env.step(action)
 
             self.assertEqual(self.env.state.shape[-1], self.env.n_stacked_frames)
 
