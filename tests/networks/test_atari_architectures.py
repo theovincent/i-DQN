@@ -3,6 +3,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
+from idqn.sample_collection import IDX_RB
 from idqn.networks.q_architectures import AtariDQN, AtariIQN, AtariiDQN, AtariiIQN
 
 
@@ -12,7 +13,7 @@ class TestAtariDQN(unittest.TestCase):
         self.random_seed = np.random.randint(1000)
         print(f"random seed {self.random_seed}")
         self.key = jax.random.PRNGKey(self.random_seed)
-        self.state_shape = (4, 84, 84)
+        self.state_shape = (84, 84, 4)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.gamma = jax.random.uniform(self.key)
 
@@ -41,11 +42,15 @@ class TestAtariDQN(unittest.TestCase):
         rewards = jax.random.uniform(self.key, (10,), minval=-1, maxval=1)
         absorbings = jax.random.randint(self.key, (10,), 0, 2)
         next_states = jax.random.uniform(self.key, (10,) + self.state_shape, minval=-1, maxval=1)
-        samples = {
-            "reward": jnp.array(rewards, dtype=jnp.float32),
-            "next_state": jnp.array(next_states, dtype=jnp.float32),
-            "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
-        }
+        samples = (
+            0,  # state
+            0,  # action
+            jnp.array(rewards, dtype=jnp.float32),  # reward
+            jnp.array(next_states, dtype=jnp.float32),  # next_state
+            0,  # next_action
+            0,  # next_reward
+            jnp.array(absorbings, dtype=jnp.bool_),  # terminal
+        )
 
         computed_targets = q.compute_target(q.params, samples)
 
@@ -64,13 +69,15 @@ class TestAtariDQN(unittest.TestCase):
         rewards = jax.random.uniform(key, (10,), minval=-1, maxval=1)
         absorbings = jax.random.randint(key, (10,), 0, 2)
         next_states = jax.random.uniform(key, (10,) + self.state_shape, minval=-1, maxval=1)
-        samples = {
-            "state": jnp.array(states, dtype=jnp.float32),
-            "action": jnp.array(actions, dtype=jnp.int8),
-            "reward": jnp.array(rewards, dtype=jnp.float32),
-            "next_state": jnp.array(next_states, dtype=jnp.float32),
-            "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
-        }
+        samples = (
+            jnp.array(states, dtype=jnp.float32),  # state
+            jnp.array(actions, dtype=jnp.int8),  # action
+            jnp.array(rewards, dtype=jnp.float32),  # reward
+            jnp.array(next_states, dtype=jnp.float32),  # next_state
+            0,  # next_action
+            0,  # next_reward
+            jnp.array(absorbings, dtype=jnp.bool_),  # terminal
+        )
 
         computed_loss = q.loss(q.params, q.params, samples)
 
@@ -138,17 +145,22 @@ class TestAtariIQN(unittest.TestCase):
         rewards = jax.random.uniform(self.key, (10,), minval=-1, maxval=1)
         absorbings = jax.random.randint(self.key, (10,), 0, 2)
         next_states = jax.random.uniform(self.key, (10,) + self.state_shape, minval=-1, maxval=1)
-        samples = {
-            "reward": jnp.array(rewards, dtype=jnp.float32),
-            "next_state": jnp.array(next_states, dtype=jnp.float32),
-            "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
-        }
-        samples["key"], samples["next_key"] = jax.random.split(self.key, 2)
-
+        samples = (
+            0,  # state
+            0,  # action
+            jnp.array(rewards, dtype=jnp.float32),  # reward
+            jnp.array(next_states, dtype=jnp.float32),  # next_state
+            0,  # next_action
+            0,  # next_reward
+            jnp.array(absorbings, dtype=jnp.bool_),  # terminal
+            0,  # indices
+            jax.random.split(self.key)[0],  # key
+            jax.random.split(self.key)[1],  # next_key
+        )
         computed_targets = q.compute_target(q.params, samples)
 
         quantiles_policy_targets, _ = q.network.apply(
-            q.target_params, next_states, samples["next_key"], q.n_quantiles_policy + q.n_quantiles_target
+            q.target_params, next_states, samples[IDX_RB["next_key"]], q.n_quantiles_policy + q.n_quantiles_target
         )
         quantiles_policy, quantiles_targets = (
             quantiles_policy_targets[:, : q.n_quantiles_policy],
@@ -176,19 +188,21 @@ class TestAtariIQN(unittest.TestCase):
         rewards = jax.random.uniform(key, (10,), minval=-1, maxval=1)
         absorbings = jax.random.randint(key, (10,), 0, 2)
         next_states = jax.random.uniform(key, (10,) + self.state_shape, minval=-1, maxval=1)
-        samples = {
-            "state": jnp.array(states, dtype=jnp.float32),
-            "action": jnp.array(actions, dtype=jnp.int8),
-            "reward": jnp.array(rewards, dtype=jnp.float32),
-            "next_state": jnp.array(next_states, dtype=jnp.float32),
-            "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
-        }
-        samples["key"], samples["next_key"] = jax.random.split(self.key, 2)
-
+        samples = (
+            jnp.array(states, dtype=jnp.float32),  # state
+            jnp.array(actions, dtype=jnp.int8),  # action
+            jnp.array(rewards, dtype=jnp.float32),  # reward
+            jnp.array(next_states, dtype=jnp.float32),  # next_state
+            0,  # next_action
+            0,  # next_reward
+            jnp.array(absorbings, dtype=jnp.bool_),  # terminal
+            jax.random.split(self.key)[0],  # key
+            jax.random.split(self.key)[1],  # next_key
+        )
         computed_loss = q.loss(q.params, q.params, samples)
 
         targets = q.compute_target(q.params, samples)
-        predictions, quantiles = q.network.apply(q.params, states, samples["key"], q.n_quantiles)
+        predictions, quantiles = q.network.apply(q.params, states, samples[IDX_RB["key"]], q.n_quantiles)
 
         loss = 0
 
@@ -283,11 +297,16 @@ class TestAtariiDQN(unittest.TestCase):
         rewards = jax.random.uniform(self.key, (10,), minval=-1, maxval=1)
         absorbings = jax.random.randint(self.key, (10,), 0, 2)
         next_states = jax.random.uniform(self.key, (10,) + self.state_shape, minval=-1, maxval=1)
-        samples = {
-            "reward": jnp.array(rewards, dtype=jnp.float32),
-            "next_state": jnp.array(next_states, dtype=jnp.float32),
-            "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
-        }
+        samples = (
+            0,  # state
+            0,  # action
+            jnp.array(rewards, dtype=jnp.float32),  # reward
+            jnp.array(next_states, dtype=jnp.float32),  # next_state
+            0,  # next_action
+            0,  # next_reward
+            jnp.array(absorbings, dtype=jnp.bool_),  # terminal
+            0,  # indices
+        )
 
         computed_targets = q.compute_target(q.params, samples)
 
@@ -318,13 +337,17 @@ class TestAtariiDQN(unittest.TestCase):
         rewards = jax.random.uniform(key, (10,), minval=-1, maxval=1)
         absorbings = jax.random.randint(key, (10,), 0, 2)
         next_states = jax.random.uniform(key, (10,) + self.state_shape, minval=-1, maxval=1)
-        samples = {
-            "state": jnp.array(states, dtype=jnp.float32),
-            "action": jnp.array(actions, dtype=jnp.int8),
-            "reward": jnp.array(rewards, dtype=jnp.float32),
-            "next_state": jnp.array(next_states, dtype=jnp.float32),
-            "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
-        }
+        samples = (
+            jnp.array(states, dtype=jnp.float32),  # state
+            jnp.array(actions, dtype=jnp.int8),  # action
+            jnp.array(rewards, dtype=jnp.float32),  # reward
+            jnp.array(next_states, dtype=jnp.float32),  # next_state
+            0,  # next_action
+            0,  # next_reward
+            jnp.array(absorbings, dtype=jnp.bool_),  # terminal
+            jax.random.split(self.key)[0],  # key
+            jax.random.split(self.key)[1],  # next_key
+        )
 
         computed_loss = q.loss(q.params, q.params, samples)
 
@@ -460,17 +483,23 @@ class TestAtariiIQN(unittest.TestCase):
         rewards = jax.random.uniform(self.key, (10,), minval=-1, maxval=1)
         absorbings = jax.random.randint(self.key, (10,), 0, 2)
         next_states = jax.random.uniform(self.key, (10,) + self.state_shape, minval=-1, maxval=1)
-        samples = {
-            "reward": jnp.array(rewards, dtype=jnp.float32),
-            "next_state": jnp.array(next_states, dtype=jnp.float32),
-            "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
-        }
-        samples["key"], samples["next_key"] = jax.random.split(self.key, 2)
+        samples = (
+            0,  # state
+            0,  # action
+            jnp.array(rewards, dtype=jnp.float32),  # reward
+            jnp.array(next_states, dtype=jnp.float32),  # next_state
+            0,  # next_action
+            0,  # next_reward
+            jnp.array(absorbings, dtype=jnp.bool_),  # terminal
+            0,  # indices
+            jax.random.split(self.key)[0],  # key
+            jax.random.split(self.key)[1],  # next_key
+        )
 
         computed_targets = q.compute_target(q.params, samples)
 
         quantiles_policy_targets, _ = q.network.apply(
-            q.target_params, next_states, samples["next_key"], q.n_quantiles_policy + q.n_quantiles_target
+            q.target_params, next_states, samples[IDX_RB["next_key"]], q.n_quantiles_policy + q.n_quantiles_target
         )
         quantiles_policy, quantiles_targets = (
             quantiles_policy_targets[:, :, : q.n_quantiles_policy],
@@ -513,19 +542,21 @@ class TestAtariiIQN(unittest.TestCase):
         rewards = jax.random.uniform(key, (10,), minval=-1, maxval=1)
         absorbings = jax.random.randint(key, (10,), 0, 2)
         next_states = jax.random.uniform(key, (10,) + self.state_shape, minval=-1, maxval=1)
-        samples = {
-            "state": jnp.array(states, dtype=jnp.float32),
-            "action": jnp.array(actions, dtype=jnp.int8),
-            "reward": jnp.array(rewards, dtype=jnp.float32),
-            "next_state": jnp.array(next_states, dtype=jnp.float32),
-            "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
-        }
-        samples["key"], samples["next_key"] = jax.random.split(self.key, 2)
-
+        samples = (
+            jnp.array(states, dtype=jnp.float32),  # state
+            jnp.array(actions, dtype=jnp.int8),  # action
+            jnp.array(rewards, dtype=jnp.float32),  # reward
+            jnp.array(next_states, dtype=jnp.float32),  # next_state
+            0,  # next_action
+            0,  # next_reward
+            jnp.array(absorbings, dtype=jnp.bool_),  # terminal
+            jax.random.split(self.key)[0],  # key
+            jax.random.split(self.key)[1],  # next_key
+        )
         computed_loss = q.loss(q.params, q.params, samples)
 
         targets = q.compute_target(q.params, samples)
-        predictions, quantiles = q.network.apply(q.params, states, samples["key"], q.n_quantiles)
+        predictions, quantiles = q.network.apply(q.params, states, samples[IDX_RB["key"]], q.n_quantiles)
 
         loss = 0
 
