@@ -6,6 +6,7 @@ import optax
 import jax
 import jax.numpy as jnp
 
+from idqn.sample_collection import IDX_RB
 from idqn.sample_collection.replay_buffer import ReplayBuffer
 from idqn.utils.pickle import save_pickled_data
 
@@ -36,10 +37,12 @@ class BaseQ:
             self.optimizer = optax.adam(learning_rate, eps=epsilon_optimizer)
             self.optimizer_state = self.optimizer.init(self.params)
 
-    def compute_target(self, params: FrozenDict, samples: FrozenDict) -> jnp.ndarray:
+    def compute_target(self, params: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.ndarray:
         raise NotImplementedError
 
-    def loss(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict, ord: int = 2) -> jnp.float32:
+    def loss(
+        self, params: FrozenDict, params_target: FrozenDict, samples: Tuple[jnp.ndarray], ord: int = 2
+    ) -> jnp.float32:
         raise NotImplementedError
 
     @staticmethod
@@ -55,7 +58,7 @@ class BaseQ:
 
     @partial(jax.jit, static_argnames="self")
     def learn_on_batch(
-        self, params: FrozenDict, params_target: FrozenDict, optimizer_state: Tuple, batch_samples: jnp.ndarray
+        self, params: FrozenDict, params_target: FrozenDict, optimizer_state: Tuple, batch_samples: Tuple[jnp.ndarray]
     ) -> Tuple[FrozenDict, FrozenDict, jnp.float32]:
         loss, grad_loss = self.loss_and_grad(params, params_target, batch_samples)
         updates, optimizer_state = self.optimizer.update(grad_loss, optimizer_state)
@@ -66,9 +69,9 @@ class BaseQ:
     def add_keys(self, samples):
         pass
 
-    def update_online_params(self, step: int, replay_buffer: ReplayBuffer, key: jax.random.PRNGKeyArray) -> jnp.float32:
+    def update_online_params(self, step: int, replay_buffer: ReplayBuffer) -> jnp.float32:
         if step % self.n_training_steps_per_online_update == 0:
-            batch_samples = replay_buffer.sample_random_batch(key)
+            batch_samples = replay_buffer.sample_transition_batch()
             self.add_keys(batch_samples)
 
             self.params, self.optimizer_state, loss = self.learn_on_batch(
@@ -154,19 +157,19 @@ class DQN(BaseSingleQ):
         return self.network.apply(params, states)
 
     @partial(jax.jit, static_argnames="self")
-    def compute_target(self, params: FrozenDict, samples: FrozenDict) -> jnp.ndarray:
-        return samples["reward"] + (1 - samples["absorbing"]) * self.gamma * self.apply(
-            params, samples["next_state"]
+    def compute_target(self, params: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.ndarray:
+        return samples[IDX_RB["reward"]] + (1 - samples[IDX_RB["absorbing"]]) * self.gamma * self.apply(
+            params, samples[IDX_RB["next_state"]]
         ).max(axis=1)
 
     @partial(jax.jit, static_argnames="self")
-    def loss(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict) -> jnp.float32:
+    def loss(self, params: FrozenDict, params_target: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.float32:
         targets = self.compute_target(params_target, samples)
-        q_states_actions = self.apply(params, samples["state"])
+        q_states_actions = self.apply(params, samples[IDX_RB["state"]])
 
         # mapping over the states
         predictions = jax.vmap(lambda q_state_actions, action: q_state_actions[action])(
-            q_states_actions, samples["action"]
+            q_states_actions, samples[IDX_RB["action"]]
         )
 
         return self.metric(predictions - targets, ord="2")
@@ -227,13 +230,14 @@ class IQN(BaseSingleQ):
         """
         return self.network.apply(params, states, key, self.n_quantiles_policy + self.n_quantiles_target)
 
-    def add_keys(self, samples):
-        self.network_key, samples["key"], samples["next_key"] = jax.random.split(self.network_key, 3)
+    def add_keys(self, samples: Tuple[jnp.ndarray]):
+        self.network_key, key, next_key = jax.random.split(self.network_key, 3)
+        samples += (key, next_key)
 
     @partial(jax.jit, static_argnames="self")
-    def compute_target(self, params: FrozenDict, samples: FrozenDict) -> jnp.ndarray:
+    def compute_target(self, params: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.ndarray:
         next_states_policy_quantiles_quantiles_actions, _ = self.apply_n_quantiles_target(
-            params, samples["next_state"], samples["next_key"]
+            params, samples[IDX_RB["next_state"]], samples[IDX_RB["next_key"]]
         )  # output (batch_size, n_quantiles_policy + n_quantiles_target, n_actions)
         next_states_policy_values_actions = jnp.mean(
             next_states_policy_quantiles_quantiles_actions[:, : self.n_quantiles_policy], axis=1
@@ -245,22 +249,22 @@ class IQN(BaseSingleQ):
             lambda reward, absorbing, next_states_quantiles_actions_, action: reward
             + (1 - absorbing) * self.gamma * next_states_quantiles_actions_[:, action]
         )(
-            samples["reward"],
-            samples["absorbing"],
+            samples[IDX_RB["reward"]],
+            samples[IDX_RB["absorbing"]],
             next_states_policy_quantiles_quantiles_actions[:, self.n_quantiles_policy :],
             next_states_action,
         )  # output (batch_size, n_quantiles_target)
 
     @partial(jax.jit, static_argnames="self")
-    def loss(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict) -> jnp.float32:
+    def loss(self, params: FrozenDict, params_target: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.float32:
         targets = self.compute_target(params_target, samples)  # output (batch_size, n_quantiles_target)
 
         states_quantiles_actions, quantiles = self.apply_n_quantiles(
-            params, samples["state"], samples["key"]
+            params, samples[IDX_RB["state"]], samples[IDX_RB["key"]]
         )  # output (batch_size, n_quantiles, n_actions) | (batch_size, n_quantiles)
         # mapping over the states
         predictions = jax.vmap(lambda quantiles_actions, action: quantiles_actions[:, action])(
-            states_quantiles_actions, samples["action"]
+            states_quantiles_actions, samples[IDX_RB["action"]]
         )  # output (batch_size, n_quantiles)
 
         # cross difference
@@ -383,19 +387,23 @@ class iDQN(BaseMultiHeadQ):
         return jnp.argmax(self.network.apply_specific_head(torso_params, head_params, state)[0]).astype(jnp.int8)
 
     @partial(jax.jit, static_argnames="self")
-    def compute_target(self, params: FrozenDict, samples: FrozenDict) -> jnp.ndarray:
+    def compute_target(self, params: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.ndarray:
         # mapping over the states
         return jax.vmap(
             lambda reward, absorbing, max_next_states: reward + (1 - absorbing) * self.gamma * max_next_states,
-        )(samples["reward"], samples["absorbing"], jnp.max(self.apply(params, samples["next_state"]), axis=2))
+        )(
+            samples[IDX_RB["reward"]],
+            samples[IDX_RB["absorbing"]],
+            jnp.max(self.apply(params, samples[IDX_RB["next_state"]]), axis=2),
+        )
 
     @partial(jax.jit, static_argnames="self")
-    def loss(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict) -> jnp.float32:
+    def loss(self, params: FrozenDict, params_target: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.float32:
         targets = self.compute_target(params_target, samples)[:, :-1]
-        values_actions = self.apply_other_heads(params, samples["state"])
+        values_actions = self.apply_other_heads(params, samples[IDX_RB["state"]])
         # mapping over the states
         predictions = jax.vmap(lambda value_actions, action: value_actions[:, action])(
-            values_actions, samples["action"]
+            values_actions, samples[IDX_RB["action"]]
         )
 
         return self.metric(predictions - targets, ord="2")
@@ -424,7 +432,7 @@ class iDQN(BaseMultiHeadQ):
 
         for _ in range(100):
             batch_samples = replay_buffer.sample_random_batch(key)
-            standard_deviation += jnp.std(self(self.params, batch_samples["state"]), axis=1).sum()
+            standard_deviation += jnp.std(self(self.params, batch_samples[IDX_RB["state"]]), axis=1).sum()
 
         return standard_deviation / (100 * replay_buffer.batch_size * self.n_actions)
 
@@ -435,10 +443,10 @@ class iDQN(BaseMultiHeadQ):
             batch_samples = replay_buffer.sample_random_batch(key)
 
             targets = self.compute_target(self.target_params, batch_samples)[:, 0]
-            values_actions = self.apply(self.params, batch_samples["state"])
+            values_actions = self.apply(self.params, batch_samples[IDX_RB["state"]])
             # mapping over the states
             predictions = jax.vmap(lambda value_actions, action: value_actions[1, action])(
-                values_actions, batch_samples["action"]
+                values_actions, batch_samples[IDX_RB["action"]]
             )
             approximation_error += self.metric(predictions - targets, ord="sum")
 
@@ -519,13 +527,14 @@ class iIQN(BaseMultiHeadQ):
             )
         ).astype(jnp.int8)
 
-    def add_keys(self, samples):
-        self.network_key, samples["key"], samples["next_key"] = jax.random.split(self.network_key, 3)
+    def add_keys(self, samples: Tuple[jnp.ndarray]):
+        self.network_key, key, next_key = jax.random.split(self.network_key, 3)
+        samples += (key, next_key)
 
     @partial(jax.jit, static_argnames="self")
-    def compute_target(self, params: FrozenDict, samples: FrozenDict) -> jnp.ndarray:
+    def compute_target(self, params: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.ndarray:
         next_states_policy_quantiles_quantiles_actions, _ = self.apply_n_quantiles_target(
-            params, samples["next_state"], samples["next_key"]
+            params, samples[IDX_RB["next_state"]], samples[IDX_RB["next_key"]]
         )  # output (batch_size, n_heads, n_quantiles_policy + n_quantiles_target, n_actions)
         next_states_policy_values_actions = jnp.mean(
             next_states_policy_quantiles_quantiles_actions[:, :, : self.n_quantiles_policy], axis=2
@@ -542,19 +551,21 @@ class iIQN(BaseMultiHeadQ):
             lambda reward, absorbing, next_states_quantiles_: reward
             + (1 - absorbing) * self.gamma * next_states_quantiles_,
         )(
-            samples["reward"], samples["absorbing"], next_states_quantiles
+            samples[IDX_RB["reward"]],
+            samples[IDX_RB["absorbing"]],
+            next_states_quantiles,
         )  # output (batch_size, n_heads, n_quantiles_target)
 
     @partial(jax.jit, static_argnames="self")
-    def loss(self, params: FrozenDict, params_target: FrozenDict, samples: FrozenDict) -> jnp.float32:
+    def loss(self, params: FrozenDict, params_target: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.float32:
         targets = self.compute_target(params_target, samples)  # output (batch_size, n_heads, n_quantiles_target)
 
         states_quantiles_actions, quantiles = self.apply_n_quantiles(
-            params, samples["state"], samples["key"]
+            params, samples[IDX_RB["state"]], samples[IDX_RB["key"]]
         )  # output (batch_size, n_heads - 1, n_quantiles, n_actions) | (batch_size, n_quantiles)
         # mapping over the states
         predictions = jax.vmap(lambda quantiles_actions, action: quantiles_actions[:, :, action])(
-            states_quantiles_actions, samples["action"]
+            states_quantiles_actions, samples[IDX_RB["action"]]
         )  # output (batch_size, n_heads - 1, n_quantiles)
 
         # cross difference

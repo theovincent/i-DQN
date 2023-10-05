@@ -8,14 +8,12 @@ import gymnasium as gym
 import numpy as np
 import jax
 import jax.numpy as jnp
-from collections import deque
 import cv2
 from tqdm import tqdm
 
 from idqn.networks.base_q import BaseQ
 from idqn.sample_collection.replay_buffer import ReplayBuffer
 from idqn.sample_collection.exploration import EpsilonGreedySchedule
-from idqn.utils.pickle import save_pickled_data, load_pickled_data
 
 
 class AtariEnv:
@@ -44,11 +42,14 @@ class AtariEnv:
         ]
 
     @property
-    def state(self) -> np.ndarray:
-        # Channel last fashion
-        return np.moveaxis(self.stacked_frames, 0, -1)
+    def observation(self) -> np.ndarray:
+        return np.copy(self.state_[:, :, -1])
 
-    def reset(self) -> np.ndarray:
+    @property
+    def state(self) -> np.ndarray:
+        return np.copy(self.state_)
+
+    def reset(self) -> None:
         self.env.reset()
 
         self.n_steps = 0
@@ -56,17 +57,10 @@ class AtariEnv:
         self.env.ale.getScreenGrayscale(self.screen_buffer[0])
         self.screen_buffer[1].fill(0)
 
-        first_sample = np.zeros((self.n_stacked_frames, self.state_height, self.state_width))
-        first_sample[-1] = self.resize()
+        self.state_ = np.zeros((self.state_height, self.state_width, self.n_stacked_frames), dtype=np.uint8)
+        self.state_[:, :, -1] = self.resize()
 
-        self.stacked_frames = deque(
-            first_sample,
-            maxlen=self.n_stacked_frames,
-        )
-
-        return self.state
-
-    def step(self, action: jnp.int8) -> Tuple[np.ndarray, np.ndarray, np.ndarray, Dict]:
+    def step(self, action: jnp.int8) -> Tuple[float, bool, Dict]:
         reward = 0
 
         for idx_frame in range(self.n_skipped_frames):
@@ -81,11 +75,12 @@ class AtariEnv:
             if absorbing:
                 break
 
-        self.stacked_frames.append(self.pool_and_resize())
+        self.state_ = np.roll(self.state_, -1, axis=-1)
+        self.state_[:, :, -1] = self.pool_and_resize()
 
         self.n_steps += 1
 
-        return self.state, reward, absorbing, _
+        return reward, absorbing, _
 
     def pool_and_resize(self) -> np.ndarray:
         np.maximum(self.screen_buffer[0], self.screen_buffer[1], out=self.screen_buffer[0])
@@ -98,39 +93,22 @@ class AtariEnv:
             dtype=np.uint8,
         )
 
-    def get_ale_state(self):
-        return self.env.ale.cloneSystemState()
-
-    def restore_ale_state(self, env_state) -> None:
-        self.env.ale.restoreSystemState(env_state)
-
-    def save(self, path: str) -> None:
-        save_pickled_data(path + "_ale_state", self.get_ale_state())
-        save_pickled_data(path + "_frame_state", self.stacked_frames)
-        save_pickled_data(path + "_n_steps", self.n_steps)
-
-    def load(self, path: str) -> None:
-        self.reset()
-        self.restore_ale_state(load_pickled_data(path + "_ale_state"))
-        self.stacked_frames = load_pickled_data(path + "_frame_state")
-        self.n_steps = load_pickled_data(path + "_n_steps")
-
     def collect_random_samples(
         self, sample_key: jax.random.PRNGKeyArray, replay_buffer: ReplayBuffer, n_samples: int, horizon: int
     ) -> None:
         self.reset()
 
         for _ in tqdm(range(n_samples)):
-            state = self.state
+            observation = self.observation
 
             sample_key, key = jax.random.split(sample_key)
             action = jax.random.choice(key, jnp.arange(self.n_actions))
-            next_state, reward, absorbing, _ = self.step(action)
+            reward, absorbing, _ = self.step(action)
 
-            truncated = self.n_steps >= horizon
-            replay_buffer.add(state, action, reward, next_state, absorbing, truncated)
+            episode_end = absorbing or self.n_steps >= horizon
+            replay_buffer.add(observation, action, reward, absorbing, episode_end=episode_end)
 
-            if absorbing or truncated:
+            if episode_end:
                 self.reset()
 
     def collect_one_sample(
@@ -141,22 +119,22 @@ class AtariEnv:
         replay_buffer: ReplayBuffer,
         exploration_schedule: EpsilonGreedySchedule,
     ) -> Tuple[float, bool]:
-        state = self.state
+        observation = self.observation
 
         if exploration_schedule.explore():
             action = q.random_action(exploration_schedule.key)
         else:
             action = q.best_action(q_params, self.state, exploration_schedule.key)
 
-        next_state, reward, absorbing, _ = self.step(action)
+        reward, absorbing, _ = self.step(action)
 
-        truncated = self.n_steps >= horizon
-        replay_buffer.add(state, action, reward, next_state, absorbing, truncated)
+        episode_end = absorbing or self.n_steps >= horizon
+        replay_buffer.add(observation, action, reward, absorbing, episode_end=episode_end)
 
-        if absorbing or truncated:
+        if episode_end:
             self.reset()
 
-        return reward, absorbing or truncated
+        return reward, episode_end
 
     def evaluate_one_simulation(
         self,
@@ -184,7 +162,7 @@ class AtariEnv:
             else:
                 action = q.best_action(q_params, self.state, key)
 
-            _, reward, absorbing, _ = self.step(action)
+            reward, absorbing, _ = self.step(action)
 
             sun_reward += reward
 

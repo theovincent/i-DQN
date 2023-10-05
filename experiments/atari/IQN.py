@@ -30,24 +30,14 @@ def run_cli(argvs=sys.argv[1:]):
 
     env = AtariEnv(args.experiment_name.split("/")[1])
 
-    if p["iqn_n_step_return"] == 1:
-        replay_buffer = ReplayBuffer(
-            p["iqn_replay_buffer_size"],
-            p["batch_size"],
-            (env.state_height, env.state_width, env.n_stacked_frames),
-            np.uint8,
-            lambda x: np.clip(x, -1, 1),
-        )
-    else:
-        replay_buffer = NStepReplayBuffer(
-            p["n_step_return"],
-            p["gamma"],
-            p["replay_buffer_size"],
-            p["batch_size"],
-            (env.state_height, env.state_width, env.n_stacked_frames),
-            np.uint8,
-            lambda x: np.clip(x, -1, 1),
-        )
+    replay_buffer = ReplayBuffer(
+        (env.state_height, env.state_width),
+        p["replay_buffer_size"],
+        p["batch_size"],
+        p["iqn_n_step_return"],
+        p["gamma"],
+        lambda x: np.clip(x, -1, 1),
+    )
 
     q = AtariIQN(
         (env.state_height, env.state_width, env.n_stacked_frames),
