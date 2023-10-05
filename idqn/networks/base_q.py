@@ -421,8 +421,8 @@ class iDQN(BaseMultiHeadQ):
     def update_heads(self, params: FrozenDict) -> FrozenDict:
         return self.network.update_heads(params)
 
-    def update_online_params(self, step: int, replay_buffer: ReplayBuffer, key: jax.random.PRNGKeyArray) -> jnp.float32:
-        loss = super().update_online_params(step, replay_buffer, key)
+    def update_online_params(self, step: int, replay_buffer: ReplayBuffer) -> jnp.float32:
+        loss = super().update_online_params(step, replay_buffer)
 
         if step % self.n_training_steps_per_head_update == 0:
             self.params = self.update_heads(self.params)
@@ -618,8 +618,8 @@ class iIQN(BaseMultiHeadQ):
     def update_heads(self, params: FrozenDict) -> FrozenDict:
         return self.network.update_heads(params)
 
-    def update_online_params(self, step: int, replay_buffer: ReplayBuffer, key: jax.random.PRNGKeyArray) -> jnp.float32:
-        loss = super().update_online_params(step, replay_buffer, key)
+    def update_online_params(self, step: int, replay_buffer: ReplayBuffer) -> jnp.float32:
+        loss = super().update_online_params(step, replay_buffer)
 
         if step % self.n_training_steps_per_head_update == 0:
             self.params = self.update_heads(self.params)
