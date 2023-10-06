@@ -17,5 +17,5 @@ for bellman_iterations_scope in "${LIST_BELLMAN_ITERATIONS_SCOPE[@]}"
 do
     # iDQN
     echo "launch train idqn"
-    submission_train_idqn_1=$(sbatch -J $EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=$(( 6 * $N_PARALLEL_SEEDS )) --mem-per-cpu=2G --time=3-00:00:00 --gres=gpu:1 -p gpu --output=/dev/null launch_job/docker_launcher.sh launch_job/atari/train_idqn.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope -ns $N_PARALLEL_SEEDS)
+    submission_train_idqn_1=$(sbatch -J $EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=$(( 4 * $N_PARALLEL_SEEDS )) --mem-per-cpu=3G --time=3-00:00:00 --gres=gpu:1 -p gpu --output=/dev/null launch_job/docker_launcher.sh launch_job/atari/train_idqn.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope -ns $N_PARALLEL_SEEDS)
 done
