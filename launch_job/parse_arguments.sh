@@ -33,9 +33,12 @@ function parse_arguments() {
                 shift
                 shift
                 ;;
+            -ud | --use_docker)
+                USE_DOCKER=true
+                shift
+                ;;
             -?*)
                 printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
-                shift
                 shift
                 ;;
             ?*)
@@ -58,5 +61,9 @@ function parse_arguments() {
     then
         echo "the number of parallel seeds is missing, use -ns" >&2
         exit
+    fi
+    if [[ $USE_DOCKER == "" ]]
+    then
+        USE_DOCKER=false
     fi
 }

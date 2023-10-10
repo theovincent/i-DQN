@@ -18,4 +18,10 @@ seed_command="export SLURM_ARRAY_TASK_ID=$FIRST_SEED"
 # DQN
 echo "launch train dqn"
 train_command="launch_job/atari/train_dqn.sh -e $EXPERIMENT_NAME -ns $N_PARALLEL_SEEDS"
-tmux send-keys -t train "$seed_command" ENTER "$train_command" ENTER
+tmux_command='tmux send-keys -t train "$seed_command" ENTER "$train_command" ENTER'
+if [[ $USE_DOCKER ]]
+then
+    launch_job/docker_launcher.sh $tmux_command
+else
+    $tmux_command
+fi
