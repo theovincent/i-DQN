@@ -3,8 +3,8 @@ The environment is inspired from https://github.com/google/dopamine/blob/master/
 """
 import os
 from typing import Tuple, Dict
-from gymnasium.wrappers.monitoring import video_recorder
-import gymnasium as gym
+from gym.wrappers.monitoring import video_recorder
+import gym as gym
 import numpy as np
 import jax
 import jax.numpy as jnp
@@ -64,7 +64,7 @@ class AtariEnv:
         reward = 0
 
         for idx_frame in range(self.n_skipped_frames):
-            _, reward_, terminal, _, _ = self.env.step(action)
+            _, reward_, terminal, _ = self.env.step(action)
 
             reward += reward_
 

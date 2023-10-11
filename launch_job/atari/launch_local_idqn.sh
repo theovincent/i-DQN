@@ -18,7 +18,7 @@ train_command="launch_job/atari/train_idqn.sh -e $EXPERIMENT_NAME -b ${LIST_BELL
 
 # iDQN
 echo "launch train idqn"
-if [[ $USE_DOCKER ]]
+if [[ $USE_DOCKER == true ]]
 then
     launch_job/docker_launcher.sh "$seed_command && $train_command"
 else
