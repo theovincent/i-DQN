@@ -2,7 +2,8 @@ git clone git@github.com:theovincent/iDQN.git
 cd iDQN
 git checkout dopamine_replay
 docker pull theovincent/idqn
-docker run -it --gpus all --mount type=bind,src=/home/$USER/iDQN/,dst=/home/$USER/iDQN/ theovincent/idqn
+docker tag theovincent/idqn idqn
+docker run -it --gpus all --mount type=bind,src=/home/$USER/iDQN/,dst=/home/$USER/iDQN/ idqn
 cd /home/ubuntu/iDQN/
 python3.10 -m venv env
 source env/bin/activate
