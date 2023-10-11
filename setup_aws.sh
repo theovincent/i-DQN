@@ -10,5 +10,3 @@ source env/bin/activate
 pip install --upgrade pip
 pip install --upgrade "jax[cuda12_pip]==0.4.13" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 pip install -e .
-apt install -y tmux
-launch_job/create_tmux.sh

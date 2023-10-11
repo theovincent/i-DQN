@@ -14,14 +14,13 @@ EXPERIMENT_GENERAL_NAME=${split_experiment_name[0]}
 
 
 seed_command="export SLURM_ARRAY_TASK_ID=$FIRST_SEED"
+train_command="launch_job/atari/train_dqn.sh -e $EXPERIMENT_NAME -ns $N_PARALLEL_SEEDS"
 
 # DQN
 echo "launch train dqn"
-train_command="launch_job/atari/train_dqn.sh -e $EXPERIMENT_NAME -ns $N_PARALLEL_SEEDS"
-tmux_command='tmux send-keys -t train "$seed_command" ENTER "$train_command" ENTER'
 if [[ $USE_DOCKER ]]
 then
-    launch_job/docker_launcher.sh $tmux_command
+    launch_job/docker_launcher.sh "$seed_command && $train_command"
 else
-    $tmux_command
+    tmux send-keys -t train "$seed_command" ENTER "$train_command" ENTER
 fi
