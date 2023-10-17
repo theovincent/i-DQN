@@ -22,7 +22,7 @@ def run_cli(argvs=sys.argv[1:]):
 
     from experiments.atari.utils import generate_keys
     from idqn.environments.atari import AtariEnv
-    from idqn.sample_collection.replay_buffer import ReplayBuffer, NStepReplayBuffer
+    from idqn.sample_collection.replay_buffer import ReplayBuffer
     from idqn.networks.q_architectures import AtariiIQN
     from idqn.utils.head_behaviorial_policy import head_behaviorial_policy
     from experiments.base.DQN import train
@@ -31,24 +31,14 @@ def run_cli(argvs=sys.argv[1:]):
 
     env = AtariEnv(args.experiment_name.split("/")[1])
 
-    if p["iiqn_n_step_return"] == 1:
-        replay_buffer = ReplayBuffer(
-            p["replay_buffer_size"],
-            p["batch_size"],
-            (env.state_height, env.state_width, env.n_stacked_frames),
-            np.uint8,
-            lambda x: np.clip(x, -1, 1),
-        )
-    else:
-        replay_buffer = NStepReplayBuffer(
-            p["iiqn_n_step_return"],
-            p["gamma"],
-            p["replay_buffer_size"],
-            p["batch_size"],
-            (env.state_height, env.state_width, env.n_stacked_frames),
-            np.uint8,
-            lambda x: np.clip(x, -1, 1),
-        )
+    replay_buffer = ReplayBuffer(
+        (env.state_height, env.state_width),
+        p["replay_buffer_size"],
+        p["batch_size"],
+        p["iiqn_n_step_return"],
+        p["gamma"],
+        lambda x: np.clip(x, -1, 1),
+    )
 
     q = AtariiIQN(
         args.bellman_iterations_scope + 1,

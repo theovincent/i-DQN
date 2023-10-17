@@ -7,11 +7,11 @@ from idqn.networks.q_architectures import AtariDQN, AtariIQN, AtariiDQN
 
 
 # ------- To modify ------- #
-experiment = "sanity_check"
-algorithm = "IQN"
-game = "Frostbite"
-bellman_iterations_scope = None
-parameters = "Q_21_152_best"
+experiment = "ut30_uh6000"
+algorithm = "iDQN"
+game = "ChopperCommand"
+bellman_iterations_scope = 5
+parameters = "Q_12_199_best"
 # ------------------------- #
 
 if bellman_iterations_scope is None:
@@ -64,12 +64,7 @@ q_params = load_pickled_data(f"experiments/atari/figures/{params_path}_online_pa
 
 
 reward, absorbing = env.evaluate_one_simulation(
-    q,
-    q_params,
-    p["horizon"],
-    p["ending_eps"],
-    jax.random.PRNGKey(0),
-    params_path,
+    q, q_params, p["horizon"], p["ending_eps"], jax.random.PRNGKey(0), params_path
 )
 print("Reward:", reward)
 print("N steps", env.n_steps, "; Horizong", p["horizon"], "; Absorbing", absorbing)

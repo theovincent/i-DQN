@@ -212,7 +212,9 @@ COLORS = {
     "iIQN_ut30_uh6000_5": AVAILABLE_COLORS["green"],
     # iDQN + 3-step return
     "DQN_sanity_check_3_steps": AVAILABLE_COLORS["light_brown"],
+    "IQN_sanity_check_3_steps": AVAILABLE_COLORS["light_brown"],
     "iDQN_sanity_check_3_steps_1": AVAILABLE_COLORS["cyan"],
+    "iIQN_sanity_check_3_steps_1": AVAILABLE_COLORS["cyan"],
     "iDQN_ut30_uh6000_3_step_5": AVAILABLE_COLORS["cyan"],
     # Ablations K
     "iDQN_ablation_study_K_5": AVAILABLE_COLORS["blue"],
@@ -226,7 +228,7 @@ COLORS = {
     # Ablations parameters
     "iDQN_ut30_uh8000_4": AVAILABLE_COLORS["cyan"],
     "DQN_ut30_uh8000": AVAILABLE_COLORS["light_pink"],
-    "iDQN_ut30_uh2000_4": AVAILABLE_COLORS["cyan"],
+    "iDQN_ut30_uh2000_4": AVAILABLE_COLORS["light_cyan"],
     "DQN_one_step_one_grad": AVAILABLE_COLORS["light_pink"],
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": AVAILABLE_COLORS["grey"],
@@ -259,7 +261,9 @@ LABEL = {
     "iIQN_ut30_uh6000_5": "iIQN K=5 (iDQN + IQN)",
     # iDQN + 3-step return
     "DQN_sanity_check_3_steps": "DQN + 3-step return (our implementation)",
+    "IQN_sanity_check_3_steps": "IQN + 3-step return (our implementation)",
     "iDQN_sanity_check_3_steps_1": "iDQN K=1 + 3-step return",
+    "iIQN_sanity_check_3_steps_1": "iIQN K=1 + 3-step return",
     "iDQN_ut30_uh6000_3_step_5": "iDQN K=5 + 3-step return",
     # Ablations K
     "iDQN_ablation_study_K_5": "iDQN K=5",
@@ -306,7 +310,9 @@ ORDER = {
     "iIQN_ut30_uh6000_5": 11,
     # iDQN + 3-step return
     "DQN_sanity_check_3_steps": 5,
+    "IQN_sanity_check_3_steps": 5,
     "iDQN_sanity_check_3_steps_1": 11,
+    "iIQN_sanity_check_3_steps_1": 11,
     "iDQN_ut30_uh6000_3_step_5": 11,
     # Ablations K
     "iDQN_ablation_study_K_5": 11,

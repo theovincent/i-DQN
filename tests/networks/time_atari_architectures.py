@@ -70,14 +70,19 @@ class TimeAtariQ:
 
         # Outside of the count: time to jit the __call__ function
         rewards = jax.random.uniform(batch_key, (self.batch_size,))
-        absorbings = jax.random.randint(batch_key, (self.batch_size,), 0, 2)
+        terminals = jax.random.randint(batch_key, (self.batch_size,), 0, 2)
         next_states = jax.random.uniform(batch_key, (self.batch_size,) + self.state_shape)
-        samples = {
-            "reward": jnp.array(rewards, dtype=jnp.float32),
-            "next_state": jnp.array(next_states, dtype=jnp.float32),
-            "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
-        }
-        self.q.add_keys(samples)
+        samples = (
+            0,  # state
+            0,  # action
+            jnp.array(rewards, dtype=jnp.float32),  # reward
+            jnp.array(next_states, dtype=jnp.float32),  # next_state
+            0,  # next_action
+            0,  # next_reward
+            jnp.array(terminals, dtype=jnp.bool_),  # terminal
+            0,  # indices
+        )
+        samples = self.q.add_keys(samples)
 
         jax.block_until_ready(self.q.compute_target(self.q.params, samples))
 
@@ -86,15 +91,17 @@ class TimeAtariQ:
         for _ in range(self.n_runs):
             batch_key, key = jax.random.split(batch_key)
 
-            rewards = jax.random.uniform(key, (self.batch_size,))
-            absorbings = jax.random.randint(key, (self.batch_size,), 0, 2)
-            next_states = jax.random.uniform(key, (self.batch_size,) + self.state_shape)
-            samples = {
-                "reward": jnp.array(rewards, dtype=jnp.float32),
-                "next_state": jnp.array(next_states, dtype=jnp.float32),
-                "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
-            }
-            self.q.add_keys(samples)
+            samples = (
+                0,  # state
+                0,  # action
+                jnp.array(rewards, dtype=jnp.float32),  # reward
+                jnp.array(next_states, dtype=jnp.float32),  # next_state
+                0,  # next_action
+                0,  # next_reward
+                jnp.array(terminals, dtype=jnp.bool_),  # terminal
+                0,  # indices
+            )
+            samples = self.q.add_keys(samples)
 
             jax.block_until_ready(self.q.compute_target(self.q.params, samples))
 
@@ -108,16 +115,19 @@ class TimeAtariQ:
         actions = jax.random.uniform(batch_key, (self.batch_size,))
         batch_key, key = jax.random.split(batch_key)
         rewards = jax.random.uniform(key, (self.batch_size,))
-        absorbings = jax.random.randint(key, (self.batch_size,), 0, 2)
+        terminals = jax.random.randint(key, (self.batch_size,), 0, 2)
         next_states = jax.random.uniform(key, (self.batch_size,) + self.state_shape)
-        samples = {
-            "state": jnp.array(states, dtype=jnp.float32),
-            "action": jnp.array(actions, dtype=jnp.int8),
-            "reward": jnp.array(rewards, dtype=jnp.float32),
-            "next_state": jnp.array(next_states, dtype=jnp.float32),
-            "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
-        }
-        self.q.add_keys(samples)
+        samples = (
+            jnp.array(states, dtype=jnp.float32),  # state
+            jnp.array(actions, dtype=jnp.int8),  # action
+            jnp.array(rewards, dtype=jnp.float32),  # reward
+            jnp.array(next_states, dtype=jnp.float32),  # next_state
+            0,  # next_action
+            0,  # next_reward
+            jnp.array(terminals, dtype=jnp.bool_),  # terminal
+            0,  # indices
+        )
+        samples = self.q.add_keys(samples)
 
         jax.block_until_ready(self.q.loss_and_grad(self.q.params, self.q.params, samples))
 
@@ -129,16 +139,19 @@ class TimeAtariQ:
             actions = jax.random.uniform(key, (self.batch_size,))
             batch_key, key = jax.random.split(batch_key)
             rewards = jax.random.uniform(key, (self.batch_size,))
-            absorbings = jax.random.randint(key, (self.batch_size,), 0, 2)
+            terminals = jax.random.randint(key, (self.batch_size,), 0, 2)
             next_states = jax.random.uniform(key, (self.batch_size,) + self.state_shape)
-            samples = {
-                "state": jnp.array(states, dtype=jnp.float32),
-                "action": jnp.array(actions, dtype=jnp.int8),
-                "reward": jnp.array(rewards, dtype=jnp.float32),
-                "next_state": jnp.array(next_states, dtype=jnp.float32),
-                "absorbing": jnp.array(absorbings, dtype=jnp.bool_),
-            }
-            self.q.add_keys(samples)
+            samples = (
+                jnp.array(states, dtype=jnp.float32),  # state
+                jnp.array(actions, dtype=jnp.int8),  # action
+                jnp.array(rewards, dtype=jnp.float32),  # reward
+                jnp.array(next_states, dtype=jnp.float32),  # next_state
+                0,  # next_action
+                0,  # next_reward
+                jnp.array(terminals, dtype=jnp.bool_),  # terminal
+                0,  # indices
+            )
+            samples = self.q.add_keys(samples)
 
             jax.block_until_ready(self.q.loss_and_grad(self.q.params, self.q.params, samples))
 
@@ -167,7 +180,7 @@ class TimeAtariDQN(TimeAtariQ):
         self.random_seed = RANDOM_SEED
         print(f"random seed {self.random_seed}")
         self.key = jax.random.PRNGKey(self.random_seed)
-        self.state_shape = (4, 84, 84)
+        self.state_shape = (84, 84, 4)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.gamma = jax.random.uniform(self.key)
         super().__init__(AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None))
@@ -178,7 +191,7 @@ class TimeAtariIQN(TimeAtariQ):
         self.random_seed = RANDOM_SEED
         print(f"random seed {self.random_seed}")
         self.key = jax.random.PRNGKey(self.random_seed)
-        self.state_shape = (4, 84, 84)
+        self.state_shape = (84, 84, 4)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.gamma = jax.random.uniform(self.key)
         super().__init__(AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None))
@@ -209,7 +222,7 @@ class TimeAtariiDQN(TimeAtariQ):
         self.key = jax.random.PRNGKey(self.random_seed)
         self.n_heads = int(jax.random.randint(self.key, (), minval=5, maxval=20))
         print(f"{self.n_heads} heads")
-        self.state_shape = (4, 84, 84)
+        self.state_shape = (84, 84, 4)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.gamma = jax.random.uniform(self.key)
         self.head_behaviorial_probability = jax.random.uniform(self.key, (self.n_heads,), minval=1, maxval=10)
@@ -237,7 +250,7 @@ class TimeAtariiIQN(TimeAtariQ):
         self.key = jax.random.PRNGKey(self.random_seed)
         self.n_heads = int(jax.random.randint(self.key, (), minval=5, maxval=20))
         print(f"{self.n_heads} heads")
-        self.state_shape = (4, 84, 84)
+        self.state_shape = (84, 84, 4)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.gamma = jax.random.uniform(self.key)
         self.head_behaviorial_probability = jax.random.uniform(self.key, (self.n_heads,), minval=1, maxval=10)

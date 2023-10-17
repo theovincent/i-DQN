@@ -40,6 +40,6 @@ class TimeAtariEnv:
         for _ in range(self.n_runs):
             action_key, key = jax.random.split(action_key)
             action = jax.random.randint(key, shape=(), minval=0, maxval=env.n_actions)
-            _, _, _, _ = env.step(action)
+            env.step(action)
 
         print("Time step: ", (time() - t_begin) / self.n_runs)
