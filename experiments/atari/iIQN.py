@@ -51,7 +51,7 @@ def run_cli(argvs=sys.argv[1:]):
         p["iiqn_optimizer_eps"],
         p["n_training_steps_per_online_update"],
         p["iiqn_n_training_steps_per_target_update"],
-        p["iiqn_n_training_steps_per_head_update"],
+        p["iiqn_n_training_steps_per_rolling_step"],
         p["iiqn_n_quantiles_policy"],
         p["iiqn_n_quantiles"],
         p["iiqn_n_quantiles_target"],

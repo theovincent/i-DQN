@@ -385,7 +385,7 @@ class TestAtariiDQN(unittest.TestCase):
         best_action = jnp.argmax(q.apply(q.params, state)[0, -1]).astype(jnp.int8)
         self.assertEqual(best_action, computed_best_action)
 
-    def test_update_heads(self) -> None:
+    def test_rolling_step(self) -> None:
         q = AtariiDQN(
             self.n_heads,
             self.state_shape,
@@ -403,7 +403,7 @@ class TestAtariiDQN(unittest.TestCase):
 
         output = q.apply(q.params, state)
 
-        q.params = q.update_heads(q.params)
+        q.params = q.rolling_step(q.params)
 
         forward_output = q.apply(q.params, state)
 
@@ -607,7 +607,7 @@ class TestAtariiIQN(unittest.TestCase):
 
         self.assertEqual(best_action, computed_best_action)
 
-    def test_update_heads(self) -> None:
+    def test_rolling_step(self) -> None:
         q = AtariiIQN(
             self.n_heads,
             self.state_shape,
@@ -628,7 +628,7 @@ class TestAtariiIQN(unittest.TestCase):
 
         output, _ = q.apply_n_quantiles(q.params, state, self.key)
 
-        q.params = q.update_heads(q.params)
+        q.params = q.rolling_step(q.params)
 
         forward_output, _ = q.apply_n_quantiles(q.params, state, self.key)
 

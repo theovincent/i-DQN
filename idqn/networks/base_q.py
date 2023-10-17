@@ -317,7 +317,7 @@ class BaseMultiHeadQ(BaseQ):
         epsilon_optimizer: float,
         n_training_steps_per_online_update: int,
         n_training_steps_per_target_update: int,
-        n_training_steps_per_head_update: int,
+        n_training_steps_per_rolling_step: int,
     ) -> None:
         super().__init__(
             q_inputs,
@@ -331,14 +331,16 @@ class BaseMultiHeadQ(BaseQ):
         )
         self.n_heads = n_heads
         self.n_training_steps_per_target_update = n_training_steps_per_target_update
-        self.n_training_steps_per_head_update = n_training_steps_per_head_update
+        self.n_training_steps_per_rolling_step = n_training_steps_per_rolling_step
 
     @partial(jax.jit, static_argnames="self")
     def random_head(self, key: jax.random.PRNGKeyArray, head_probability: jnp.ndarray) -> jnp.int8:
         return jax.random.choice(key, jnp.arange(self.n_heads), p=head_probability)
 
     def update_target_params(self, step: int) -> None:
-        if (step % self.n_training_steps_per_target_update == 0) or (step % self.n_training_steps_per_head_update == 0):
+        if (step % self.n_training_steps_per_target_update == 0) or (
+            step % self.n_training_steps_per_rolling_step == 0
+        ):
             self.target_params = self.params
 
 
@@ -356,7 +358,7 @@ class iDQN(BaseMultiHeadQ):
         epsilon_optimizer: float,
         n_training_steps_per_online_update: int,
         n_training_steps_per_target_update: int,
-        n_training_steps_per_head_update: int,
+        n_training_steps_per_rolling_step: int,
     ) -> None:
         super().__init__(
             n_heads,
@@ -369,7 +371,7 @@ class iDQN(BaseMultiHeadQ):
             epsilon_optimizer,
             n_training_steps_per_online_update,
             n_training_steps_per_target_update,
-            n_training_steps_per_head_update,
+            n_training_steps_per_rolling_step,
         )
         self.head_behaviorial_probability = head_behaviorial_probability
 
@@ -418,14 +420,14 @@ class iDQN(BaseMultiHeadQ):
         )
 
     @partial(jax.jit, static_argnames="self")
-    def update_heads(self, params: FrozenDict) -> FrozenDict:
-        return self.network.update_heads(params)
+    def rolling_step(self, params: FrozenDict) -> FrozenDict:
+        return self.network.rolling_step(params)
 
     def update_online_params(self, step: int, replay_buffer: ReplayBuffer) -> jnp.float32:
         loss = super().update_online_params(step, replay_buffer)
 
-        if step % self.n_training_steps_per_head_update == 0:
-            self.params = self.update_heads(self.params)
+        if step % self.n_training_steps_per_rolling_step == 0:
+            self.params = self.rolling_step(self.params)
 
         return loss
 
@@ -469,7 +471,7 @@ class iIQN(BaseMultiHeadQ):
         epsilon_optimizer: float,
         n_training_steps_per_online_update: int,
         n_training_steps_per_target_update: int,
-        n_training_steps_per_head_update: int,
+        n_training_steps_per_rolling_step: int,
         n_quantiles_policy: int,
         n_quantiles: int,
         n_quantiles_target: int,
@@ -485,7 +487,7 @@ class iIQN(BaseMultiHeadQ):
             epsilon_optimizer,
             n_training_steps_per_online_update,
             n_training_steps_per_target_update,
-            n_training_steps_per_head_update,
+            n_training_steps_per_rolling_step,
         )
         self.head_behaviorial_probability = head_behaviorial_probability
         self.n_quantiles_policy = n_quantiles_policy
@@ -615,13 +617,13 @@ class iIQN(BaseMultiHeadQ):
         )
 
     @partial(jax.jit, static_argnames="self")
-    def update_heads(self, params: FrozenDict) -> FrozenDict:
-        return self.network.update_heads(params)
+    def rolling_step(self, params: FrozenDict) -> FrozenDict:
+        return self.network.rolling_step(params)
 
     def update_online_params(self, step: int, replay_buffer: ReplayBuffer) -> jnp.float32:
         loss = super().update_online_params(step, replay_buffer)
 
-        if step % self.n_training_steps_per_head_update == 0:
-            self.params = self.update_heads(self.params)
+        if step % self.n_training_steps_per_rolling_step == 0:
+            self.params = self.rolling_step(self.params)
 
         return loss

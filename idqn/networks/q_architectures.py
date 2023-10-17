@@ -209,7 +209,7 @@ class AtariSharediDQNNet:
 
         return self.head.apply(head_params, features)
 
-    def update_heads(self, params: FrozenDict) -> FrozenDict:
+    def rolling_step(self, params: FrozenDict) -> FrozenDict:
         unfrozen_params = params.unfreeze()
         # The shared params of the first head takes the shared params of the other heads
         unfrozen_params["torso_params_0"] = params["torso_params_1"]
@@ -234,7 +234,7 @@ class AtariiDQN(iDQN):
         epsilon_optimizer: float,
         n_training_steps_per_online_update: int,
         n_training_steps_per_target_update: int,
-        n_training_steps_per_head_update: int,
+        n_training_steps_per_rolling_step: int,
     ) -> None:
         super().__init__(
             n_heads,
@@ -248,7 +248,7 @@ class AtariiDQN(iDQN):
             epsilon_optimizer,
             n_training_steps_per_online_update,
             n_training_steps_per_target_update,
-            n_training_steps_per_head_update,
+            n_training_steps_per_rolling_step,
         )
 
 
@@ -388,7 +388,7 @@ class AtariSharediIQNet:
 
         return self.head.apply(head_params, multiplied_features)  # output (batch_size, n_quantiles, n_actions)
 
-    def update_heads(self, params: FrozenDict) -> FrozenDict:
+    def rolling_step(self, params: FrozenDict) -> FrozenDict:
         unfrozen_params = params.unfreeze()
         # The shared params of the first head takes the shared params of the other heads
         unfrozen_params["torso_params_0"] = params["torso_params_1"]
@@ -414,7 +414,7 @@ class AtariiIQN(iIQN):
         epsilon_optimizer: float,
         n_training_steps_per_online_update: int,
         n_training_steps_per_target_update: int,
-        n_training_steps_per_head_update: int,
+        n_training_steps_per_rolling_step: int,
         n_quantiles_policy: int,
         n_quantiles: int,
         n_quantiles_target: int,
@@ -431,7 +431,7 @@ class AtariiIQN(iIQN):
             epsilon_optimizer,
             n_training_steps_per_online_update,
             n_training_steps_per_target_update,
-            n_training_steps_per_head_update,
+            n_training_steps_per_rolling_step,
             n_quantiles_policy,
             n_quantiles,
             n_quantiles_target,

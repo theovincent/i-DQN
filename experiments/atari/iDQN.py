@@ -51,7 +51,7 @@ def run_cli(argvs=sys.argv[1:]):
         p["idqn_optimizer_eps"],
         p["n_training_steps_per_online_update"],
         p["idqn_n_training_steps_per_target_update"],
-        p["idqn_n_training_steps_per_head_update"],
+        p["idqn_n_training_steps_per_rolling_step"],
     )
 
     train(
