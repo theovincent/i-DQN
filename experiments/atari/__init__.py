@@ -230,6 +230,8 @@ COLORS = {
     "DQN_ut30_uh8000": AVAILABLE_COLORS["light_pink"],
     "iDQN_ut30_uh2000_4": AVAILABLE_COLORS["light_cyan"],
     "DQN_one_step_one_grad": AVAILABLE_COLORS["light_pink"],
+    "iDQN_ut30_uh500_5": AVAILABLE_COLORS["orange"],
+    "iDQN_ut1_uh6000_5": AVAILABLE_COLORS["pink"],
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": AVAILABLE_COLORS["grey"],
     "Quantile (JAX)_dopamine": AVAILABLE_COLORS["light_red"],
@@ -275,10 +277,12 @@ LABEL = {
     # Ablations head std
     "iDQN_head_std_5": "inter-head standard deviation",
     # Ablations parameters
-    "iDQN_ut30_uh8000_4": "iDQN K = 4, T = 8000",
-    "DQN_ut30_uh8000": "DQN, G = 1",
-    "iDQN_ut30_uh2000_4": "iDQN K = 4, T = 2000",
-    "DQN_one_step_one_grad": "DQN G = 1",
+    "iDQN_ut30_uh8000_4": "iDQN K=4, R=8000, G=4",
+    "DQN_ut30_uh8000": "DQN, T=8000, G=1",
+    "iDQN_ut30_uh2000_4": "iDQN K=4, R=2000",
+    "DQN_one_step_one_grad": "DQN G=1",
+    "iDQN_ut30_uh500_5": "iDQN, T=30, R=500",
+    "iDQN_ut1_uh6000_5": "iDQN, T=1, R=6000",
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": "DQN (Nature)",
     "Quantile (JAX)_dopamine": "QR-DQN + 3-step return",
@@ -328,6 +332,8 @@ ORDER = {
     "DQN_ut30_uh8000": 4,
     "iDQN_ut30_uh2000_4": 11,
     "DQN_one_step_one_grad": 4,
+    "iDQN_ut30_uh500_5": 4,
+    "iDQN_ut1_uh6000_5": 4,
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": 2,
     "Quantile (JAX)_dopamine": 3,
