@@ -52,7 +52,7 @@ def train(
 
             losses[
                 idx_epoch, np.minimum(idx_training_step, p["n_training_steps_per_epoch"] - 1)
-            ] = q.update_online_params(n_training_steps, replay_buffer)
+            ] = q.update_online_params(n_training_steps, replay_buffer, has_reset=has_reset)
             q.update_target_params(n_training_steps)
 
             idx_training_step += 1

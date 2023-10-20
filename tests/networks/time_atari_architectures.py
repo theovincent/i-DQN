@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from idqn.networks.base_q import BaseQ
-from idqn.networks.q_architectures import AtariDQN, AtariIQN, AtariiDQN, AtariiIQN
+from idqn.networks.q_architectures import AtariDQN, AtariIQN, AtariREM, AtariiDQN, AtariiIQN
 
 RANDOM_SEED = np.random.randint(1000)
 
@@ -25,6 +25,14 @@ def run_cli():
     time_atari_iqn.time_compute_target()
     time_atari_iqn.time_loss()
     time_atari_iqn.time_best_action()
+
+    print("\n\nTime REM")
+    time_atari_rem = TimeAtariREM()
+
+    time_atari_rem.time_inference()
+    time_atari_rem.time_compute_target()
+    time_atari_rem.time_loss()
+    time_atari_rem.time_best_action()
 
     print("\n\nTime iDQN")
     time_atari_idqn = TimeAtariiDQN()
@@ -82,7 +90,7 @@ class TimeAtariQ:
             jnp.array(terminals, dtype=jnp.bool_),  # terminal
             0,  # indices
         )
-        samples = self.q.add_keys(samples)
+        samples = self.q.augment_samples(samples, key=self.q.network_key)
 
         jax.block_until_ready(self.q.compute_target(self.q.params, samples))
 
@@ -91,6 +99,9 @@ class TimeAtariQ:
         for _ in range(self.n_runs):
             batch_key, key = jax.random.split(batch_key)
 
+            rewards = jax.random.uniform(key, (self.batch_size,))
+            terminals = jax.random.randint(key, (self.batch_size,), 0, 2)
+            next_states = jax.random.uniform(key, (self.batch_size,) + self.state_shape)
             samples = (
                 0,  # state
                 0,  # action
@@ -101,7 +112,7 @@ class TimeAtariQ:
                 jnp.array(terminals, dtype=jnp.bool_),  # terminal
                 0,  # indices
             )
-            samples = self.q.add_keys(samples)
+            samples = self.q.augment_samples(samples, key=key)
 
             jax.block_until_ready(self.q.compute_target(self.q.params, samples))
 
@@ -127,7 +138,7 @@ class TimeAtariQ:
             jnp.array(terminals, dtype=jnp.bool_),  # terminal
             0,  # indices
         )
-        samples = self.q.add_keys(samples)
+        samples = self.q.augment_samples(samples, key=self.q.network_key)
 
         jax.block_until_ready(self.q.loss_and_grad(self.q.params, self.q.params, samples))
 
@@ -151,7 +162,7 @@ class TimeAtariQ:
                 jnp.array(terminals, dtype=jnp.bool_),  # terminal
                 0,  # indices
             )
-            samples = self.q.add_keys(samples)
+            samples = self.q.augment_samples(samples, key=key)
 
             jax.block_until_ready(self.q.loss_and_grad(self.q.params, self.q.params, samples))
 
@@ -164,13 +175,13 @@ class TimeAtariQ:
         # several time to jit all the underlying functions of q.best_action
         for _ in range(self.n_runs):
             state_key, key = jax.random.split(state_key)
-            jax.block_until_ready(self.q.best_action(self.q.params, jax.random.uniform(key, self.state_shape), key))
+            jax.block_until_ready(self.q.best_action(self.q.params, jax.random.uniform(key, self.state_shape), key=key))
 
         t_begin = time()
 
         for _ in range(self.n_runs):
             state_key, key = jax.random.split(state_key)
-            jax.block_until_ready(self.q.best_action(self.q.params, jax.random.uniform(key, self.state_shape), key))
+            jax.block_until_ready(self.q.best_action(self.q.params, jax.random.uniform(key, self.state_shape), key=key))
 
         print("Time best action: ", (time() - t_begin) / self.n_runs)
 
@@ -213,6 +224,17 @@ class TimeAtariIQN(TimeAtariQ):
             )
 
         print("Time inference: ", (time() - t_begin) / self.n_runs)
+
+
+class TimeAtariREM(TimeAtariQ):
+    def __init__(self) -> None:
+        self.random_seed = RANDOM_SEED
+        print(f"random seed {self.random_seed}")
+        self.key = jax.random.PRNGKey(self.random_seed)
+        self.state_shape = (84, 84, 4)
+        self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
+        self.gamma = jax.random.uniform(self.key)
+        super().__init__(AtariREM(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None))
 
 
 class TimeAtariiDQN(TimeAtariQ):

@@ -83,8 +83,10 @@ class iIQN(BaseIteratedQ):
             )
         ).astype(jnp.int8)
 
-    def add_keys(self, samples: Tuple[jnp.ndarray]) -> Tuple[jnp.ndarray]:
-        self.network_key, key, next_key = jax.random.split(self.network_key, 3)
+    @staticmethod
+    @partial(jax.jit, static_argnames="self")
+    def augment_samples(samples: Tuple[jnp.ndarray], **kwargs) -> Tuple[jnp.ndarray]:
+        key, next_key = jax.random.split(kwargs.get("key"))
         samples += (key, next_key)
 
         return samples
@@ -157,13 +159,13 @@ class iIQN(BaseIteratedQ):
         # sum over the quantiles and mean over the target quantiles, the heads and the states
         return jnp.mean(jnp.sum(quantile_losses, axis=3))
 
-    def best_action(self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey) -> jnp.int8:
-        idx_head = self.random_head(key, self.head_behaviorial_probability)
+    def best_action(self, params: FrozenDict, state: jnp.ndarray, **kwargs) -> jnp.int8:
+        idx_head = self.random_head(kwargs.get("key"), self.head_behaviorial_probability)
 
         return self.best_action_from_head(
             params["torso_params_0" if idx_head == 0 else "torso_params_1"],
             params["quantiles_params_0" if idx_head == 0 else "quantiles_params_1"],
             params[f"head_params_{idx_head}"],
             state,
-            key,
+            kwargs.get("key"),
         )

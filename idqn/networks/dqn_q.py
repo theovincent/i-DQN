@@ -57,6 +57,5 @@ class DQN(BaseSingleQ):
         return self.metric(predictions - targets, ord="2")
 
     @partial(jax.jit, static_argnames="self")
-    def best_action(self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey) -> jnp.int8:
-        # key is not used here
+    def best_action(self, params: FrozenDict, state: jnp.ndarray, **kwargs) -> jnp.int8:
         return jnp.argmax(self.apply(params, jnp.array(state, dtype=jnp.float32))[0]).astype(jnp.int8)

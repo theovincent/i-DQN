@@ -78,8 +78,8 @@ class iDQN(BaseIteratedQ):
 
         return self.metric(predictions - targets, ord="2")
 
-    def best_action(self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey) -> jnp.int8:
-        idx_head = self.random_head(key, self.head_behaviorial_probability)
+    def best_action(self, params: FrozenDict, state: jnp.ndarray, **kwargs) -> jnp.int8:
+        idx_head = self.random_head(kwargs.get("key"), self.head_behaviorial_probability)
 
         return self.best_action_from_head(
             params[f"torso_params_{0 if idx_head == 0 else 1}"], params[f"head_params_{idx_head}"], state

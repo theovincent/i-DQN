@@ -65,13 +65,14 @@ class BaseQ:
 
         return params, optimizer_state, loss
 
-    def add_keys(self, samples: Tuple[jnp.ndarray]) -> Tuple[jnp.ndarray]:
+    def augment_samples(self, samples: Tuple[jnp.ndarray], **kwargs) -> Tuple[jnp.ndarray]:
         return samples
 
-    def update_online_params(self, step: int, replay_buffer: ReplayBuffer) -> jnp.float32:
+    def update_online_params(self, step: int, replay_buffer: ReplayBuffer, **kwargs) -> jnp.float32:
         if step % self.n_training_steps_per_online_update == 0:
+            self.network_key, key = jax.random.split(self.network_key)
             batch_samples = replay_buffer.sample_transition_batch()
-            batch_samples = self.add_keys(batch_samples)
+            batch_samples = self.augment_samples(batch_samples, key=key, **kwargs)
 
             self.params, self.optimizer_state, loss = self.learn_on_batch(
                 self.params, self.target_params, self.optimizer_state, batch_samples
@@ -88,7 +89,7 @@ class BaseQ:
     def random_action(self, key: jax.random.PRNGKeyArray) -> jnp.int8:
         return jax.random.choice(key, jnp.arange(self.n_actions)).astype(jnp.int8)
 
-    def best_action(self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey) -> jnp.int8:
+    def best_action(self, params: FrozenDict, state: jnp.ndarray, **kwargs) -> jnp.int8:
         raise NotImplementedError
 
     def save(self, path: str) -> None:
@@ -169,10 +170,8 @@ class BaseIteratedQ(BaseQ):
     def rolling_step(self, params: FrozenDict) -> FrozenDict:
         return self.network.rolling_step(params)
 
-    def update_online_params(self, step: int, replay_buffer: ReplayBuffer) -> jnp.float32:
-        loss = super().update_online_params(step, replay_buffer)
-
+    def update_online_params(self, step: int, replay_buffer: ReplayBuffer, **kwargs) -> jnp.float32:
         if step % self.n_training_steps_per_rolling_step == 0:
             self.params = self.rolling_step(self.params)
 
-        return loss
+        return super().update_online_params(step, replay_buffer, **kwargs)

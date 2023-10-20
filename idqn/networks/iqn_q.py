@@ -59,8 +59,10 @@ class IQN(BaseSingleQ):
         """
         return self.network.apply(params, states, key, self.n_quantiles_policy + self.n_quantiles_target)
 
-    def add_keys(self, samples: Tuple[jnp.ndarray]) -> Tuple[jnp.ndarray]:
-        self.network_key, key, next_key = jax.random.split(self.network_key, 3)
+    @staticmethod
+    @partial(jax.jit, static_argnames="self")
+    def augment_samples(samples: Tuple[jnp.ndarray], **kwargs) -> Tuple[jnp.ndarray]:
+        key, next_key = jax.random.split(kwargs.get("key"))
         samples += (key, next_key)
 
         return samples
@@ -126,8 +128,10 @@ class IQN(BaseSingleQ):
         return jnp.mean(jnp.sum(quantile_losses, axis=2))
 
     @partial(jax.jit, static_argnames="self")
-    def best_action(self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey) -> jnp.int8:
-        state_quantiles, _ = self.apply_n_quantiles_policy(params, jnp.array(state, dtype=jnp.float32), key)
+    def best_action(self, params: FrozenDict, state: jnp.ndarray, **kwargs) -> jnp.int8:
+        state_quantiles, _ = self.apply_n_quantiles_policy(
+            params, jnp.array(state, dtype=jnp.float32), kwargs.get("key")
+        )
         state_values = jnp.mean(state_quantiles, axis=(0, 1))
 
         return jnp.argmax(state_values).astype(jnp.int8)
