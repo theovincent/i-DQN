@@ -210,6 +210,9 @@ COLORS = {
     "iIQN_sanity_check_1": AVAILABLE_COLORS["green"],
     "iIQN_ut30_uh6000_3": AVAILABLE_COLORS["green"],
     "iIQN_ut30_uh6000_5": AVAILABLE_COLORS["green"],
+    # iREM
+    "REM_sanity_check": AVAILABLE_COLORS["light_brown"],
+    "iREM_sanity_check_1": AVAILABLE_COLORS["green"],
     # iDQN + 3-step return
     "DQN_sanity_check_3_steps": AVAILABLE_COLORS["light_brown"],
     "IQN_sanity_check_3_steps": AVAILABLE_COLORS["light_brown"],
@@ -230,8 +233,12 @@ COLORS = {
     "DQN_ut30_uh8000": AVAILABLE_COLORS["light_pink"],
     "iDQN_ut30_uh2000_4": AVAILABLE_COLORS["light_cyan"],
     "DQN_one_step_one_grad": AVAILABLE_COLORS["light_pink"],
+    "iDQN_ut30_uh100_5": AVAILABLE_COLORS["orange"],
     "iDQN_ut30_uh500_5": AVAILABLE_COLORS["orange"],
     "iDQN_ut1_uh6000_5": AVAILABLE_COLORS["pink"],
+    "iDQN_ut30_uh100_deter_5": AVAILABLE_COLORS["orange"],
+    "iDQN_ut30_uh500_deter_5": AVAILABLE_COLORS["red"],
+    "iDQN_ut30_uh6000_deter_5": AVAILABLE_COLORS["pink"],
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": AVAILABLE_COLORS["grey"],
     "Quantile (JAX)_dopamine": AVAILABLE_COLORS["light_red"],
@@ -261,6 +268,9 @@ LABEL = {
     "iIQN_sanity_check_1": "iIQN K=1",
     "iIQN_ut30_uh6000_3": "iIQN K=3 (iDQN + IQN)",
     "iIQN_ut30_uh6000_5": "iIQN K=5 (iDQN + IQN)",
+    # iREM
+    "REM_sanity_check": "REM (our implementation)",
+    "iREM_sanity_check_1": "iREM K=1",
     # iDQN + 3-step return
     "DQN_sanity_check_3_steps": "DQN + 3-step return (our implementation)",
     "IQN_sanity_check_3_steps": "IQN + 3-step return (our implementation)",
@@ -281,8 +291,12 @@ LABEL = {
     "DQN_ut30_uh8000": "DQN, T=8000, G=1",
     "iDQN_ut30_uh2000_4": "iDQN K=4, R=2000",
     "DQN_one_step_one_grad": "DQN G=1",
+    "iDQN_ut30_uh100_5": "iDQN, T=30, R=100",
     "iDQN_ut30_uh500_5": "iDQN, T=30, R=500",
     "iDQN_ut1_uh6000_5": "iDQN, T=1, R=6000",
+    "iDQN_ut30_uh100_deter_5": "iDQN, T=30, R=100",
+    "iDQN_ut30_uh500_deter_5": "iDQN, T=30, R=500",
+    "iDQN_ut30_uh6000_deter_5": "iDQN, T=30, R=6000",
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": "DQN (Nature)",
     "Quantile (JAX)_dopamine": "QR-DQN + 3-step return",
@@ -295,11 +309,11 @@ LABEL = {
     "IQN": "IQN + 3-step return",
     "M-IQN": "Munchausen + IQN + 3-step return",
     # Baselines from dopamine
-    "DQN_dopamine": "DQN (Nature) dopamine",
-    "DQN (Adam + MSE in JAX)_dopamine": "DQN (Adam) dopamine",
-    "C51_dopamine": "C51 dopamine",
-    "Rainbow_dopamine": "Rainbow dopamine",
-    "IQN_dopamine": "IQN dopamine",
+    # "DQN_dopamine": "DQN (Nature) dopamine",
+    # "DQN (Adam + MSE in JAX)_dopamine": "DQN (Adam) dopamine",
+    # "C51_dopamine": "C51 dopamine",
+    # "Rainbow_dopamine": "Rainbow dopamine",
+    # "IQN_dopamine": "IQN dopamine",
 }
 
 ORDER = {
@@ -312,6 +326,9 @@ ORDER = {
     "iIQN_sanity_check_1": 11,
     "iIQN_ut30_uh6000_3": 11,
     "iIQN_ut30_uh6000_5": 11,
+    # iREM
+    "REM_sanity_check": 5,
+    "iREM_sanity_check_1": 11,
     # iDQN + 3-step return
     "DQN_sanity_check_3_steps": 5,
     "IQN_sanity_check_3_steps": 5,
@@ -332,8 +349,12 @@ ORDER = {
     "DQN_ut30_uh8000": 4,
     "iDQN_ut30_uh2000_4": 11,
     "DQN_one_step_one_grad": 4,
+    "iDQN_ut30_uh100_5": 4,
     "iDQN_ut30_uh500_5": 4,
     "iDQN_ut1_uh6000_5": 4,
+    "iDQN_ut30_uh100_deter_5": 4,
+    "iDQN_ut30_uh500_deter_5": 4,
+    "iDQN_ut30_uh6000_deter_5": 4,
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": 2,
     "Quantile (JAX)_dopamine": 3,
@@ -346,9 +367,9 @@ ORDER = {
     "IQN": 8,
     "M-IQN": 9,
     # Baselines from dopamine
-    "DQN_dopamine": 2,
-    "DQN (Adam + MSE in JAX)_dopamine": 4,
-    "C51_dopamine": 5,
-    "Rainbow_dopamine": 7,
-    "IQN_dopamine": 8,
+    # "DQN_dopamine": 2,
+    # "DQN (Adam + MSE in JAX)_dopamine": 4,
+    # "C51_dopamine": 5,
+    # "Rainbow_dopamine": 7,
+    # "IQN_dopamine": 8,
 }
