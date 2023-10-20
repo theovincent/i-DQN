@@ -238,6 +238,7 @@ COLORS = {
     "iDQN_ut1_uh6000_5": AVAILABLE_COLORS["pink"],
     "iDQN_ut30_uh100_deter_5": AVAILABLE_COLORS["orange"],
     "iDQN_ut30_uh500_deter_5": AVAILABLE_COLORS["red"],
+    "iDQN_ut1_uh6000_deter_5": AVAILABLE_COLORS["purple"],
     "iDQN_ut30_uh6000_deter_5": AVAILABLE_COLORS["pink"],
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": AVAILABLE_COLORS["grey"],
@@ -296,6 +297,7 @@ LABEL = {
     "iDQN_ut1_uh6000_5": "iDQN, T=1, R=6000",
     "iDQN_ut30_uh100_deter_5": "iDQN, T=30, R=100",
     "iDQN_ut30_uh500_deter_5": "iDQN, T=30, R=500",
+    "iDQN_ut1_uh6000_deter_5": "iDQN, T=1, R=6000",
     "iDQN_ut30_uh6000_deter_5": "iDQN, T=30, R=6000",
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": "DQN (Nature)",
@@ -354,6 +356,7 @@ ORDER = {
     "iDQN_ut1_uh6000_5": 4,
     "iDQN_ut30_uh100_deter_5": 4,
     "iDQN_ut30_uh500_deter_5": 4,
+    "iDQN_ut1_uh6000_deter_5": 4,
     "iDQN_ut30_uh6000_deter_5": 4,
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": 2,
