@@ -52,6 +52,7 @@ def run_cli(argvs=sys.argv[1:]):
         p["n_training_steps_per_online_update"],
         p["idqn_n_training_steps_per_target_update"],
         p["idqn_n_training_steps_per_rolling_step"],
+        p["idqn_shared_network"],
     )
 
     train(

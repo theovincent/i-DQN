@@ -225,59 +225,95 @@ class AtariSharediDQNNet:
 
     def init(self, key_init: jax.random.PRNGKey, state: jnp.ndarray) -> FrozenDict:
         # We need only two sets of torso parameters
-        torso_params = {}
-        torso_params["torso_params_0"] = self.torso.init(key_init, state)
-        key_init, _ = jax.random.split(key_init)
-        torso_params["torso_params_1"] = self.torso.init(key_init, state)
+        torso_params = jax.vmap(self.torso.init, in_axes=(0, None))(jax.random.split(key_init), state)
 
-        features = self.torso.apply(torso_params["torso_params_0"], state)
+        features = self.torso.apply(jax.tree_util.tree_map(lambda param: param[0], torso_params), state)
 
-        head_params = {}
-        for idx_head in range(self.n_heads):
-            key_init, _ = jax.random.split(key_init)
-            head_params[f"head_params_{idx_head}"] = self.head.init(key_init, features)
+        head_params = jax.vmap(self.head.init, in_axes=(0, None))(jax.random.split(key_init, self.n_heads), features)
 
-        return FrozenDict(**torso_params, **head_params)
+        return FrozenDict(torso_params=torso_params, head_params=head_params)
 
     def apply(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
-        features_0 = self.torso.apply(params["torso_params_0"], state)
-        features_1 = self.torso.apply(params["torso_params_1"], state)
+        # out_axes = 1 because the output shape is (batch_size, 2, n_features)
+        features = jax.vmap(self.torso.apply, in_axes=(0, None), out_axes=1)(params["torso_params"], state)
 
         # batch_size = features_0.shape[0]
-        output = jnp.zeros((features_0.shape[0], self.n_heads, self.n_actions))
+        output = jnp.zeros((features.shape[0], self.n_heads, self.n_actions))
 
-        output = output.at[:, 0].set(self.head.apply(params["head_params_0"], features_0))
-        for idx_head in range(1, self.n_heads):
-            output = output.at[:, idx_head].set(self.head.apply(params[f"head_params_{idx_head}"], features_1))
+        output = output.at[:, 0].set(
+            self.head.apply(jax.tree_util.tree_map(lambda param: param[0], params["head_params"]), features[:, 0])
+        )
+        output = output.at[:, 1:].set(
+            jax.vmap(self.head.apply, in_axes=(0, None), out_axes=1)(
+                jax.tree_util.tree_map(lambda param: param[1:], params["head_params"]), features[:, 1]
+            )
+        )
 
         return output
 
     def apply_other_heads(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
-        features_1 = self.torso.apply(params["torso_params_1"], state)
+        feature = self.torso.apply(jax.tree_util.tree_map(lambda param: param[1], params["torso_params"]), state)
 
-        # batch_size = features_1.shape[0]
-        output = jnp.zeros((features_1.shape[0], self.n_heads - 1, self.n_actions))
+        return jax.vmap(self.head.apply, in_axes=(0, None), out_axes=1)(
+            jax.tree_util.tree_map(lambda param: param[1:], params["head_params"]), feature
+        )
 
-        for idx_head in range(1, self.n_heads):
-            output = output.at[:, idx_head - 1].set(self.head.apply(params[f"head_params_{idx_head}"], features_1))
+    def apply_specific_head(self, params: FrozenDict, idx_head: int, state: jnp.ndarray) -> jnp.ndarray:
+        feature = self.torso.apply(
+            jax.tree_util.tree_map(
+                lambda param: param[jax.lax.cond(idx_head >= 1, lambda: 1, lambda: 0)], params["torso_params"]
+            ),
+            state,
+        )
 
-        return output
-
-    def apply_specific_head(self, torso_params: FrozenDict, head_params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
-        features = self.torso.apply(torso_params, state)
-
-        return self.head.apply(head_params, features)
+        return self.head.apply(jax.tree_util.tree_map(lambda param: param[idx_head], params["head_params"]), feature)
 
     def rolling_step(self, params: FrozenDict) -> FrozenDict:
-        unfrozen_params = params.unfreeze()
-        # The shared params of the first head takes the shared params of the other heads
-        unfrozen_params["torso_params_0"] = params["torso_params_1"]
+        def roll(param):
+            param = param.at[:-1].set(param[1:])
+            return param
 
-        # Each head takes the params of the following one
-        for idx_head in range(self.n_heads - 1):
-            unfrozen_params[f"head_params_{idx_head}"] = params[f"head_params_{idx_head + 1}"]
+        unfrozen_params = params.unfreeze()
+
+        unfrozen_params["torso_params"] = jax.tree_util.tree_map(
+            lambda param: roll(param), unfrozen_params["torso_params"]
+        )
+        unfrozen_params["head_params"] = jax.tree_util.tree_map(
+            lambda param: roll(param), unfrozen_params["head_params"]
+        )
 
         return FrozenDict(unfrozen_params)
+
+
+class AtariiDQNNet:
+    def __init__(self, n_nets: int, n_actions: int) -> None:
+        self.n_nets = n_nets
+        self.dqn_net = AtariDQNNet(n_actions)
+
+    def init(self, key_init: jax.random.PRNGKey, state: jnp.ndarray) -> FrozenDict:
+        return jax.vmap(self.dqn_net.init, in_axes=(0, None))(jax.random.split(key_init, self.n_nets), state)
+
+    def apply(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
+        # out_axes = 1 because the output shape is (batch_size, n_nets, n_actions)
+        return jax.vmap(self.dqn_net.apply, in_axes=(0, None), out_axes=1)(params, state)
+
+    def apply_other_heads(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
+        params_other_heads = jax.tree_util.tree_map(lambda param: param[1:], params)
+
+        return self.apply(params_other_heads, state)
+
+    def apply_specific_head(self, params: FrozenDict, idx_head: int, state: jnp.ndarray) -> jnp.ndarray:
+        params_heads = jax.tree_util.tree_map(lambda param: param[idx_head], params)
+
+        return self.dqn_net.apply(params_heads, state)
+
+    def rolling_step(self, params: FrozenDict) -> FrozenDict:
+        def roll(param):
+            param = param.at[:-1].set(param[1:])
+            return param
+
+        unfrozen_params = params.unfreeze()
+        return FrozenDict(jax.tree_util.tree_map(lambda param: roll(param), unfrozen_params))
 
 
 class AtariiDQN(iDQN):
@@ -294,13 +330,14 @@ class AtariiDQN(iDQN):
         n_training_steps_per_online_update: int,
         n_training_steps_per_target_update: int,
         n_training_steps_per_rolling_step: int,
+        shared_network: int,
     ) -> None:
         super().__init__(
             n_heads,
             state_shape,
             n_actions,
             gamma,
-            AtariSharediDQNNet(n_heads, n_actions),
+            AtariSharediDQNNet(n_heads, n_actions) if shared_network else AtariiDQNNet(n_heads, n_actions),
             network_key,
             head_behaviorial_probability,
             learning_rate,

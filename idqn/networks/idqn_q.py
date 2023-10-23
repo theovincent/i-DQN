@@ -50,11 +50,9 @@ class iDQN(BaseIteratedQ):
         return self.network.apply_other_heads(params, states)
 
     @partial(jax.jit, static_argnames="self")
-    def best_action_from_head(
-        self, torso_params: FrozenDict, head_params: FrozenDict, state: jnp.ndarray
-    ) -> jnp.ndarray:
+    def best_action_from_head(self, params: FrozenDict, idx_head: int, state: jnp.ndarray) -> jnp.ndarray:
         """This function is supposed to take a single state and not a batch"""
-        return jnp.argmax(self.network.apply_specific_head(torso_params, head_params, state)[0]).astype(jnp.int8)
+        return jnp.argmax(self.network.apply_specific_head(params, idx_head, state)[0]).astype(jnp.int8)
 
     @partial(jax.jit, static_argnames="self")
     def compute_target(self, params: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.ndarray:
@@ -78,12 +76,11 @@ class iDQN(BaseIteratedQ):
 
         return self.metric(predictions - targets, ord="2")
 
+    @partial(jax.jit, static_argnames="self")
     def best_action(self, params: FrozenDict, state: jnp.ndarray, **kwargs) -> jnp.int8:
         idx_head = self.random_head(kwargs.get("key"), self.head_behaviorial_probability)
 
-        return self.best_action_from_head(
-            params[f"torso_params_{0 if idx_head == 0 else 1}"], params[f"head_params_{idx_head}"], state
-        )
+        return self.best_action_from_head(params, idx_head, state)
 
     def compute_standard_deviation_head(self, replay_buffer: ReplayBuffer, key: jax.random.PRNGKeyArray) -> jnp.float32:
         standard_deviation = 0

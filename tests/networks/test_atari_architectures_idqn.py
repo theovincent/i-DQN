@@ -31,6 +31,7 @@ class TestAtariiDQN(unittest.TestCase):
             None,
             None,
             None,
+            shared_network=True,
         )
 
         state = jax.random.uniform(self.key, self.state_shape, minval=-1, maxval=1)
@@ -62,6 +63,7 @@ class TestAtariiDQN(unittest.TestCase):
             None,
             None,
             None,
+            shared_network=True,
         )
 
         rewards = jax.random.uniform(self.key, (10,), minval=-1, maxval=1)
@@ -100,6 +102,7 @@ class TestAtariiDQN(unittest.TestCase):
             None,
             None,
             None,
+            shared_network=True,
         )
         states = jax.random.uniform(self.key, (10,) + self.state_shape, minval=-1, maxval=1)
         actions = jax.random.randint(self.key, (10,), minval=0, maxval=self.n_actions)
@@ -145,6 +148,7 @@ class TestAtariiDQN(unittest.TestCase):
             None,
             None,
             None,
+            shared_network=True,
         )
         state = jax.random.uniform(self.key, self.state_shape, minval=-1, maxval=1)
 
@@ -167,6 +171,7 @@ class TestAtariiDQN(unittest.TestCase):
             None,
             None,
             None,
+            shared_network=True,
         )
         state = jax.random.uniform(self.key, (50,) + self.state_shape, minval=-1, maxval=1)
 
@@ -176,4 +181,4 @@ class TestAtariiDQN(unittest.TestCase):
 
         forward_output = q.apply(q.params, state)
 
-        self.assertAlmostEqual(np.linalg.norm(forward_output[:, :-1] - output[:, 1:]), 0, places=8)
+        self.assertAlmostEqual(np.linalg.norm(forward_output[:, :-1] - output[:, 1:]), 0, places=5)

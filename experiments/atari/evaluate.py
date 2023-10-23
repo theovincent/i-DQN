@@ -58,6 +58,7 @@ else:
         None,
         None,
         None,
+        shared_network=True,
     )
 
 q_params = load_pickled_data(f"experiments/atari/figures/{params_path}_online_params")
