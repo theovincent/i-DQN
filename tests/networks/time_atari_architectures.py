@@ -261,6 +261,7 @@ class TimeAtariiDQN(TimeAtariQ):
                 None,
                 None,
                 None,
+                shared_network=False,
             )
         )
 
@@ -292,6 +293,7 @@ class TimeAtariiIQN(TimeAtariQ):
                 32,
                 32,
                 32,
+                shared_network=False,
             )
         )
 

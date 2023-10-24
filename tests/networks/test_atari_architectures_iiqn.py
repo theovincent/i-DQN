@@ -35,6 +35,7 @@ class TestAtariiIQN(unittest.TestCase):
             32,
             64,
             64,
+            shared_network=True,
         )
 
         state = jax.random.uniform(self.key, self.state_shape, minval=-1, maxval=1)
@@ -76,6 +77,7 @@ class TestAtariiIQN(unittest.TestCase):
             32,
             64,
             64,
+            shared_network=True,
         )
 
         rewards = jax.random.uniform(self.key, (10,), minval=-1, maxval=1)
@@ -132,6 +134,7 @@ class TestAtariiIQN(unittest.TestCase):
             32,
             13,
             9,
+            shared_network=True,
         )
 
         states = jax.random.uniform(self.key, (10,) + self.state_shape, minval=-1, maxval=1)
@@ -192,6 +195,7 @@ class TestAtariiIQN(unittest.TestCase):
             32,
             64,
             64,
+            shared_network=True,
         )
         state = jax.random.uniform(self.key, self.state_shape, minval=-1, maxval=1)
 
@@ -220,6 +224,7 @@ class TestAtariiIQN(unittest.TestCase):
             32,
             64,
             64,
+            shared_network=True,
         )
         state = jax.random.uniform(self.key, (50,) + self.state_shape, minval=-1, maxval=1)
 

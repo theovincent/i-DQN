@@ -43,5 +43,6 @@
     "iiqn_head_behaviorial_policy": "uniform",
     "iiqn_n_quantiles_policy": 32,
     "iiqn_n_quantiles": 64,
-    "iiqn_n_quantiles_target": 64
+    "iiqn_n_quantiles_target": 64,
+    "iiqn_shared_network": true
 }

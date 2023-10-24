@@ -55,6 +55,7 @@ def run_cli(argvs=sys.argv[1:]):
         p["iiqn_n_quantiles_policy"],
         p["iiqn_n_quantiles"],
         p["iiqn_n_quantiles_target"],
+        p["iiqn_shared_network"],
     )
 
     train(

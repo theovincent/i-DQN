@@ -64,21 +64,13 @@ class iIQN(BaseIteratedQ):
     ) -> Tuple[jnp.ndarray, jnp.ndarray]:
         return self.network.apply(params, states, key, self.n_quantiles_policy + self.n_quantiles_target)
 
-    @partial(jax.jit, static_argnames="self")
     def best_action_from_head(
-        self,
-        torso_params: FrozenDict,
-        quantiles_params: FrozenDict,
-        head_params: FrozenDict,
-        state: jnp.ndarray,
-        key: jax.random.PRNGKey,
+        self, params: FrozenDict, idx_head: int, state: jnp.ndarray, key: jax.random.PRNGKey
     ) -> jnp.ndarray:
         """This function is supposed to take a single state and not a batch"""
         return jnp.argmax(
             jnp.mean(
-                self.network.apply_specific_head(
-                    torso_params, quantiles_params, head_params, state, key, self.n_quantiles_policy
-                )[0],
+                self.network.apply_specific_head(params, idx_head, state, key, self.n_quantiles_policy)[0],
                 axis=0,
             )
         ).astype(jnp.int8)
@@ -159,13 +151,8 @@ class iIQN(BaseIteratedQ):
         # sum over the quantiles and mean over the target quantiles, the heads and the states
         return jnp.mean(jnp.sum(quantile_losses, axis=3))
 
+    @partial(jax.jit, static_argnames="self")
     def best_action(self, params: FrozenDict, state: jnp.ndarray, **kwargs) -> jnp.int8:
         idx_head = self.random_head(kwargs.get("key"), self.head_behaviorial_probability)
 
-        return self.best_action_from_head(
-            params["torso_params_0" if idx_head == 0 else "torso_params_1"],
-            params["quantiles_params_0" if idx_head == 0 else "quantiles_params_1"],
-            params[f"head_params_{idx_head}"],
-            state,
-            kwargs.get("key"),
-        )
+        return self.best_action_from_head(params, idx_head, state, kwargs.get("key"))

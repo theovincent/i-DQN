@@ -49,7 +49,6 @@ class iDQN(BaseIteratedQ):
     def apply_other_heads(self, params: FrozenDict, states: jnp.ndarray) -> jnp.ndarray:
         return self.network.apply_other_heads(params, states)
 
-    @partial(jax.jit, static_argnames="self")
     def best_action_from_head(self, params: FrozenDict, idx_head: int, state: jnp.ndarray) -> jnp.ndarray:
         """This function is supposed to take a single state and not a batch"""
         return jnp.argmax(self.network.apply_specific_head(params, idx_head, state)[0]).astype(jnp.int8)
