@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from idqn.sample_collection import IDX_RB
-from idqn.networks.q_architectures import AtariiIQN
+from idqn.networks.architectures.iiqn import AtariiIQN
 
 
 class TestAtariiIQN(unittest.TestCase):

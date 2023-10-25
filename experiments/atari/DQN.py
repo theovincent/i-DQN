@@ -23,7 +23,7 @@ def run_cli(argvs=sys.argv[1:]):
     from experiments.atari.utils import generate_keys
     from idqn.environments.atari import AtariEnv
     from idqn.sample_collection.replay_buffer import ReplayBuffer
-    from idqn.networks.q_architectures import AtariDQN
+    from idqn.networks.architectures.dqn import AtariDQN
     from experiments.base.DQN import train
 
     q_key, train_key = generate_keys(args.seed)

@@ -5,7 +5,7 @@ import flax.linen as nn
 import jax
 import jax.numpy as jnp
 
-from idqn.networks.base_q import BaseIteratedQ
+from idqn.networks.base import BaseIteratedQ
 from idqn.sample_collection import IDX_RB
 from idqn.sample_collection.replay_buffer import ReplayBuffer
 

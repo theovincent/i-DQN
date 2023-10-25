@@ -3,7 +3,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from idqn.networks.q_architectures import AtariDQN
+from idqn.networks.architectures.dqn import AtariDQN
 
 
 class TestAtariDQN(unittest.TestCase):

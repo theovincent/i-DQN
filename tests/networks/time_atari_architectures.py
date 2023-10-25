@@ -3,8 +3,13 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from idqn.networks.base_q import BaseQ
-from idqn.networks.q_architectures import AtariDQN, AtariIQN, AtariREM, AtariiDQN, AtariiIQN
+from idqn.networks.base import BaseQ
+from idqn.networks.architectures.dqn import AtariDQN
+from idqn.networks.architectures.iqn import AtariIQN
+from idqn.networks.architectures.rem import AtariREM
+from idqn.networks.architectures.idqn import AtariiDQN
+from idqn.networks.architectures.iiqn import AtariiIQN
+from idqn.networks.architectures.irem import AtariiREM
 
 RANDOM_SEED = np.random.randint(1000)
 
@@ -49,6 +54,14 @@ def run_cli():
     time_atari_iiqn.time_compute_target()
     time_atari_iiqn.time_loss()
     time_atari_iiqn.time_best_action()
+
+    print("\n\nTime iREM")
+    time_atari_rem = TimeAtariiREM()
+
+    time_atari_rem.time_inference()
+    time_atari_rem.time_compute_target()
+    time_atari_rem.time_loss()
+    time_atari_rem.time_best_action()
 
 
 class TimeAtariQ:
@@ -261,7 +274,7 @@ class TimeAtariiDQN(TimeAtariQ):
                 None,
                 None,
                 None,
-                shared_network=False,
+                shared_network=True,
             )
         )
 
@@ -293,7 +306,7 @@ class TimeAtariiIQN(TimeAtariQ):
                 32,
                 32,
                 32,
-                shared_network=False,
+                shared_network=True,
             )
         )
 
@@ -314,3 +327,32 @@ class TimeAtariiIQN(TimeAtariQ):
             )
 
         print("Time inference: ", (time() - t_begin) / self.n_runs)
+
+
+class TimeAtariiREM(TimeAtariQ):
+    def __init__(self) -> None:
+        self.random_seed = RANDOM_SEED
+        print(f"random seed {self.random_seed}", end=" ")
+        self.key = jax.random.PRNGKey(self.random_seed)
+        self.n_heads = int(jax.random.randint(self.key, (), minval=5, maxval=20))
+        print(f"{self.n_heads} heads")
+        self.state_shape = (84, 84, 4)
+        self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
+        self.gamma = jax.random.uniform(self.key)
+        self.head_behaviorial_probability = jax.random.uniform(self.key, (self.n_heads,), minval=1, maxval=10)
+        super().__init__(
+            q=AtariiREM(
+                self.n_heads,
+                self.state_shape,
+                self.n_actions,
+                self.gamma,
+                self.key,
+                self.head_behaviorial_probability,
+                None,
+                None,
+                None,
+                None,
+                None,
+                shared_network=True,
+            )
+        )

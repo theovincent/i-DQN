@@ -6,7 +6,7 @@ from argparse import Namespace
 
 from idqn.sample_collection.exploration import EpsilonGreedySchedule
 from idqn.sample_collection.replay_buffer import ReplayBuffer
-from idqn.networks.base_q import BaseQ
+from idqn.networks.base import BaseQ
 from idqn.environments.atari import AtariEnv
 
 

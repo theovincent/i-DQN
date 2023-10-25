@@ -3,23 +3,23 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from idqn.networks.architectures.idqn import AtariiDQN
+from idqn.networks.architectures.irem import AtariiREM
 
 
-class TestAtariiDQN(unittest.TestCase):
+class TestAtariiREM(unittest.TestCase):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.random_seed = np.random.randint(1000)
         print(f"random seed {self.random_seed}")
         self.key = jax.random.PRNGKey(self.random_seed)
-        self.n_heads = int(jax.random.randint(self.key, (), minval=2, maxval=50))
+        self.n_heads = int(jax.random.randint(self.key, (), minval=2, maxval=10))
         self.state_shape = (84, 84, 4)
-        self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
+        self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=15))
         self.gamma = jax.random.uniform(self.key)
         self.head_behaviorial_probability = jax.random.uniform(self.key, (self.n_heads,), minval=1, maxval=10)
 
     def test_output(self) -> None:
-        q = AtariiDQN(
+        q = AtariiREM(
             self.n_heads,
             self.state_shape,
             self.n_actions,
@@ -51,7 +51,7 @@ class TestAtariiDQN(unittest.TestCase):
         self.assertEqual(state.shape, state_copy.shape)
 
     def test_compute_target(self) -> None:
-        q = AtariiDQN(
+        q = AtariiREM(
             self.n_heads,
             self.state_shape,
             self.n_actions,
@@ -90,7 +90,7 @@ class TestAtariiDQN(unittest.TestCase):
                 self.assertAlmostEqual(computed_targets[idx_sample, idx_head], target, places=6)
 
     def test_loss(self) -> None:
-        q = AtariiDQN(
+        q = AtariiREM(
             self.n_heads,
             self.state_shape,
             self.n_actions,
@@ -136,7 +136,7 @@ class TestAtariiDQN(unittest.TestCase):
         self.assertAlmostEqual(computed_loss, np.square(targets[:, :-1] - predictions[:, 1:]).mean(), places=6)
 
     def test_best_action(self) -> None:
-        q = AtariiDQN(
+        q = AtariiREM(
             self.n_heads,
             self.state_shape,
             self.n_actions,
@@ -159,7 +159,7 @@ class TestAtariiDQN(unittest.TestCase):
         self.assertEqual(best_action, computed_best_action)
 
     def test_rolling_step(self) -> None:
-        q = AtariiDQN(
+        q = AtariiREM(
             self.n_heads,
             self.state_shape,
             self.n_actions,

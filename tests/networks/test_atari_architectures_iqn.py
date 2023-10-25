@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from idqn.sample_collection import IDX_RB
-from idqn.networks.q_architectures import AtariIQN
+from idqn.networks.architectures.iqn import AtariIQN
 
 
 class TestAtariIQN(unittest.TestCase):

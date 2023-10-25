@@ -5,7 +5,7 @@ import flax.linen as nn
 import jax
 import jax.numpy as jnp
 
-from idqn.networks.base_q import BaseSingleQ
+from idqn.networks.base import BaseSingleQ
 from idqn.sample_collection import IDX_RB
 
 

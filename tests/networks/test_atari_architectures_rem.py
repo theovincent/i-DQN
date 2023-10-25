@@ -3,8 +3,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from idqn.sample_collection import IDX_RB
-from idqn.networks.q_architectures import AtariREM
+from idqn.networks.architectures.rem import AtariREM
 
 
 class TestAtariREM(unittest.TestCase):

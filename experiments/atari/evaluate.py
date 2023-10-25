@@ -3,7 +3,7 @@ import jax
 from idqn.utils.pickle import load_pickled_data
 from idqn.utils.head_behaviorial_policy import head_behaviorial_policy
 from idqn.environments.atari import AtariEnv
-from idqn.networks.q_architectures import AtariDQN, AtariIQN, AtariiDQN
+from idqn.networks.architectures.dqn import AtariDQN, AtariIQN, AtariiDQN
 
 
 # ------- To modify ------- #
