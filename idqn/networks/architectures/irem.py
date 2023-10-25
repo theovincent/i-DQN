@@ -58,6 +58,12 @@ class AtariiREMNet:
 
         return FrozenDict(unfreezed_params)
 
+    def update_combination(self, params: FrozenDict, key: jax.random.PRNGKeyArray) -> FrozenDict:
+        unfrozen_params = params.unfreeze()
+        unfrozen_params["params_combiner"] = self.combiner.init(key, jnp.ones(self.n_nets_rem))
+
+        return FrozenDict(unfrozen_params)
+
 
 class AtariiREM(iREM):
     def __init__(

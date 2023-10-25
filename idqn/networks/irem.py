@@ -40,12 +40,12 @@ class iREM(iDQN):
         )
 
     @partial(jax.jit, static_argnames="self")
-    def update_combinations(self, params: FrozenDict, key: jax.random.PRNGKeyArray) -> FrozenDict:
-        return self.network.update_combinations(params, key)
+    def update_combination(self, params: FrozenDict, key: jax.random.PRNGKeyArray) -> FrozenDict:
+        return self.network.update_combination(params, key)
 
     def update_online_params(self, step: int, replay_buffer: ReplayBuffer, **kwargs) -> jnp.float32:
         if kwargs.get("has_reset"):
             self.network_key, key = jax.random.split(self.network_key)
-            self.params = self.update_combinations(self.params, key)
+            self.params = self.update_combination(self.params, key)
 
         return super().update_online_params(step, replay_buffer, **kwargs)
