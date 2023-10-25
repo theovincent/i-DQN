@@ -176,6 +176,19 @@ EXPERIMENTED_GAME = [
     "Zaxxon",
 ]
 
+EXPERIMENTED_GAME_SHORT = [
+    "Alien",
+    "BankHeist",
+    "ChopperCommand",
+    "Enduro",
+    "Frostbite",
+    "Jamesbond",
+    "KungFuMaster",
+    "Seaquest",
+    "Skiing",
+    "StarGunner",
+]
+
 AVAILABLE_COLORS = {
     "black": "#000000",
     "blue": "#1F77B4",
@@ -210,6 +223,7 @@ COLORS = {
     "iIQN_sanity_check_1": AVAILABLE_COLORS["green"],
     "iIQN_ut30_uh6000_3": AVAILABLE_COLORS["green"],
     "iIQN_ut30_uh6000_5": AVAILABLE_COLORS["green"],
+    "iIQN_weak_ut30_uh6000_3": AVAILABLE_COLORS["green"],
     # iREM
     "REM_sanity_check": AVAILABLE_COLORS["light_brown"],
     "iREM_sanity_check_1": AVAILABLE_COLORS["green"],
@@ -236,10 +250,6 @@ COLORS = {
     "iDQN_ut30_uh100_5": AVAILABLE_COLORS["orange"],
     "iDQN_ut30_uh500_5": AVAILABLE_COLORS["orange"],
     "iDQN_ut1_uh6000_5": AVAILABLE_COLORS["pink"],
-    "iDQN_ut30_uh100_deter_5": AVAILABLE_COLORS["orange"],
-    "iDQN_ut30_uh500_deter_5": AVAILABLE_COLORS["red"],
-    "iDQN_ut1_uh6000_deter_5": AVAILABLE_COLORS["purple"],
-    "iDQN_ut30_uh6000_deter_5": AVAILABLE_COLORS["pink"],
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": AVAILABLE_COLORS["grey"],
     "Quantile (JAX)_dopamine": AVAILABLE_COLORS["light_red"],
@@ -250,6 +260,7 @@ COLORS = {
     "Rainbow": AVAILABLE_COLORS["light_purple"],
     "IQN_pure": AVAILABLE_COLORS["orange"],  # Only on a few games
     "IQN": AVAILABLE_COLORS["light_orange"],
+    "IQN + n-step return (dopamine)": AVAILABLE_COLORS["purple"],
     "M-IQN": AVAILABLE_COLORS["light_yellow"],
     # Baselines from dopamine
     # "DQN_dopamine": AVAILABLE_COLORS["grey"],
@@ -269,6 +280,7 @@ LABEL = {
     "iIQN_sanity_check_1": "iIQN K=1",
     "iIQN_ut30_uh6000_3": "iIQN K=3 (iDQN + IQN)",
     "iIQN_ut30_uh6000_5": "iIQN K=5 (iDQN + IQN)",
+    "iIQN_weak_ut30_uh6000_3": "iIQN weak K=3 (iDQN + IQN weak)",
     # iREM
     "REM_sanity_check": "REM (our implementation)",
     "iREM_sanity_check_1": "iREM K=1",
@@ -292,13 +304,9 @@ LABEL = {
     "DQN_ut30_uh8000": "DQN, T=8000, G=1",
     "iDQN_ut30_uh2000_4": "iDQN K=4, R=2000",
     "DQN_one_step_one_grad": "DQN G=1",
-    "iDQN_ut30_uh100_5": "iDQN, T=30, R=100",
-    "iDQN_ut30_uh500_5": "iDQN, T=30, R=500",
-    "iDQN_ut1_uh6000_5": "iDQN, T=1, R=6000",
-    "iDQN_ut30_uh100_deter_5": "iDQN, T=30, R=100",
-    "iDQN_ut30_uh500_deter_5": "iDQN, T=30, R=500",
-    "iDQN_ut1_uh6000_deter_5": "iDQN, T=1, R=6000",
-    "iDQN_ut30_uh6000_deter_5": "iDQN, T=30, R=6000",
+    "iDQN_ut30_uh100_5": "iDQN K=5, T=30, R=100",
+    "iDQN_ut30_uh500_5": "iDQN K=5, T=30, R=500",
+    "iDQN_ut1_uh6000_5": "iDQN K=5, T=1, R=6000",
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": "DQN (Nature)",
     "Quantile (JAX)_dopamine": "QR-DQN + 3-step return",
@@ -309,6 +317,7 @@ LABEL = {
     "Rainbow": "Rainbow (C51 + 3-step return + PER)",
     "IQN_pure": "IQN",  # Only on a few games
     "IQN": "IQN + 3-step return",
+    "IQN + n-step return (dopamine)": "IQN + 3-step return (dopamine)",
     "M-IQN": "Munchausen + IQN + 3-step return",
     # Baselines from dopamine
     # "DQN_dopamine": "DQN (Nature) dopamine",
@@ -328,6 +337,7 @@ ORDER = {
     "iIQN_sanity_check_1": 11,
     "iIQN_ut30_uh6000_3": 11,
     "iIQN_ut30_uh6000_5": 11,
+    "iIQN_weak_ut30_uh6000_3": 11,
     # iREM
     "REM_sanity_check": 5,
     "iREM_sanity_check_1": 11,
@@ -354,10 +364,6 @@ ORDER = {
     "iDQN_ut30_uh100_5": 4,
     "iDQN_ut30_uh500_5": 4,
     "iDQN_ut1_uh6000_5": 4,
-    "iDQN_ut30_uh100_deter_5": 4,
-    "iDQN_ut30_uh500_deter_5": 4,
-    "iDQN_ut1_uh6000_deter_5": 4,
-    "iDQN_ut30_uh6000_deter_5": 4,
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": 2,
     "Quantile (JAX)_dopamine": 3,
@@ -368,6 +374,7 @@ ORDER = {
     "Rainbow": 7,
     "IQN_pure": 8,  # Only on a few games
     "IQN": 8,
+    "IQN + n-step return (dopamine)": 8,
     "M-IQN": 9,
     # Baselines from dopamine
     # "DQN_dopamine": 2,
