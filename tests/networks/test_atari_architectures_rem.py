@@ -14,10 +14,10 @@ class TestAtariREM(unittest.TestCase):
         self.key = jax.random.PRNGKey(self.random_seed)
         self.state_shape = (84, 84, 4)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
-        self.gamma = jax.random.uniform(self.key)
+        self.cumulative_gamma = jax.random.uniform(self.key)
 
     def test_output(self) -> None:
-        q = AtariREM(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
+        q = AtariREM(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
 
         state = jax.random.uniform(self.key, self.state_shape, minval=-1, maxval=1)
         state_copy = state.copy()
@@ -36,7 +36,7 @@ class TestAtariREM(unittest.TestCase):
         self.assertEqual(state.shape, state_copy.shape)
 
     def test_compute_target(self) -> None:
-        q = AtariREM(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
+        q = AtariREM(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
 
         rewards = jax.random.uniform(self.key, (10,), minval=-1, maxval=1)
         terminals = jax.random.randint(self.key, (10,), 0, 2)
@@ -54,13 +54,13 @@ class TestAtariREM(unittest.TestCase):
         computed_targets = q.compute_target(q.params, samples)
 
         for idx_sample in range(10):
-            target = rewards[idx_sample] + (1 - terminals[idx_sample]) * self.gamma * jnp.max(
+            target = rewards[idx_sample] + (1 - terminals[idx_sample]) * self.cumulative_gamma * jnp.max(
                 q.apply(q.params, next_states[idx_sample])
             )
             self.assertAlmostEqual(computed_targets[idx_sample], target, places=6)
 
     def test_loss(self) -> None:
-        q = AtariREM(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
+        q = AtariREM(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
 
         states = jax.random.uniform(self.key, (10,) + self.state_shape, minval=-1, maxval=1)
         actions = jax.random.randint(self.key, (10,), minval=0, maxval=self.n_actions)
@@ -89,12 +89,12 @@ class TestAtariREM(unittest.TestCase):
         self.assertAlmostEqual(computed_loss, np.square(targets - predictions).mean(), places=6)
 
     def test_random_action(self) -> None:
-        q = AtariREM(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
+        q = AtariREM(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
 
         self.assertEqual(q.random_action(self.key).dtype, jnp.int8)
 
     def test_best_action(self) -> None:
-        q = AtariREM(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
+        q = AtariREM(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
 
         state = jax.random.uniform(self.key, self.state_shape, minval=-1, maxval=1)
 

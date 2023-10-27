@@ -16,7 +16,7 @@ class TestAtariiIQN(unittest.TestCase):
         self.n_heads = int(jax.random.randint(self.key, (), minval=2, maxval=50))
         self.state_shape = (84, 84, 4)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
-        self.gamma = jax.random.uniform(self.key)
+        self.cumulative_gamma = jax.random.uniform(self.key)
         self.head_behaviorial_probability = jax.random.uniform(self.key, (self.n_heads,), minval=1, maxval=10)
 
     def test_output(self) -> None:
@@ -24,7 +24,7 @@ class TestAtariiIQN(unittest.TestCase):
             self.n_heads,
             self.state_shape,
             self.n_actions,
-            self.gamma,
+            self.cumulative_gamma,
             self.key,
             self.head_behaviorial_probability,
             None,
@@ -66,7 +66,7 @@ class TestAtariiIQN(unittest.TestCase):
             self.n_heads,
             self.state_shape,
             self.n_actions,
-            self.gamma,
+            self.cumulative_gamma,
             self.key,
             self.head_behaviorial_probability,
             None,
@@ -113,7 +113,9 @@ class TestAtariiIQN(unittest.TestCase):
 
                 target = (
                     rewards[idx_sample]
-                    + (1 - terminals[idx_sample]) * self.gamma * quantiles_targets[idx_sample, idx_head, :, action]
+                    + (1 - terminals[idx_sample])
+                    * self.cumulative_gamma
+                    * quantiles_targets[idx_sample, idx_head, :, action]
                 )
                 self.assertAlmostEqual(jnp.linalg.norm(computed_targets[idx_sample, idx_head] - target), 0, places=6)
 
@@ -123,7 +125,7 @@ class TestAtariiIQN(unittest.TestCase):
             n_heads,
             self.state_shape,
             self.n_actions,
-            self.gamma,
+            self.cumulative_gamma,
             self.key,
             self.head_behaviorial_probability,
             None,
@@ -184,7 +186,7 @@ class TestAtariiIQN(unittest.TestCase):
             self.n_heads,
             self.state_shape,
             self.n_actions,
-            self.gamma,
+            self.cumulative_gamma,
             self.key,
             jnp.zeros(self.n_heads).at[-1].set(1),
             None,
@@ -213,7 +215,7 @@ class TestAtariiIQN(unittest.TestCase):
             self.n_heads,
             self.state_shape,
             self.n_actions,
-            self.gamma,
+            self.cumulative_gamma,
             self.key,
             self.head_behaviorial_probability,
             None,

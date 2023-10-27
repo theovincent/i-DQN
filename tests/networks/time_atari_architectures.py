@@ -206,8 +206,10 @@ class TimeAtariDQN(TimeAtariQ):
         self.key = jax.random.PRNGKey(self.random_seed)
         self.state_shape = (84, 84, 4)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
-        self.gamma = jax.random.uniform(self.key)
-        super().__init__(AtariDQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None))
+        self.cumulative_gamma = jax.random.uniform(self.key)
+        super().__init__(
+            AtariDQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
+        )
 
 
 class TimeAtariIQN(TimeAtariQ):
@@ -217,8 +219,10 @@ class TimeAtariIQN(TimeAtariQ):
         self.key = jax.random.PRNGKey(self.random_seed)
         self.state_shape = (84, 84, 4)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
-        self.gamma = jax.random.uniform(self.key)
-        super().__init__(AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None))
+        self.cumulative_gamma = jax.random.uniform(self.key)
+        super().__init__(
+            AtariIQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
+        )
 
     def time_inference(self) -> None:
         state_key = self.key
@@ -246,8 +250,10 @@ class TimeAtariREM(TimeAtariQ):
         self.key = jax.random.PRNGKey(self.random_seed)
         self.state_shape = (84, 84, 4)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
-        self.gamma = jax.random.uniform(self.key)
-        super().__init__(AtariREM(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None))
+        self.cumulative_gamma = jax.random.uniform(self.key)
+        super().__init__(
+            AtariREM(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
+        )
 
 
 class TimeAtariiDQN(TimeAtariQ):
@@ -259,14 +265,14 @@ class TimeAtariiDQN(TimeAtariQ):
         print(f"{self.n_heads} heads")
         self.state_shape = (84, 84, 4)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
-        self.gamma = jax.random.uniform(self.key)
+        self.cumulative_gamma = jax.random.uniform(self.key)
         self.head_behaviorial_probability = jax.random.uniform(self.key, (self.n_heads,), minval=1, maxval=10)
         super().__init__(
             q=AtariiDQN(
                 self.n_heads,
                 self.state_shape,
                 self.n_actions,
-                self.gamma,
+                self.cumulative_gamma,
                 self.key,
                 self.head_behaviorial_probability,
                 None,
@@ -288,14 +294,14 @@ class TimeAtariiIQN(TimeAtariQ):
         print(f"{self.n_heads} heads")
         self.state_shape = (84, 84, 4)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
-        self.gamma = jax.random.uniform(self.key)
+        self.cumulative_gamma = jax.random.uniform(self.key)
         self.head_behaviorial_probability = jax.random.uniform(self.key, (self.n_heads,), minval=1, maxval=10)
         super().__init__(
             q=AtariiIQN(
                 self.n_heads,
                 self.state_shape,
                 self.n_actions,
-                self.gamma,
+                self.cumulative_gamma,
                 self.key,
                 self.head_behaviorial_probability,
                 None,
@@ -338,14 +344,14 @@ class TimeAtariiREM(TimeAtariQ):
         print(f"{self.n_heads} heads")
         self.state_shape = (84, 84, 4)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
-        self.gamma = jax.random.uniform(self.key)
+        self.cumulative_gamma = jax.random.uniform(self.key)
         self.head_behaviorial_probability = jax.random.uniform(self.key, (self.n_heads,), minval=1, maxval=10)
         super().__init__(
             q=AtariiREM(
                 self.n_heads,
                 self.state_shape,
                 self.n_actions,
-                self.gamma,
+                self.cumulative_gamma,
                 self.key,
                 self.head_behaviorial_probability,
                 None,

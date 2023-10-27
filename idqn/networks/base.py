@@ -15,7 +15,7 @@ class BaseQ:
         self,
         q_inputs: dict,
         n_actions: int,
-        gamma: float,
+        cumulative_gamma: float,
         network: nn.Module,
         network_key: jax.random.PRNGKeyArray,
         learning_rate: float,
@@ -23,7 +23,7 @@ class BaseQ:
         n_training_steps_per_online_update: int,
     ) -> None:
         self.n_actions = n_actions
-        self.gamma = gamma
+        self.cumulative_gamma = cumulative_gamma
         self.network = network
         self.network_key = network_key
         self.params = self.network.init(self.network_key, **q_inputs)
@@ -101,7 +101,7 @@ class BaseSingleQ(BaseQ):
         self,
         q_inputs: dict,
         n_actions: int,
-        gamma: float,
+        cumulative_gamma: float,
         network: nn.Module,
         network_key: jax.random.PRNGKeyArray,
         learning_rate: float,
@@ -112,7 +112,7 @@ class BaseSingleQ(BaseQ):
         super().__init__(
             q_inputs,
             n_actions,
-            gamma,
+            cumulative_gamma,
             network,
             network_key,
             learning_rate,
@@ -133,7 +133,7 @@ class BaseIteratedQ(BaseQ):
         n_heads: int,
         q_inputs: dict,
         n_actions: int,
-        gamma: float,
+        cumulative_gamma: float,
         network: nn.Module,
         network_key: jax.random.PRNGKeyArray,
         learning_rate: float,
@@ -145,7 +145,7 @@ class BaseIteratedQ(BaseQ):
         super().__init__(
             q_inputs,
             n_actions,
-            gamma,
+            cumulative_gamma,
             network,
             network_key,
             learning_rate,

@@ -15,7 +15,7 @@ class iIQN(BaseIteratedQ):
         n_heads: int,
         state_shape: list,
         n_actions: int,
-        gamma: float,
+        cumulative_gamma: float,
         network: nn.Module,
         network_key: jax.random.PRNGKeyArray,
         head_behaviorial_probability: jnp.ndarray,
@@ -32,7 +32,7 @@ class iIQN(BaseIteratedQ):
             n_heads,
             {"state": jnp.zeros(state_shape, dtype=jnp.float32), "key": jax.random.PRNGKey(0), "n_quantiles": 32},
             n_actions,
-            gamma,
+            cumulative_gamma,
             network,
             network_key,
             learning_rate,
@@ -101,7 +101,7 @@ class iIQN(BaseIteratedQ):
         # mapping over the states
         return jax.vmap(
             lambda reward, terminal, next_states_quantiles_: reward
-            + (1 - terminal) * self.gamma * next_states_quantiles_,
+            + (1 - terminal) * self.cumulative_gamma * next_states_quantiles_,
         )(
             samples[IDX_RB["reward"]],
             samples[IDX_RB["terminal"]],

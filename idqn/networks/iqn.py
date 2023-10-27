@@ -14,7 +14,7 @@ class IQN(BaseSingleQ):
         self,
         state_shape: list,
         n_actions: int,
-        gamma: float,
+        cumulative_gamma: float,
         network: nn.Module,
         network_key: jax.random.PRNGKeyArray,
         learning_rate: float,
@@ -25,7 +25,7 @@ class IQN(BaseSingleQ):
         super().__init__(
             {"state": jnp.zeros(state_shape, dtype=jnp.float32), "key": jax.random.PRNGKey(0), "n_quantiles": 32},
             n_actions,
-            gamma,
+            cumulative_gamma,
             network,
             network_key,
             learning_rate,
@@ -80,7 +80,7 @@ class IQN(BaseSingleQ):
         # mapping over the states
         return jax.vmap(
             lambda reward, terminal, next_states_quantiles_actions_, action: reward
-            + (1 - terminal) * self.gamma * next_states_quantiles_actions_[:, action]
+            + (1 - terminal) * self.cumulative_gamma * next_states_quantiles_actions_[:, action]
         )(
             samples[IDX_RB["reward"]],
             samples[IDX_RB["terminal"]],

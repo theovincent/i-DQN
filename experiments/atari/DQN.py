@@ -1,6 +1,7 @@
 import sys
 import argparse
 import json
+import math
 import numpy as np
 
 from experiments.base.parser import addparse
@@ -34,7 +35,7 @@ def run_cli(argvs=sys.argv[1:]):
         (env.state_height, env.state_width),
         p["replay_buffer_size"],
         p["batch_size"],
-        p["dqn_n_step_return"],
+        p["n_step_return"],
         p["gamma"],
         lambda x: np.clip(x, -1, 1),
     )
@@ -42,7 +43,7 @@ def run_cli(argvs=sys.argv[1:]):
     q = AtariDQN(
         (env.state_height, env.state_width, env.n_stacked_frames),
         env.n_actions,
-        p["gamma"],
+        math.pow(p["gamma"], p["n_step_return"]),
         q_key,
         p["dqn_learning_rate"],
         p["dqn_optimizer_eps"],

@@ -14,7 +14,7 @@ class DQN(BaseSingleQ):
         self,
         state_shape: list,
         n_actions: int,
-        gamma: float,
+        cumulative_gamma: float,
         network: nn.Module,
         network_key: jax.random.PRNGKeyArray,
         learning_rate: float,
@@ -25,7 +25,7 @@ class DQN(BaseSingleQ):
         super().__init__(
             {"state": jnp.zeros(state_shape, dtype=jnp.float32)},
             n_actions,
-            gamma,
+            cumulative_gamma,
             network,
             network_key,
             learning_rate,
@@ -40,7 +40,7 @@ class DQN(BaseSingleQ):
 
     @partial(jax.jit, static_argnames="self")
     def compute_target(self, params: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.ndarray:
-        return samples[IDX_RB["reward"]] + (1 - samples[IDX_RB["terminal"]]) * self.gamma * self.apply(
+        return samples[IDX_RB["reward"]] + (1 - samples[IDX_RB["terminal"]]) * self.cumulative_gamma * self.apply(
             params, samples[IDX_RB["next_state"]]
         ).max(axis=1)
 

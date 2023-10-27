@@ -15,7 +15,7 @@ class TestAtariiREM(unittest.TestCase):
         self.n_heads = int(jax.random.randint(self.key, (), minval=2, maxval=10))
         self.state_shape = (84, 84, 4)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=15))
-        self.gamma = jax.random.uniform(self.key)
+        self.cumulative_gamma = jax.random.uniform(self.key)
         self.head_behaviorial_probability = jax.random.uniform(self.key, (self.n_heads,), minval=1, maxval=10)
 
     def test_output(self) -> None:
@@ -23,7 +23,7 @@ class TestAtariiREM(unittest.TestCase):
             self.n_heads,
             self.state_shape,
             self.n_actions,
-            self.gamma,
+            self.cumulative_gamma,
             self.key,
             self.head_behaviorial_probability,
             None,
@@ -55,7 +55,7 @@ class TestAtariiREM(unittest.TestCase):
             self.n_heads,
             self.state_shape,
             self.n_actions,
-            self.gamma,
+            self.cumulative_gamma,
             self.key,
             self.head_behaviorial_probability,
             None,
@@ -84,7 +84,7 @@ class TestAtariiREM(unittest.TestCase):
 
         for idx_sample in range(10):
             for idx_head in range(self.n_heads):
-                target = rewards[idx_sample] + (1 - terminals[idx_sample]) * self.gamma * jnp.max(
+                target = rewards[idx_sample] + (1 - terminals[idx_sample]) * self.cumulative_gamma * jnp.max(
                     q.apply(q.params, next_states[idx_sample])[:, idx_head]
                 )
                 self.assertAlmostEqual(computed_targets[idx_sample, idx_head], target, places=6)
@@ -94,7 +94,7 @@ class TestAtariiREM(unittest.TestCase):
             self.n_heads,
             self.state_shape,
             self.n_actions,
-            self.gamma,
+            self.cumulative_gamma,
             self.key,
             self.head_behaviorial_probability,
             None,
@@ -140,7 +140,7 @@ class TestAtariiREM(unittest.TestCase):
             self.n_heads,
             self.state_shape,
             self.n_actions,
-            self.gamma,
+            self.cumulative_gamma,
             self.key,
             jnp.zeros(self.n_heads).at[-1].set(1),
             None,
@@ -163,7 +163,7 @@ class TestAtariiREM(unittest.TestCase):
             self.n_heads,
             self.state_shape,
             self.n_actions,
-            self.gamma,
+            self.cumulative_gamma,
             self.key,
             self.head_behaviorial_probability,
             None,

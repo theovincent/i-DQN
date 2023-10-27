@@ -13,7 +13,7 @@ class REM(DQN):
         self,
         state_shape: list,
         n_actions: int,
-        gamma: float,
+        cumulative_gamma: float,
         network: nn.Module,
         network_key: jax.random.PRNGKeyArray,
         learning_rate: float,
@@ -24,7 +24,7 @@ class REM(DQN):
         super().__init__(
             state_shape,
             n_actions,
-            gamma,
+            cumulative_gamma,
             network,
             network_key,
             learning_rate,

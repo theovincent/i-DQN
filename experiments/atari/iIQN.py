@@ -1,6 +1,7 @@
 import sys
 import argparse
 import json
+import math
 import numpy as np
 
 from experiments.base.parser import addparse
@@ -35,7 +36,7 @@ def run_cli(argvs=sys.argv[1:]):
         (env.state_height, env.state_width),
         p["replay_buffer_size"],
         p["batch_size"],
-        p["iiqn_n_step_return"],
+        p["n_step_return"],
         p["gamma"],
         lambda x: np.clip(x, -1, 1),
     )
@@ -44,7 +45,7 @@ def run_cli(argvs=sys.argv[1:]):
         args.bellman_iterations_scope + 1,
         (env.state_height, env.state_width, env.n_stacked_frames),
         env.n_actions,
-        p["gamma"],
+        math.pow(p["gamma"], p["n_step_return"]),
         q_key,
         head_behaviorial_policy(p["iiqn_head_behaviorial_policy"], args.bellman_iterations_scope + 1),
         p["iiqn_learning_rate"],

@@ -37,7 +37,7 @@ class AtariIQN(IQN):
         self,
         state_shape: list,
         n_actions: int,
-        gamma: float,
+        cumulative_gamma: float,
         network_key: jax.random.PRNGKeyArray,
         learning_rate: float,
         epsilon_optimizer: float,
@@ -47,7 +47,7 @@ class AtariIQN(IQN):
         super().__init__(
             state_shape,
             n_actions,
-            gamma,
+            cumulative_gamma,
             AtariIQNNet(n_actions),
             network_key,
             learning_rate,

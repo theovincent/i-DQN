@@ -1,9 +1,12 @@
 import json
+import math
 import jax
 from idqn.utils.pickle import load_pickled_data
 from idqn.utils.head_behaviorial_policy import head_behaviorial_policy
 from idqn.environments.atari import AtariEnv
-from idqn.networks.architectures.dqn import AtariDQN, AtariIQN, AtariiDQN
+from idqn.networks.architectures.dqn import AtariDQN
+from idqn.networks.architectures.iqn import AtariIQN
+from idqn.networks.architectures.idqn import AtariiDQN
 
 
 # ------- To modify ------- #
@@ -27,7 +30,7 @@ if algorithm == "DQN":
     q = AtariDQN(
         (env.state_height, env.state_width, env.n_stacked_frames),
         env.n_actions,
-        p["gamma"],
+        math.pow(p["gamma"], p["n_step_return"]),
         jax.random.PRNGKey(0),
         None,
         None,
@@ -38,7 +41,7 @@ elif algorithm == "IQN":
     q = AtariIQN(
         (env.state_height, env.state_width, env.n_stacked_frames),
         env.n_actions,
-        p["gamma"],
+        math.pow(p["gamma"], p["n_step_return"]),
         jax.random.PRNGKey(0),
         None,
         None,
@@ -50,7 +53,7 @@ else:
         bellman_iterations_scope + 1,
         (env.state_height, env.state_width, env.n_stacked_frames),
         env.n_actions,
-        p["gamma"],
+        math.pow(p["gamma"], p["n_step_return"])
         jax.random.PRNGKey(0),
         head_behaviorial_policy(p["idqn_head_behaviorial_policy"], bellman_iterations_scope + 1),
         None,

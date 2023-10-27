@@ -15,10 +15,10 @@ class TestAtariIQN(unittest.TestCase):
         self.key = jax.random.PRNGKey(self.random_seed)
         self.state_shape = (84, 84, 4)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
-        self.gamma = jax.random.uniform(self.key)
+        self.cumulative_gamma = jax.random.uniform(self.key)
 
     def test_output(self) -> None:
-        q = AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
+        q = AtariIQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
 
         state = jax.random.uniform(self.key, self.state_shape, minval=-1, maxval=1)
         state_copy = state.copy()
@@ -42,7 +42,7 @@ class TestAtariIQN(unittest.TestCase):
         self.assertEqual(state.shape, state_copy.shape)
 
     def test_compute_target(self) -> None:
-        q = AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
+        q = AtariIQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
 
         rewards = jax.random.uniform(self.key, (10,), minval=-1, maxval=1)
         terminals = jax.random.randint(self.key, (10,), 0, 2)
@@ -75,12 +75,12 @@ class TestAtariIQN(unittest.TestCase):
 
             target = (
                 rewards[idx_sample]
-                + (1 - terminals[idx_sample]) * self.gamma * quantiles_targets[idx_sample, :, action]
+                + (1 - terminals[idx_sample]) * self.cumulative_gamma * quantiles_targets[idx_sample, :, action]
             )
             self.assertAlmostEqual(jnp.linalg.norm(computed_targets[idx_sample] - target), 0, places=6)
 
     def test_loss(self) -> None:
-        q = AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
+        q = AtariIQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
         q.n_quantiles = 13
         q.n_quantiles_target = 9
 
@@ -126,7 +126,7 @@ class TestAtariIQN(unittest.TestCase):
         self.assertAlmostEqual(computed_loss, loss, places=5)
 
     def test_best_action(self) -> None:
-        q = AtariIQN(self.state_shape, self.n_actions, self.gamma, self.key, None, None, None, None)
+        q = AtariIQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
 
         state = jax.random.uniform(self.key, self.state_shape, minval=-1, maxval=1)
 

@@ -16,7 +16,7 @@ class iDQN(BaseIteratedQ):
         n_heads: int,
         state_shape: list,
         n_actions: int,
-        gamma: float,
+        cumulative_gamma: float,
         network: nn.Module,
         network_key: jax.random.PRNGKeyArray,
         head_behaviorial_probability: jnp.ndarray,
@@ -30,7 +30,7 @@ class iDQN(BaseIteratedQ):
             n_heads,
             {"state": jnp.zeros(state_shape, dtype=jnp.float32)},
             n_actions,
-            gamma,
+            cumulative_gamma,
             network,
             network_key,
             learning_rate,
@@ -57,7 +57,7 @@ class iDQN(BaseIteratedQ):
     def compute_target(self, params: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.ndarray:
         # mapping over the states
         return jax.vmap(
-            lambda reward, terminal, max_next_states: reward + (1 - terminal) * self.gamma * max_next_states,
+            lambda reward, terminal, max_next_states: reward + (1 - terminal) * self.cumulative_gamma * max_next_states,
         )(
             samples[IDX_RB["reward"]],
             samples[IDX_RB["terminal"]],
