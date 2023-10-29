@@ -12,13 +12,12 @@ class TestPipeline(unittest.TestCase):
         self.random_seed = np.random.randint(1000)
         print(f"random seed {self.random_seed}")
         self.game = "Pong"
-
         self.experiment_name = "test_pipeline"
 
         if not os.path.exists(f"experiments/atari/figures/{self.experiment_name}"):
             os.makedirs(f"experiments/atari/figures/{self.experiment_name}")
         shutil.copyfile(
-            "tests/pipeline/parameters.json", f"experiments/atari/figures/{self.experiment_name}/parameters.json"
+            "tests/pipeline/parameters_test.json", f"experiments/atari/figures/{self.experiment_name}/parameters.json"
         )
 
         subprocess.run(["launch_job/create_tmux.sh"])
