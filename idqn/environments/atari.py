@@ -47,7 +47,7 @@ class AtariEnv:
 
     @property
     def state(self) -> np.ndarray:
-        return np.copy(self.state_)
+        return jnp.array(self.state_, dtype=jnp.float32)
 
     def reset(self) -> None:
         self.env.reset()

@@ -31,14 +31,14 @@ class AtariiREMNet:
 
     def apply_generic(self, idqn_apply_func: Callable, params: FrozenDict, state: jnp.ndarray):
         # out_axes = -1 because the n_nets networks are the input dimension of the combiner
-        # output (batch_size, n_head_idqn, n_actions, n_nets_rem)
+        # output (n_head_idqn, n_actions, n_nets_rem)
         output_nets = jax.vmap(
             lambda params, state: idqn_apply_func(params, state=state), in_axes=(0, None), out_axes=-1
         )(params["params_nets"], state)
         params_combiner = jax.lax.stop_gradient(params["params_combiner"])
 
         # squeeze last dimension because the combination of the n_nets networks should not appear
-        # output (batch_size, n_head_idqn, n_actions)
+        # output (n_head_idqn, n_actions)
         return jnp.squeeze(self.combiner.apply(params_combiner, output_nets), axis=-1)
 
     def apply(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:

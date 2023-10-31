@@ -6,6 +6,7 @@ import jax
 import jax.numpy as jnp
 
 from idqn.networks.base import BaseSingleQ
+from idqn.networks.architectures.base import scale, preprocessor
 from idqn.sample_collection import IDX_RB
 
 
@@ -34,17 +35,14 @@ class DQN(BaseSingleQ):
             n_training_steps_per_target_update,
         )
 
-    @partial(jax.jit, static_argnames="self")
     def apply(self, params: FrozenDict, states: jnp.ndarray) -> jnp.ndarray:
-        return self.network.apply(params, states)
+        return jax.vmap(self.network.apply, in_axes=(None, 0))(params, preprocessor(states))
 
-    @partial(jax.jit, static_argnames="self")
     def compute_target(self, params: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.ndarray:
         return samples[IDX_RB["reward"]] + (1 - samples[IDX_RB["terminal"]]) * self.cumulative_gamma * self.apply(
             params, samples[IDX_RB["next_state"]]
         ).max(axis=1)
 
-    @partial(jax.jit, static_argnames="self")
     def loss(self, params: FrozenDict, params_target: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.float32:
         targets = self.compute_target(params_target, samples)
         q_states_actions = self.apply(params, samples[IDX_RB["state"]])
@@ -58,4 +56,4 @@ class DQN(BaseSingleQ):
 
     @partial(jax.jit, static_argnames="self")
     def best_action(self, params: FrozenDict, state: jnp.ndarray, **kwargs) -> jnp.int8:
-        return jnp.argmax(self.apply(params, jnp.array(state, dtype=jnp.float32))[0]).astype(jnp.int8)
+        return jnp.argmax(self.network.apply(params, scale(state))).astype(jnp.int8)

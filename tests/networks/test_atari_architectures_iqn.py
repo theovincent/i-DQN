@@ -61,8 +61,8 @@ class TestAtariIQN(unittest.TestCase):
         )
         computed_targets = q.compute_target(q.params, samples)
 
-        quantiles_policy_targets, _ = q.network.apply(
-            q.target_params, next_states, samples[IDX_RB["next_key"]], q.n_quantiles_policy + q.n_quantiles_target
+        quantiles_policy_targets, _ = q.apply_n_quantiles_target(
+            q.target_params, next_states, samples[IDX_RB["next_key"]]
         )
         quantiles_policy, quantiles_targets = (
             quantiles_policy_targets[:, : q.n_quantiles_policy],
@@ -105,7 +105,7 @@ class TestAtariIQN(unittest.TestCase):
         computed_loss = q.loss(q.params, q.params, samples)
 
         targets = q.compute_target(q.params, samples)
-        predictions, quantiles = q.network.apply(q.params, states, samples[IDX_RB["key"]], q.n_quantiles)
+        predictions, quantiles = q.apply_n_quantiles(q.params, states, samples[IDX_RB["key"]])
 
         loss = 0
 
@@ -133,7 +133,7 @@ class TestAtariIQN(unittest.TestCase):
         computed_best_action = q.best_action(q.params, state, key=self.key)
 
         quantiles_policy, _ = q.network.apply(q.params, state, self.key, q.n_quantiles_policy)
-        value_policy = jnp.mean(quantiles_policy, axis=1)[0]
+        value_policy = jnp.mean(quantiles_policy, axis=0)
         best_action = jnp.argmax(value_policy)
 
         self.assertEqual(best_action, computed_best_action)

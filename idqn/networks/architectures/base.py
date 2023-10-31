@@ -3,6 +3,15 @@ import jax
 import jax.numpy as jnp
 
 
+def scale(state: jnp.ndarray) -> jnp.ndarray:
+    return state / 255.0
+
+
+def preprocessor(state: jnp.ndarray) -> jnp.ndarray:
+    # scale -> at least 4 dimensions
+    return jnp.array(scale(state), ndmin=4)
+
+
 class Torso(nn.Module):
     dqn_initialisation: bool = True
 
@@ -15,16 +24,14 @@ class Torso(nn.Module):
                 scale=1.0 / jnp.sqrt(3.0), mode="fan_in", distribution="uniform"
             )
 
-        # scale -> at least 4 dimensions
-        preprocessed_state = jnp.array(state / 255.0, ndmin=4)
-        x = nn.Conv(features=32, kernel_size=(8, 8), strides=(4, 4), kernel_init=initializer)(preprocessed_state)
+        x = nn.Conv(features=32, kernel_size=(8, 8), strides=(4, 4), kernel_init=initializer)(state)
         x = nn.relu(x)
         x = nn.Conv(features=64, kernel_size=(4, 4), strides=(2, 2), kernel_init=initializer)(x)
         x = nn.relu(x)
         x = nn.Conv(features=64, kernel_size=(3, 3), strides=(1, 1), kernel_init=initializer)(x)
         x = nn.relu(x)
 
-        return x.reshape((preprocessed_state.shape[0], -1))  # flatten
+        return x.flatten()
 
 
 class Head(nn.Module):
@@ -51,19 +58,17 @@ class QuantileEmbedding(nn.Module):
     quantile_embedding_dim: int = 64
 
     @nn.compact
-    def __call__(self, key, n_quantiles, batch_size):
+    def __call__(self, key, n_quantiles):
         initializer = nn.initializers.variance_scaling(scale=1.0 / jnp.sqrt(3.0), mode="fan_in", distribution="uniform")
 
-        quantiles = jax.random.uniform(key, shape=(batch_size, n_quantiles, 1))
+        quantiles = jax.random.uniform(key, shape=(n_quantiles, 1))
         arange = jnp.arange(1, self.quantile_embedding_dim + 1).reshape((1, self.quantile_embedding_dim))
 
         quantile_embedding = nn.Dense(features=self.n_features, kernel_init=initializer)(
             jnp.cos(jnp.pi * quantiles @ arange)
         )
-        return (
-            nn.relu(quantile_embedding),
-            quantiles[:, :, 0],
-        )  # output (batch_size, n_quantiles, n_features) | (batch_size, n_quantiles)
+        # output (n_quantiles, n_features) | (n_quantiles)
+        return (nn.relu(quantile_embedding), jnp.squeeze(quantiles, axis=1))
 
 
 def roll(param):

@@ -25,29 +25,21 @@ class AtariSharediDQNNet:
         return FrozenDict(torso_params=torso_params, head_params=head_params)
 
     def apply(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
-        # output (2, batch_size, n_features)
+        # output (2, n_features)
         features = jax.vmap(self.torso.apply, in_axes=(0, None))(params["torso_params"], state)
 
-        # batch_size = features_0.shape[1]
-        output = jnp.zeros((features.shape[1], self.n_heads, self.n_actions))
+        repeated_features_ = jnp.repeat(features[None, 1], self.n_heads, axis=0)
+        repeated_features = repeated_features_.at[0].set(features[0])
 
-        output = output.at[:, 0].set(
-            self.head.apply(jax.tree_util.tree_map(lambda param: param[0], params["head_params"]), features[0])
-        )
-        output = output.at[:, 1:].set(
-            jax.vmap(self.head.apply, in_axes=(0, None), out_axes=1)(
-                jax.tree_util.tree_map(lambda param: param[1:], params["head_params"]), features[1]
-            )  # output (batch_size, n_heads - 1, n_features)
-        )
-
-        return output  # output (batch_size, n_heads, n_features)
+        # output (n_heads, n_actions)
+        return jax.vmap(self.head.apply)(params["head_params"], repeated_features)
 
     def apply_other_heads(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
         feature = self.torso.apply(jax.tree_util.tree_map(lambda param: param[1], params["torso_params"]), state)
 
-        return jax.vmap(self.head.apply, in_axes=(0, None), out_axes=1)(
+        return jax.vmap(self.head.apply, in_axes=(0, None))(
             jax.tree_util.tree_map(lambda param: param[1:], params["head_params"]), feature
-        )  # output (batch_size, n_heads - 1, n_features)
+        )  # output (n_heads - 1, n_actions)
 
     def apply_specific_head(self, params: FrozenDict, idx_head: int, state: jnp.ndarray) -> jnp.ndarray:
         feature = self.torso.apply(
@@ -72,8 +64,8 @@ class AtariiDQNNet:
         return jax.vmap(self.dqn_net.init, in_axes=(0, None))(jax.random.split(key_init, self.n_nets), state)
 
     def apply(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
-        # output (batch_size, n_nets, n_actions)
-        return jax.vmap(self.dqn_net.apply, in_axes=(0, None), out_axes=1)(params, state)
+        # output (n_nets, n_actions)
+        return jax.vmap(self.dqn_net.apply, in_axes=(0, None))(params, state)
 
     def apply_other_heads(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
         params_other_heads = jax.tree_util.tree_map(lambda param: param[1:], params)

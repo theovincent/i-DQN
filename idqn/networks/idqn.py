@@ -6,6 +6,7 @@ import jax
 import jax.numpy as jnp
 
 from idqn.networks.base import BaseIteratedQ
+from idqn.networks.architectures.base import scale, preprocessor
 from idqn.sample_collection import IDX_RB
 from idqn.sample_collection.replay_buffer import ReplayBuffer
 
@@ -41,33 +42,33 @@ class iDQN(BaseIteratedQ):
         )
         self.head_behaviorial_probability = head_behaviorial_probability
 
-    @partial(jax.jit, static_argnames="self")
     def apply(self, params: FrozenDict, states: jnp.ndarray) -> jnp.ndarray:
-        return self.network.apply(params, states)
+        return jax.vmap(self.network.apply, in_axes=(None, 0))(params, preprocessor(states))
 
-    @partial(jax.jit, static_argnames="self")
     def apply_other_heads(self, params: FrozenDict, states: jnp.ndarray) -> jnp.ndarray:
-        return self.network.apply_other_heads(params, states)
+        return jax.vmap(self.network.apply_other_heads, in_axes=(None, 0))(params, preprocessor(states))
 
-    def best_action_from_head(self, params: FrozenDict, idx_head: int, state: jnp.ndarray) -> jnp.ndarray:
-        """This function is supposed to take a single state and not a batch"""
-        return jnp.argmax(self.network.apply_specific_head(params, idx_head, state)[0]).astype(jnp.int8)
-
-    @partial(jax.jit, static_argnames="self")
     def compute_target(self, params: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.ndarray:
-        # mapping over the states
+        # remove the last head | output (batch_size, n_heads - 1, n_actions)
+        next_q = self.apply(params, samples[IDX_RB["next_state"]])[:, :-1]
+
+        # mapping over the heads
         return jax.vmap(
-            lambda reward, terminal, max_next_states: reward + (1 - terminal) * self.cumulative_gamma * max_next_states,
+            lambda rewards, terminals, next_values: rewards + (1 - terminals) * self.cumulative_gamma * next_values,
+            in_axes=(None, None, 1),
+            out_axes=1,
         )(
             samples[IDX_RB["reward"]],
             samples[IDX_RB["terminal"]],
-            jnp.max(self.apply(params, samples[IDX_RB["next_state"]]), axis=2),
+            jnp.max(next_q, axis=2),
         )
 
-    @partial(jax.jit, static_argnames="self")
     def loss(self, params: FrozenDict, params_target: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.float32:
-        targets = self.compute_target(params_target, samples)[:, :-1]
+        # output (batch_size, n_heads - 1)
+        targets = self.compute_target(params_target, samples)
+        # output (batch_size, n_heads - 1, n_actions)
         values_actions = self.apply_other_heads(params, samples[IDX_RB["state"]])
+
         # mapping over the states
         predictions = jax.vmap(lambda value_actions, action: value_actions[:, action])(
             values_actions, samples[IDX_RB["action"]]
@@ -79,7 +80,7 @@ class iDQN(BaseIteratedQ):
     def best_action(self, params: FrozenDict, state: jnp.ndarray, **kwargs) -> jnp.int8:
         idx_head = self.random_head(kwargs.get("key"), self.head_behaviorial_probability)
 
-        return self.best_action_from_head(params, idx_head, state)
+        return jnp.argmax(self.network.apply_specific_head(params, idx_head, scale(state))).astype(jnp.int8)
 
     def compute_standard_deviation_head(self, replay_buffer: ReplayBuffer, key: jax.random.PRNGKeyArray) -> jnp.float32:
         standard_deviation = 0

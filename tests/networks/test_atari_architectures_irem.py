@@ -83,7 +83,7 @@ class TestAtariiREM(unittest.TestCase):
         computed_targets = q.compute_target(q.params, samples)
 
         for idx_sample in range(10):
-            for idx_head in range(self.n_heads):
+            for idx_head in range(self.n_heads - 1):
                 target = rewards[idx_sample] + (1 - terminals[idx_sample]) * self.cumulative_gamma * jnp.max(
                     q.apply(q.params, next_states[idx_sample])[:, idx_head]
                 )
@@ -133,7 +133,7 @@ class TestAtariiREM(unittest.TestCase):
                     0, idx_head, actions.astype(jnp.int8)[idx_sample]
                 ]
 
-        self.assertAlmostEqual(computed_loss, np.square(targets[:, :-1] - predictions[:, 1:]).mean(), places=6)
+        self.assertAlmostEqual(computed_loss, np.square(targets - predictions[:, 1:]).mean(), places=6)
 
     def test_best_action(self) -> None:
         q = AtariiREM(

@@ -16,20 +16,20 @@ class AtariIQNNet(nn.Module):
         self.head = Head(self.n_actions, dqn_initialisation=False)
 
     def __call__(self, state, key, n_quantiles) -> Tuple[jnp.ndarray, jnp.ndarray]:
-        # output (batch_size, n_features)
+        # output (n_features)
         state_features = self.torso(state)
-        # output (batch_size, n_quantiles, n_features)
-        quantiles_features, quantiles = self.quantile_embedding(key, n_quantiles, state_features.shape[0])
+        # output (n_quantiles, n_features)
+        quantiles_features, quantiles = self.quantile_embedding(key, n_quantiles)
 
-        # mapping over the quantiles. output (batch_size, n_quantiles, n_features)
+        # mapping over the quantiles | output (n_quantiles, n_features)
         multiplied_features = jax.vmap(
-            lambda quantile_features, state_features_: quantile_features * state_features_, (1, None), 1
+            lambda quantile_features, state_features_: quantile_features * state_features_, in_axes=(0, None)
         )(quantiles_features, state_features)
 
         return (
             self.head(multiplied_features),
             quantiles,
-        )  # output (batch_size, n_quantiles, n_actions) | (batch_size, n_quantiles)
+        )  # output (n_quantiles, n_actions) | (n_quantiles)
 
 
 class AtariIQN(IQN):

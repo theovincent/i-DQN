@@ -30,18 +30,11 @@ class BaseQ:
         self.target_params = self.params
         self.n_training_steps_per_online_update = n_training_steps_per_online_update
 
-        self.loss_and_grad = jax.jit(jax.value_and_grad(self.loss))
-
         if learning_rate is not None:
             self.optimizer = optax.adam(learning_rate, eps=epsilon_optimizer)
             self.optimizer_state = self.optimizer.init(self.params)
 
-    def compute_target(self, params: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.ndarray:
-        raise NotImplementedError
-
-    def loss(
-        self, params: FrozenDict, params_target: FrozenDict, samples: Tuple[jnp.ndarray], ord: int = 2
-    ) -> jnp.float32:
+    def loss(self, params: FrozenDict, params_target: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.float32:
         raise NotImplementedError
 
     @staticmethod
@@ -59,13 +52,14 @@ class BaseQ:
     def learn_on_batch(
         self, params: FrozenDict, params_target: FrozenDict, optimizer_state: Tuple, batch_samples: Tuple[jnp.ndarray]
     ) -> Tuple[FrozenDict, FrozenDict, jnp.float32]:
-        loss, grad_loss = self.loss_and_grad(params, params_target, batch_samples)
+        loss, grad_loss = jax.value_and_grad(self.loss)(params, params_target, batch_samples)
         updates, optimizer_state = self.optimizer.update(grad_loss, optimizer_state)
         params = optax.apply_updates(params, updates)
 
         return params, optimizer_state, loss
 
-    def augment_samples(self, samples: Tuple[jnp.ndarray], **kwargs) -> Tuple[jnp.ndarray]:
+    @staticmethod
+    def augment_samples(samples: Tuple[jnp.ndarray], **kwargs) -> Tuple[jnp.ndarray]:
         return samples
 
     def update_online_params(self, step: int, replay_buffer: ReplayBuffer, **kwargs) -> jnp.float32:
@@ -156,7 +150,6 @@ class BaseIteratedQ(BaseQ):
         self.n_training_steps_per_target_update = n_training_steps_per_target_update
         self.n_training_steps_per_rolling_step = n_training_steps_per_rolling_step
 
-    @partial(jax.jit, static_argnames="self")
     def random_head(self, key: jax.random.PRNGKeyArray, head_probability: jnp.ndarray) -> jnp.int8:
         return jax.random.choice(key, jnp.arange(self.n_heads), p=head_probability)
 
