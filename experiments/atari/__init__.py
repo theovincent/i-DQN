@@ -229,6 +229,7 @@ COLORS = {
     "iREM_sanity_check_1": AVAILABLE_COLORS["green"],
     # iDQN + 3-step return
     "DQN_sanity_check_3_steps": AVAILABLE_COLORS["light_brown"],
+    "DQN_sanity_check_3_steps_old": AVAILABLE_COLORS["brown"],
     "IQN_sanity_check_3_steps": AVAILABLE_COLORS["light_brown"],
     "iDQN_sanity_check_3_steps_1": AVAILABLE_COLORS["cyan"],
     "iIQN_sanity_check_3_steps_1": AVAILABLE_COLORS["cyan"],
@@ -286,6 +287,7 @@ LABEL = {
     "iREM_sanity_check_1": "iREM K=1",
     # iDQN + 3-step return
     "DQN_sanity_check_3_steps": "DQN + 3-step return (our implementation)",
+    "DQN_sanity_check_3_steps_old": "DQN + 3-step return (our implementation, gamma=1)",
     "IQN_sanity_check_3_steps": "IQN + 3-step return (our implementation)",
     "iDQN_sanity_check_3_steps_1": "iDQN K=1 + 3-step return",
     "iIQN_sanity_check_3_steps_1": "iIQN K=1 + 3-step return",
@@ -343,6 +345,7 @@ ORDER = {
     "iREM_sanity_check_1": 11,
     # iDQN + 3-step return
     "DQN_sanity_check_3_steps": 5,
+    "DQN_sanity_check_3_steps_old": 5,
     "IQN_sanity_check_3_steps": 5,
     "iDQN_sanity_check_3_steps_1": 11,
     "iIQN_sanity_check_3_steps_1": 11,
