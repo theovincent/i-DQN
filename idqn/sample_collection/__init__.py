@@ -7,6 +7,4 @@ IDX_RB = {
     "next_reward": 5,
     "terminal": 6,
     "indices": 7,
-    "key": 8,  # For IQN
-    "next_key": 9,  # For IQN
 }
