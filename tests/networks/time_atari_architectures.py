@@ -11,7 +11,7 @@ from idqn.networks.architectures.idqn import AtariiDQN
 from idqn.networks.architectures.iiqn import AtariiIQN
 from idqn.networks.architectures.irem import AtariiREM
 
-RANDOM_SEED = np.random.randint(1000)
+RANDOM_SEED = 845  # np.random.randint(1000)
 
 
 def run_cli():
@@ -74,20 +74,26 @@ class TimeAtariQ:
 
     def time_inference(self) -> None:
         state_key = self.key
+        apply_func = jax.jit(self.q.apply)
 
         # Outside of the count: time to jit the __call__ function
-        jax.block_until_ready(self.q.apply(self.q.params, jax.random.uniform(state_key, self.state_shape)))
+        jax.block_until_ready(
+            apply_func(self.q.params, jax.random.uniform(state_key, (self.batch_size,) + self.state_shape))
+        )
 
         t_begin = time()
 
         for _ in range(self.n_runs):
             state_key, key = jax.random.split(state_key)
-            jax.block_until_ready(self.q.apply(self.q.params, jax.random.uniform(key, self.state_shape)))
+            jax.block_until_ready(
+                apply_func(self.q.params, jax.random.uniform(key, (self.batch_size,) + self.state_shape))
+            )
 
         print("Time inference: ", (time() - t_begin) / self.n_runs)
 
     def time_compute_target(self) -> None:
         batch_key = self.key
+        compute_target_func = jax.jit(self.q.compute_target)
 
         # Outside of the count: time to jit the __call__ function
         rewards = jax.random.uniform(batch_key, (self.batch_size,))
@@ -105,7 +111,7 @@ class TimeAtariQ:
         )
         samples = self.q.augment_samples(samples, key=self.q.network_key)
 
-        jax.block_until_ready(self.q.compute_target(self.q.params, samples))
+        jax.block_until_ready(compute_target_func(self.q.params, samples))
 
         t_begin = time()
 
@@ -127,14 +133,15 @@ class TimeAtariQ:
             )
             samples = self.q.augment_samples(samples, key=key)
 
-            jax.block_until_ready(self.q.compute_target(self.q.params, samples))
+            jax.block_until_ready(compute_target_func(self.q.params, samples))
 
         print("Time compute target: ", (time() - t_begin) / self.n_runs)
 
     def time_loss(self) -> None:
         batch_key = self.key
+        loss_and_grad_func = jax.jit(jax.value_and_grad(self.q.loss))
 
-        # Outside of the count: time to jit the __call__ function
+        # Outside of the count: time to jit the function
         states = jax.random.uniform(batch_key, (self.batch_size,) + self.state_shape)
         actions = jax.random.uniform(batch_key, (self.batch_size,))
         batch_key, key = jax.random.split(batch_key)
@@ -153,7 +160,7 @@ class TimeAtariQ:
         )
         samples = self.q.augment_samples(samples, key=self.q.network_key)
 
-        jax.block_until_ready(self.q.loss_and_grad(self.q.params, self.q.params, samples))
+        jax.block_until_ready(loss_and_grad_func(self.q.params, self.q.params, samples))
 
         t_begin = time()
 
@@ -177,18 +184,17 @@ class TimeAtariQ:
             )
             samples = self.q.augment_samples(samples, key=key)
 
-            jax.block_until_ready(self.q.loss_and_grad(self.q.params, self.q.params, samples))
+            jax.block_until_ready(loss_and_grad_func(self.q.params, self.q.params, samples))
 
         print("Time loss: ", (time() - t_begin) / self.n_runs)
 
     def time_best_action(self) -> None:
         state_key = self.key
 
-        # Outside of the count: time to jit the __call__ function
-        # several time to jit all the underlying functions of q.best_action
-        for _ in range(self.n_runs):
-            state_key, key = jax.random.split(state_key)
-            jax.block_until_ready(self.q.best_action(self.q.params, jax.random.uniform(key, self.state_shape), key=key))
+        # Outside of the count: time to jit the function
+        jax.block_until_ready(
+            self.q.best_action(self.q.params, jax.random.uniform(state_key, self.state_shape), key=state_key)
+        )
 
         t_begin = time()
 
@@ -226,10 +232,13 @@ class TimeAtariIQN(TimeAtariQ):
 
     def time_inference(self) -> None:
         state_key = self.key
+        apply_func = jax.jit(self.q.apply_n_quantiles)
 
         # Outside of the count: time to jit the __call__ function
         jax.block_until_ready(
-            self.q.apply_n_quantiles(self.q.params, jax.random.uniform(state_key, self.state_shape), self.q.network_key)
+            self.q.apply_n_quantiles(
+                self.q.params, jax.random.uniform(state_key, (self.batch_size,) + self.state_shape), self.q.network_key
+            )
         )
 
         t_begin = time()
@@ -237,7 +246,9 @@ class TimeAtariIQN(TimeAtariQ):
         for _ in range(self.n_runs):
             state_key, key = jax.random.split(state_key)
             jax.block_until_ready(
-                self.q.apply_n_quantiles(self.q.params, jax.random.uniform(key, self.state_shape), self.q.network_key)
+                apply_func(
+                    self.q.params, jax.random.uniform(key, (self.batch_size,) + self.state_shape), self.q.network_key
+                )
             )
 
         print("Time inference: ", (time() - t_begin) / self.n_runs)
@@ -267,6 +278,8 @@ class TimeAtariiDQN(TimeAtariQ):
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.cumulative_gamma = jax.random.uniform(self.key)
         self.head_behaviorial_probability = jax.random.uniform(self.key, (self.n_heads,), minval=1, maxval=10)
+        shared_network = True
+        print("Shared network" if shared_network else "Independant network")
         super().__init__(
             q=AtariiDQN(
                 self.n_heads,
@@ -280,7 +293,7 @@ class TimeAtariiDQN(TimeAtariQ):
                 None,
                 None,
                 None,
-                shared_network=True,
+                shared_network,
             )
         )
 
@@ -296,6 +309,8 @@ class TimeAtariiIQN(TimeAtariQ):
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.cumulative_gamma = jax.random.uniform(self.key)
         self.head_behaviorial_probability = jax.random.uniform(self.key, (self.n_heads,), minval=1, maxval=10)
+        shared_network = True
+        print("Shared network" if shared_network else "Independant network")
         super().__init__(
             q=AtariiIQN(
                 self.n_heads,
@@ -312,16 +327,19 @@ class TimeAtariiIQN(TimeAtariQ):
                 32,
                 32,
                 32,
-                shared_network=True,
+                shared_network,
             )
         )
 
     def time_inference(self) -> None:
         state_key = self.key
+        apply_func = jax.jit(self.q.apply_n_quantiles)
 
         # Outside of the count: time to jit the __call__ function
         jax.block_until_ready(
-            self.q.apply_n_quantiles(self.q.params, jax.random.uniform(state_key, self.state_shape), self.q.network_key)
+            apply_func(
+                self.q.params, jax.random.uniform(state_key, (self.batch_size,) + self.state_shape), self.q.network_key
+            )
         )
 
         t_begin = time()
@@ -329,7 +347,9 @@ class TimeAtariiIQN(TimeAtariQ):
         for _ in range(self.n_runs):
             state_key, key = jax.random.split(state_key)
             jax.block_until_ready(
-                self.q.apply_n_quantiles(self.q.params, jax.random.uniform(key, self.state_shape), self.q.network_key)
+                apply_func(
+                    self.q.params, jax.random.uniform(key, (self.batch_size,) + self.state_shape), self.q.network_key
+                )
             )
 
         print("Time inference: ", (time() - t_begin) / self.n_runs)
@@ -346,6 +366,8 @@ class TimeAtariiREM(TimeAtariQ):
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.cumulative_gamma = jax.random.uniform(self.key)
         self.head_behaviorial_probability = jax.random.uniform(self.key, (self.n_heads,), minval=1, maxval=10)
+        shared_network = True
+        print("Shared network" if shared_network else "Independant network")
         super().__init__(
             q=AtariiREM(
                 self.n_heads,
@@ -359,6 +381,6 @@ class TimeAtariiREM(TimeAtariQ):
                 None,
                 None,
                 None,
-                shared_network=True,
+                shared_network,
             )
         )
