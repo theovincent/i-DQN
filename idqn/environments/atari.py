@@ -124,7 +124,7 @@ class AtariEnv:
         if exploration_schedule.explore():
             action = q.random_action(exploration_schedule.key)
         else:
-            action = q.best_action(q_params, self.state, key=exploration_schedule.key)
+            action = q.best_action(q_params, self.state, exploration_schedule.key)
 
         reward, terminal, _ = self.step(action)
 
@@ -160,7 +160,7 @@ class AtariEnv:
             if jax.random.uniform(key) < eps_eval:
                 action = q.random_action(key)
             else:
-                action = q.best_action(q_params, self.state, key=key)
+                action = q.best_action(q_params, self.state, key)
 
             reward, terminal, _ = self.step(action)
 

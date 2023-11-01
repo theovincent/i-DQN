@@ -34,42 +34,42 @@ class BaseQ:
             self.optimizer = optax.adam(learning_rate, eps=epsilon_optimizer)
             self.optimizer_state = self.optimizer.init(self.params)
 
-    def loss(self, params: FrozenDict, params_target: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.float32:
-        raise NotImplementedError
+    def loss_on_batch(
+        self, params: FrozenDict, params_target: FrozenDict, samples: Tuple[jnp.ndarray], key: jax.random.PRNGKeyArray
+    ) -> jnp.float32:
+        return jax.vmap(self.loss, in_axes=(None, None, 0, None))(params, params_target, samples, key).mean()
 
     @staticmethod
     def metric(error: jnp.ndarray, ord: str) -> jnp.float32:
         if ord == "huber":
-            return optax.huber_loss(error, 0).mean()
+            return optax.huber_loss(error, 0)
         elif ord == "1":
-            return jnp.abs(error).mean()
+            return jnp.abs(error)
         elif ord == "2":
-            return jnp.square(error).mean()
-        elif ord == "sum":
-            return jnp.square(error).sum()
+            return jnp.square(error)
 
     @partial(jax.jit, static_argnames="self")
     def learn_on_batch(
-        self, params: FrozenDict, params_target: FrozenDict, optimizer_state: Tuple, batch_samples: Tuple[jnp.ndarray]
+        self,
+        params: FrozenDict,
+        params_target: FrozenDict,
+        optimizer_state: Tuple,
+        batch_samples: Tuple[jnp.ndarray],
+        key: jax.random.PRNGKeyArray,
     ) -> Tuple[FrozenDict, FrozenDict, jnp.float32]:
-        loss, grad_loss = jax.value_and_grad(self.loss)(params, params_target, batch_samples)
+        loss, grad_loss = jax.value_and_grad(self.loss_on_batch)(params, params_target, batch_samples, key)
         updates, optimizer_state = self.optimizer.update(grad_loss, optimizer_state)
         params = optax.apply_updates(params, updates)
 
         return params, optimizer_state, loss
 
-    @staticmethod
-    def augment_samples(samples: Tuple[jnp.ndarray], **kwargs) -> Tuple[jnp.ndarray]:
-        return samples
-
     def update_online_params(self, step: int, replay_buffer: ReplayBuffer, **kwargs) -> jnp.float32:
         if step % self.n_training_steps_per_online_update == 0:
             self.network_key, key = jax.random.split(self.network_key)
             batch_samples = replay_buffer.sample_transition_batch()
-            batch_samples = self.augment_samples(batch_samples, key=key, **kwargs)
 
             self.params, self.optimizer_state, loss = self.learn_on_batch(
-                self.params, self.target_params, self.optimizer_state, batch_samples
+                self.params, self.target_params, self.optimizer_state, batch_samples, key
             )
 
             return loss
@@ -83,7 +83,7 @@ class BaseQ:
     def random_action(self, key: jax.random.PRNGKeyArray) -> jnp.int8:
         return jax.random.choice(key, jnp.arange(self.n_actions)).astype(jnp.int8)
 
-    def best_action(self, params: FrozenDict, state: jnp.ndarray, **kwargs) -> jnp.int8:
+    def best_action(self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKeyArray) -> jnp.int8:
         raise NotImplementedError
 
     def save(self, path: str) -> None:

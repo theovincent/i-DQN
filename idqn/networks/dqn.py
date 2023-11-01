@@ -6,7 +6,7 @@ import jax
 import jax.numpy as jnp
 
 from idqn.networks.base import BaseSingleQ
-from idqn.networks.architectures.base import scale, preprocessor
+from idqn.networks.architectures.base import scale
 from idqn.sample_collection import IDX_RB
 
 
@@ -35,25 +35,22 @@ class DQN(BaseSingleQ):
             n_training_steps_per_target_update,
         )
 
-    def apply(self, params: FrozenDict, states: jnp.ndarray) -> jnp.ndarray:
-        return jax.vmap(self.network.apply, in_axes=(None, 0))(params, preprocessor(states))
+    def apply(self, params: FrozenDict, state: jnp.ndarray) -> jnp.ndarray:
+        return self.network.apply(params, scale(state))
 
-    def compute_target(self, params: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.ndarray:
-        return samples[IDX_RB["reward"]] + (1 - samples[IDX_RB["terminal"]]) * self.cumulative_gamma * self.apply(
-            params, samples[IDX_RB["next_state"]]
-        ).max(axis=1)
-
-    def loss(self, params: FrozenDict, params_target: FrozenDict, samples: Tuple[jnp.ndarray]) -> jnp.float32:
-        targets = self.compute_target(params_target, samples)
-        q_states_actions = self.apply(params, samples[IDX_RB["state"]])
-
-        # mapping over the states
-        predictions = jax.vmap(lambda q_state_actions, action: q_state_actions[action])(
-            q_states_actions, samples[IDX_RB["action"]]
+    def compute_target(self, params: FrozenDict, sample: Tuple[jnp.ndarray]) -> jnp.float32:
+        return sample[IDX_RB["reward"]] + (1 - sample[IDX_RB["terminal"]]) * self.cumulative_gamma * jnp.max(
+            self.apply(params, sample[IDX_RB["next_state"]])
         )
 
-        return self.metric(predictions - targets, ord="2")
+    def loss(
+        self, params: FrozenDict, params_target: FrozenDict, sample: Tuple[jnp.ndarray], key: jax.random.PRNGKeyArray
+    ) -> jnp.float32:
+        target = self.compute_target(params_target, sample)
+        q_value = self.apply(params, sample[IDX_RB["state"]])[sample[IDX_RB["action"]]]
+
+        return self.metric(q_value - target, ord="2")
 
     @partial(jax.jit, static_argnames="self")
-    def best_action(self, params: FrozenDict, state: jnp.ndarray, **kwargs) -> jnp.int8:
+    def best_action(self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKeyArray) -> jnp.int8:
         return jnp.argmax(self.network.apply(params, scale(state))).astype(jnp.int8)
