@@ -7,11 +7,6 @@ def scale(state: jnp.ndarray) -> jnp.ndarray:
     return state / 255.0
 
 
-def preprocessor(state: jnp.ndarray) -> jnp.ndarray:
-    # scale -> at least 4 dimensions
-    return jnp.array(scale(state), ndmin=4)
-
-
 class Torso(nn.Module):
     dqn_initialisation: bool = True
 

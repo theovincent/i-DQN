@@ -54,7 +54,7 @@ class IQN(BaseSingleQ):
         )
 
         # output (n_actions)
-        next_q_policy_values = jnp.mean(next_q_policy_quantiles_quantiles[:, : self.n_quantiles_policy], axis=0)
+        next_q_policy_values = jnp.mean(next_q_policy_quantiles_quantiles[: self.n_quantiles_policy], axis=0)
         next_action = jnp.argmax(next_q_policy_values)
 
         # output (n_quantiles_target)
