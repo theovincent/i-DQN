@@ -22,93 +22,81 @@ class AtariSharediIQNet:
         # We need two sets of torso parameters
         torso_params = jax.vmap(self.torso.init, in_axes=(0, None))(jax.random.split(key_init), state)
 
-        # We need two set of quantile embedding parameters. 1 for batch_size
+        # We need two set of quantile embedding parameters
         key_init, _ = jax.random.split(key_init)
-        quantiles_params = jax.vmap(self.quantile_embedding.init, in_axes=(0, None, None, None))(
-            jax.random.split(key_init), key, n_quantiles, 1
+        quantiles_params = jax.vmap(self.quantile_embedding.init, in_axes=(0, None, None))(
+            jax.random.split(key_init), key, n_quantiles
         )
 
         # Compute the input for the heads
-        state_features = self.torso.apply(
-            jax.tree_util.tree_map(lambda param: param[0], torso_params), state
-        )  # output (batch_size, n_features)
+        # output (n_features)
+        state_features = self.torso.apply(jax.tree_util.tree_map(lambda param: param[0], torso_params), state)
+        # output (n_quantiles, n_features)
         quantiles_features, _ = self.quantile_embedding.apply(
-            jax.tree_util.tree_map(lambda param: param[0], quantiles_params), key, n_quantiles, 1
-        )  # output (batch_size, n_quantiles, n_features)
+            jax.tree_util.tree_map(lambda param: param[0], quantiles_params), key, n_quantiles
+        )
 
-        # mapping over the quantiles. output (batch_size, n_quantiles, n_features)
-        multiplied_features = jax.vmap(
+        # mapping over the quantiles | output (n_quantiles, n_features)
+        features = jax.vmap(
             lambda quantile_features, state_features_: quantile_features * state_features_,
-            in_axes=(1, None),
-            out_axes=1,
+            in_axes=(0, None),
         )(quantiles_features, state_features)
 
-        head_params = jax.vmap(self.head.init, in_axes=(0, None))(
-            jax.random.split(key_init, self.n_heads), multiplied_features
-        )
+        head_params = jax.vmap(self.head.init, in_axes=(0, None))(jax.random.split(key_init, self.n_heads), features)
 
         return FrozenDict(torso_params=torso_params, quantiles_params=quantiles_params, head_params=head_params)
 
     def apply(
         self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey, n_quantiles: int
     ) -> Tuple[jnp.ndarray, jnp.ndarray]:
-        # output (2, batch_size, n_features)
+        # output (2, n_features)
         state_features = jax.vmap(self.torso.apply, in_axes=(0, None))(params["torso_params"], state)
 
         # We use the same key for the quantiles here so that the 'apply' function computes the same quantiles over all the heads.
-        quantiles_features, quantiles = jax.vmap(self.quantile_embedding.apply, in_axes=(0, None, None, None))(
-            params["quantiles_params"], key, n_quantiles, state_features.shape[1]
-        )  # output (2, batch_size, n_quantiles, n_features) | (2, batch_size, n_quantiles)
+        # output (2, n_quantiles, n_features) | (2, n_quantiles)
+        quantiles_features, quantiles = jax.vmap(self.quantile_embedding.apply, in_axes=(0, None, None))(
+            params["quantiles_params"], key, n_quantiles
+        )
 
-        # mapping over the quantiles. output (2, batch_size, n_quantiles, n_features)
-        multiplied_features = jax.vmap(
-            lambda quantile_features_, state_features_: quantile_features_ * state_features_, (2, None), 2
+        # mapping over the quantiles | output (2, n_quantiles, n_features)
+        features = jax.vmap(
+            lambda quantile_features_, state_features_: quantile_features_ * state_features_, (1, None), 1
         )(quantiles_features, state_features)
 
-        output = jnp.zeros((state_features.shape[1], self.n_heads, n_quantiles, self.n_actions))
+        # output (n_heads, n_quantiles, n_actions)
+        repeated_features_ = jnp.repeat(features[None, 1], self.n_heads, axis=0)
+        repeated_features = repeated_features_.at[0].set(features[0])
 
-        output = output.at[:, 0].set(
-            self.head.apply(
-                jax.tree_util.tree_map(lambda param: param[0], params["head_params"]), multiplied_features[0]
-            )  # output (batch_size, n_quantiles, n_actions)
-        )
-        output = output.at[:, 1:].set(
-            jax.vmap(self.head.apply, in_axes=(0, None), out_axes=1)(
-                jax.tree_util.tree_map(lambda param: param[1:], params["head_params"]), multiplied_features[1]
-            )  # output (batch_size, n_heads - 1, n_quantiles, n_actions)
-        )
-
-        return output, quantiles[0]  # output (batch_size, n_heads, n_quantiles, n_actions) | (batch_size, n_quantiles)
+        # output (n_heads, n_quantiles, n_actions) | (n_quantiles)
+        return jax.vmap(self.head.apply)(params["head_params"], repeated_features), quantiles[0]
 
     def apply_other_heads(
         self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey, n_quantiles: int
     ) -> Tuple[jnp.ndarray, jnp.ndarray]:
-        # output (batch_size, n_features)
+        # output (n_features)
         state_feature = self.torso.apply(jax.tree_util.tree_map(lambda param: param[1], params["torso_params"]), state)
 
-        # output (batch_size, n_quantiles, n_features) | (batch_size, n_quantiles)
+        # output (n_quantiles, n_features) | (n_quantiles)
         quantiles_feature, quantiles = self.quantile_embedding.apply(
-            jax.tree_util.tree_map(lambda param: param[1], params["quantiles_params"]),
-            key,
-            n_quantiles,
-            state_feature.shape[0],
+            jax.tree_util.tree_map(lambda param: param[1], params["quantiles_params"]), key, n_quantiles
         )
 
-        # mapping over the quantiles. output (batch_size, n_quantiles, n_features)
-        multiplied_feature = jax.vmap(
-            lambda quantile_feature_, state_feature_: quantile_feature_ * state_feature_, (1, None), 1
+        # mapping over the quantiles | output (n_quantiles, n_features)
+        feature = jax.vmap(
+            lambda quantile_feature_, state_feature_: quantile_feature_ * state_feature_, in_axes=(0, None)
         )(quantiles_feature, state_feature)
 
-        output = jax.vmap(self.head.apply, in_axes=(0, None), out_axes=1)(
-            jax.tree_util.tree_map(lambda param: param[1:], params["head_params"]), multiplied_feature
-        )  # output (batch_size, n_heads, n_quantiles, n_actions)
+        # output (n_heads, n_quantiles, n_actions)
+        output = jax.vmap(self.head.apply, in_axes=(0, None))(
+            jax.tree_util.tree_map(lambda param: param[1:], params["head_params"]), feature
+        )
 
-        return output, quantiles  # output (batch_size, n_heads, n_quantiles, n_actions) | (batch_size, n_quantiles)
+        return output, quantiles  # output (n_heads, n_quantiles, n_actions) | (n_quantiles)
 
     def apply_specific_head(
         self, params: FrozenDict, idx_head: int, state: jnp.ndarray, key: jax.random.PRNGKey, n_quantiles: int
     ) -> jnp.ndarray:
-        # output (batch_size, n_features)
+        # output (n_features)
         state_feature = self.torso.apply(
             jax.tree_util.tree_map(
                 lambda param: param[jax.lax.cond(idx_head >= 1, lambda: 1, lambda: 0)], params["torso_params"]
@@ -116,24 +104,23 @@ class AtariSharediIQNet:
             state,
         )
 
-        # output (batch_size, n_quantiles, n_features)
+        # output (n_quantiles, n_features)
         quantiles_feature, _ = self.quantile_embedding.apply(
             jax.tree_util.tree_map(
                 lambda param: param[jax.lax.cond(idx_head >= 1, lambda: 1, lambda: 0)], params["quantiles_params"]
             ),
             key,
             n_quantiles,
-            state_feature.shape[0],
         )
 
-        # mapping over the quantiles. output (batch_size, n_quantiles, n_features)
-        multiplied_feature = jax.vmap(
-            lambda quantile_feature_, state_feature_: quantile_feature_ * state_feature_, (1, None), 1
+        # mapping over the quantiles | output (n_quantiles, n_features)
+        feature = jax.vmap(
+            lambda quantile_feature_, state_feature_: quantile_feature_ * state_feature_, in_axes=(0, None)
         )(quantiles_feature, state_feature)
 
         return self.head.apply(
-            jax.tree_util.tree_map(lambda param: param[idx_head], params["head_params"]), multiplied_feature
-        )  # output (batch_size, n_quantiles, n_actions)
+            jax.tree_util.tree_map(lambda param: param[idx_head], params["head_params"]), feature
+        )  # output (n_quantiles, n_actions)
 
     def rolling_step(self, params: FrozenDict) -> FrozenDict:
         return FrozenDict(jax.tree_util.tree_map(lambda param: roll(param), params.unfreeze()))
@@ -154,10 +141,8 @@ class AtariiIQNet:
     def apply(
         self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKey, n_quantiles: int
     ) -> Tuple[jnp.ndarray, jnp.ndarray]:
-        # out_axes = 1 because the output shape is (batch_size, n_nets, n_quantiles, n_actions) | (batch_size, n_nets, n_quantiles)
-        output, quantiles = jax.vmap(self.iqn_net.apply, in_axes=(0, None, None, None), out_axes=(1, 0))(
-            params, state, key, n_quantiles
-        )
+        # output (n_nets, n_quantiles, n_actions) | (n_nets, n_quantiles)
+        output, quantiles = jax.vmap(self.iqn_net.apply, in_axes=(0, None, None, None))(params, state, key, n_quantiles)
 
         # We use the same key for the quantiles here so that the 'apply' function computes the same quantiles over all the heads.
         return output, quantiles[0]
@@ -167,6 +152,7 @@ class AtariiIQNet:
     ) -> Tuple[jnp.ndarray, jnp.ndarray]:
         params_other_heads = jax.tree_util.tree_map(lambda param: param[1:], params)
 
+        # output (n_nets - 1, n_quantiles, n_actions) | (n_nets - 1, n_quantiles)
         return self.apply(params_other_heads, state, key, n_quantiles)
 
     def apply_specific_head(
@@ -177,9 +163,10 @@ class AtariiIQNet:
         key: jax.random.PRNGKey,
         n_quantiles: int,
     ) -> jnp.ndarray:
-        params_heads = jax.tree_util.tree_map(lambda param: param[idx_head], params)
+        params_head = jax.tree_util.tree_map(lambda param: param[idx_head], params)
 
-        return self.iqn_net.apply(params_heads, state, key, n_quantiles)[0]
+        # output (n_quantiles, n_actions)
+        return self.iqn_net.apply(params_head, state, key, n_quantiles)[0]
 
     def rolling_step(self, params: FrozenDict) -> FrozenDict:
         return FrozenDict(jax.tree_util.tree_map(lambda param: roll(param), params.unfreeze()))

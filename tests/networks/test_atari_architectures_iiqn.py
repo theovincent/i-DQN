@@ -43,18 +43,18 @@ class TestAtariiIQN(unittest.TestCase):
 
         output, quantiles = q.apply_n_quantiles(q.params, state, self.key)
         output_batch, batch_quantiles = q.apply_n_quantiles_target(
-            q.params, jax.random.uniform(self.key, (50,) + self.state_shape, minval=-1, maxval=1), self.key
+            q.params, jax.random.uniform(self.key, (32,) + self.state_shape, minval=-1, maxval=1), self.key
         )
 
         self.assertGreater(np.linalg.norm(output), 0)
         self.assertGreater(np.linalg.norm(output_batch), 0)
 
         self.assertEqual(quantiles.shape, (1, q.n_quantiles))
-        self.assertEqual(batch_quantiles.shape, (50, q.n_quantiles_policy + q.n_quantiles_target))
+        self.assertEqual(batch_quantiles.shape, (32, q.n_quantiles_policy + q.n_quantiles_target))
 
         self.assertEqual(output.shape, (1, self.n_heads - 1, q.n_quantiles, self.n_actions))
         self.assertEqual(
-            output_batch.shape, (50, self.n_heads, q.n_quantiles_policy + q.n_quantiles_target, self.n_actions)
+            output_batch.shape, (32, self.n_heads, q.n_quantiles_policy + q.n_quantiles_target, self.n_actions)
         )
 
         # test if the input has been changed
@@ -98,8 +98,8 @@ class TestAtariiIQN(unittest.TestCase):
 
         computed_targets = q.compute_target(q.params, samples)
 
-        quantiles_policy_targets, _ = q.network.apply(
-            q.target_params, next_states, samples[IDX_RB["next_key"]], q.n_quantiles_policy + q.n_quantiles_target
+        quantiles_policy_targets, _ = q.apply_n_quantiles_target(
+            q.target_params, next_states, samples[IDX_RB["next_key"]]
         )
         quantiles_policy, quantiles_targets = (
             quantiles_policy_targets[:, :, : q.n_quantiles_policy],
@@ -107,7 +107,7 @@ class TestAtariiIQN(unittest.TestCase):
         )
 
         for idx_sample in range(10):
-            for idx_head in range(self.n_heads):
+            for idx_head in range(self.n_heads - 1):
                 value_policy = jnp.mean(quantiles_policy[idx_sample, idx_head], axis=0)
                 action = jnp.argmax(value_policy)
 
@@ -160,7 +160,7 @@ class TestAtariiIQN(unittest.TestCase):
         computed_loss = q.loss(q.params, q.params, samples)
 
         targets = q.compute_target(q.params, samples)
-        predictions, quantiles = q.network.apply(q.params, states, samples[IDX_RB["key"]], q.n_quantiles)
+        predictions, quantiles = q.apply_n_quantiles(q.params, states, samples[IDX_RB["key"]])
 
         loss = 0
 
@@ -205,7 +205,7 @@ class TestAtariiIQN(unittest.TestCase):
 
         quantiles_policy, _ = q.network.apply(q.params, state, self.key, q.n_quantiles_policy)
         # -1 since head behavioral policy equals to [0, ..., 0, 1]
-        value_policy = jnp.mean(quantiles_policy[0, -1], axis=0)
+        value_policy = jnp.mean(quantiles_policy[-1], axis=0)
         best_action = jnp.argmax(value_policy).astype(jnp.int8)
 
         self.assertEqual(best_action, computed_best_action)
