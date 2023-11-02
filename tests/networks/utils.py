@@ -57,3 +57,8 @@ class Generator:
     @partial(jax.jit, static_argnames="self")
     def generate_state(self, key: jax.random.PRNGKeyArray) -> jnp.ndarray:
         return jax.random.uniform(key, self.state_shape)
+
+
+def assertArray(func, list_a, list_b, places=7):
+    for a, b in zip(list_a, list_b):
+        func(a, b, places=places)

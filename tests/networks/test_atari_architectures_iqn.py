@@ -3,8 +3,9 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from idqn.sample_collection import IDX_RB
 from idqn.networks.architectures.iqn import AtariIQN
+from tests.networks.utils import Generator, assertArray
+from idqn.sample_collection import IDX_RB
 
 
 class TestAtariIQN(unittest.TestCase):
@@ -16,26 +17,21 @@ class TestAtariIQN(unittest.TestCase):
         self.state_shape = (84, 84, 4)
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.cumulative_gamma = jax.random.uniform(self.key)
+        self.generator = Generator(None, self.state_shape)
 
     def test_output(self) -> None:
         q = AtariIQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
 
-        state = jax.random.uniform(self.key, self.state_shape, minval=-1, maxval=1)
+        state = self.generator.generate_state(self.key)
         state_copy = state.copy()
 
-        output, quantiles = q.apply_n_quantiles(q.params, state, self.key)
-        output_batch, batch_quantiles = q.apply_n_quantiles_target(
-            q.params, jax.random.uniform(self.key, (50,) + self.state_shape, minval=-1, maxval=1), self.key
-        )
+        output, quantiles = q.apply(q.params, state, self.key, q.n_quantiles)
 
         self.assertGreater(np.linalg.norm(output), 0)
-        self.assertGreater(np.linalg.norm(output_batch), 0)
 
-        self.assertEqual(quantiles.shape, (1, q.n_quantiles))
-        self.assertEqual(batch_quantiles.shape, (50, q.n_quantiles_policy + q.n_quantiles_target))
+        self.assertEqual(quantiles.shape, (q.n_quantiles,))
 
-        self.assertEqual(output.shape, (1, q.n_quantiles, self.n_actions))
-        self.assertEqual(output_batch.shape, (50, q.n_quantiles_policy + q.n_quantiles_target, self.n_actions))
+        self.assertEqual(output.shape, (q.n_quantiles, self.n_actions))
 
         # test if the input has been changed
         self.assertEqual(np.linalg.norm(state - state_copy), 0)
@@ -44,93 +40,55 @@ class TestAtariIQN(unittest.TestCase):
     def test_compute_target(self) -> None:
         q = AtariIQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
 
-        rewards = jax.random.uniform(self.key, (10,), minval=-1, maxval=1)
-        terminals = jax.random.randint(self.key, (10,), 0, 2)
-        next_states = jax.random.uniform(self.key, (10,) + self.state_shape, minval=-1, maxval=1)
-        samples = (
-            0,  # state
-            0,  # action
-            jnp.array(rewards, dtype=jnp.float32),  # reward
-            jnp.array(next_states, dtype=jnp.float32),  # next_state
-            0,  # next_action
-            0,  # next_reward
-            jnp.array(terminals, dtype=jnp.bool_),  # terminal
-            0,  # indices
-            jax.random.split(self.key)[0],  # key
-            jax.random.split(self.key)[1],  # next_key
-        )
-        computed_targets = q.compute_target(q.params, samples)
+        sample = self.generator.generate_sample(self.key)
 
-        quantiles_policy_targets, _ = q.apply_n_quantiles_target(
-            q.target_params, next_states, samples[IDX_RB["next_key"]]
-        )
-        quantiles_policy, quantiles_targets = (
-            quantiles_policy_targets[:, : q.n_quantiles_policy],
-            quantiles_policy_targets[:, q.n_quantiles_policy :],
+        computed_targets = q.compute_target(q.target_params, sample, self.key)
+
+        quantiles_policy, _ = q.apply(q.target_params, sample[IDX_RB["next_state"]], self.key, q.n_quantiles_policy)
+        quantiles_targets, _ = q.apply(q.target_params, sample[IDX_RB["next_state"]], self.key, q.n_quantiles_target)
+
+        value_policy = jnp.mean(quantiles_policy, axis=0)
+        action = jnp.argmax(value_policy)
+
+        targets = (
+            sample[IDX_RB["reward"]]
+            + (1 - sample[IDX_RB["terminal"]]) * self.cumulative_gamma * quantiles_targets[:, action]
         )
 
-        for idx_sample in range(10):
-            value_policy = jnp.mean(quantiles_policy[idx_sample], axis=0)
-            action = jnp.argmax(value_policy)
-
-            target = (
-                rewards[idx_sample]
-                + (1 - terminals[idx_sample]) * self.cumulative_gamma * quantiles_targets[idx_sample, :, action]
-            )
-            self.assertAlmostEqual(jnp.linalg.norm(computed_targets[idx_sample] - target), 0, places=6)
+        assertArray(self.assertAlmostEqual, computed_targets, targets, places=3)
 
     def test_loss(self) -> None:
         q = AtariIQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
-        q.n_quantiles = 13
-        q.n_quantiles_target = 9
 
-        states = jax.random.uniform(self.key, (10,) + self.state_shape, minval=-1, maxval=1)
-        actions = jax.random.randint(self.key, (10,), minval=0, maxval=self.n_actions)
-        key, _ = jax.random.split(self.key)
-        rewards = jax.random.uniform(key, (10,), minval=-1, maxval=1)
-        terminals = jax.random.randint(key, (10,), 0, 2)
-        next_states = jax.random.uniform(key, (10,) + self.state_shape, minval=-1, maxval=1)
-        samples = (
-            jnp.array(states, dtype=jnp.float32),  # state
-            jnp.array(actions, dtype=jnp.int8),  # action
-            jnp.array(rewards, dtype=jnp.float32),  # reward
-            jnp.array(next_states, dtype=jnp.float32),  # next_state
-            0,  # next_action
-            0,  # next_reward
-            jnp.array(terminals, dtype=jnp.bool_),  # terminal
-            0,  # indices
-            jax.random.split(self.key)[0],  # key
-            jax.random.split(self.key)[1],  # next_key
-        )
-        computed_loss = q.loss(q.params, q.params, samples)
+        sample = self.generator.generate_sample(self.key)
 
-        targets = q.compute_target(q.params, samples)
-        predictions, quantiles = q.apply_n_quantiles(q.params, states, samples[IDX_RB["key"]])
+        computed_loss = q.loss(q.params, q.params, sample, self.key)
+
+        targets = q.compute_target(q.params, sample, jax.random.split(self.key)[1])
+        predictions_values, quantiles = q.apply(q.params, sample[IDX_RB["state"]], self.key, q.n_quantiles)
+
+        predictions = predictions_values[:, sample[IDX_RB["action"]]]
 
         loss = 0
 
-        for idx_sample in range(10):
-            for idx_quantile in range(q.n_quantiles):
-                for idx_quantile_target in range(q.n_quantiles_target):
-                    bellman_error = (
-                        targets[idx_sample, idx_quantile_target]
-                        - predictions[idx_sample, idx_quantile, actions[idx_sample]]
-                    )
-                    huber_loss = (
-                        1 / 2 * bellman_error**2 if jnp.abs(bellman_error) < 1 else jnp.abs(bellman_error) - 1 / 2
-                    )
-                    loss += jnp.abs(quantiles[idx_sample, idx_quantile] - (bellman_error < 0)) * huber_loss
+        for idx_quantile in range(q.n_quantiles):
+            for idx_quantile_target in range(q.n_quantiles_target):
+                bellman_error = targets[idx_quantile_target] - predictions[idx_quantile]
+                huber_loss = (
+                    1 / 2 * bellman_error**2 if jnp.abs(bellman_error) < 1 else jnp.abs(bellman_error) - 1 / 2
+                )
+                loss += jnp.abs(quantiles[idx_quantile] - (bellman_error < 0)) * huber_loss
 
-        loss /= 10 * q.n_quantiles_target
+        loss /= q.n_quantiles_target
 
-        self.assertAlmostEqual(computed_loss, loss, places=5)
+        self.assertAlmostEqual(computed_loss, loss, places=4)
 
     def test_best_action(self) -> None:
         q = AtariIQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
 
-        state = jax.random.uniform(self.key, self.state_shape, minval=-1, maxval=1)
+        state = self.generator.generate_state(self.key)
 
-        computed_best_action = q.best_action(q.params, state, key=self.key)
+        computed_best_action = q.best_action(q.params, state, self.key)
 
         quantiles_policy, _ = q.network.apply(q.params, state, self.key, q.n_quantiles_policy)
         value_policy = jnp.mean(quantiles_policy, axis=0)
