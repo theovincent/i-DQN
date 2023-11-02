@@ -45,7 +45,7 @@ class TestAtariDQN(unittest.TestCase):
         target = sample[IDX_RB["reward"]] + (1 - sample[IDX_RB["terminal"]]) * self.cumulative_gamma * jnp.max(
             q.apply(q.params, sample[IDX_RB["next_state"]])
         )
-        self.assertAlmostEqual(computed_target, target, places=6)
+        self.assertAlmostEqual(computed_target, target)
 
     def test_loss(self) -> None:
         q = AtariDQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
