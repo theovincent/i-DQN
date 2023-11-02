@@ -120,7 +120,8 @@ class TimeAtariDQN(TimeAtariQ):
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.cumulative_gamma = jax.random.uniform(self.key)
         super().__init__(
-            AtariDQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
+            AtariDQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None),
+            self.state_shape,
         )
 
 
@@ -133,7 +134,8 @@ class TimeAtariIQN(TimeAtariQuantileQ):
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.cumulative_gamma = jax.random.uniform(self.key)
         super().__init__(
-            AtariIQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
+            AtariIQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None),
+            self.state_shape,
         )
 
 
@@ -146,7 +148,8 @@ class TimeAtariREM(TimeAtariQ):
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.cumulative_gamma = jax.random.uniform(self.key)
         super().__init__(
-            AtariREM(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
+            AtariREM(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None),
+            self.state_shape,
         )
 
 
@@ -164,7 +167,7 @@ class TimeAtariiDQN(TimeAtariQ):
         shared_network = True
         print("and shared networks" if shared_network else "and independant networks")
         super().__init__(
-            q=AtariiDQN(
+            AtariiDQN(
                 self.n_heads,
                 self.state_shape,
                 self.n_actions,
@@ -177,7 +180,8 @@ class TimeAtariiDQN(TimeAtariQ):
                 None,
                 None,
                 shared_network,
-            )
+            ),
+            self.state_shape,
         )
 
 
@@ -195,7 +199,7 @@ class TimeAtariiIQN(TimeAtariQuantileQ):
         shared_network = True
         print("and shared networks" if shared_network else "and independant networks")
         super().__init__(
-            q=AtariiIQN(
+            AtariiIQN(
                 self.n_heads,
                 self.state_shape,
                 self.n_actions,
@@ -211,7 +215,8 @@ class TimeAtariiIQN(TimeAtariQuantileQ):
                 32,
                 32,
                 shared_network,
-            )
+            ),
+            self.state_shape,
         )
 
 
@@ -229,7 +234,7 @@ class TimeAtariiREM(TimeAtariQ):
         shared_network = True
         print("and shared networks" if shared_network else "and independant networks")
         super().__init__(
-            q=AtariiREM(
+            AtariiREM(
                 self.n_heads,
                 self.state_shape,
                 self.n_actions,
@@ -242,5 +247,6 @@ class TimeAtariiREM(TimeAtariQ):
                 None,
                 None,
                 shared_network,
-            )
+            ),
+            self.state_shape,
         )
