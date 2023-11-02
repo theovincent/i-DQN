@@ -22,10 +22,17 @@ class TestPipeline(unittest.TestCase):
 
         subprocess.run(["launch_job/create_tmux.sh"])
 
-    def test_dqn_pipeline(self) -> None:
+    def run_pipeline(self, algorithm: str, iterated: bool = False):
+        if iterated:
+            args = ("-lb", "3")
+            output_file = "3_"
+        else:
+            args = ()
+            output_file = ""
+
         output = subprocess.run(
             [
-                "launch_job/atari/launch_local_dqn.sh",
+                f"launch_job/atari/launch_local_{algorithm.lower()}.sh",
                 "-e",
                 f"{self.experiment_name}/{self.game}",
                 "-fs",
@@ -34,176 +41,41 @@ class TestPipeline(unittest.TestCase):
                 str(self.random_seed),
                 "-ns",
                 "1",
+                *args,
             ]
         )
         self.assertEqual(output.returncode, 0)
 
         time.sleep(10)
 
-        output = subprocess.run(["rm", "-r", f"experiments/atari/figures/{self.experiment_name}/{self.game}/DQN"])
+        output = subprocess.run(
+            ["rm", "-r", f"experiments/atari/figures/{self.experiment_name}/{self.game}/{algorithm}"]
+        )
         self.assertEqual(output.returncode, 0)
 
         output = subprocess.run(
             [
                 "mv",
-                f"out/atari/{self.experiment_name}/{self.game}/train_dqn_1{str(self.random_seed)}.out",
-                f"out/atari/{self.experiment_name}/{self.game}/train_dqn.out",
+                f"out/atari/{self.experiment_name}/{self.game}/{output_file}train_{algorithm.lower()}_1{str(self.random_seed)}.out",
+                f"out/atari/{self.experiment_name}/{self.game}/{output_file}train_{algorithm.lower()}.out",
             ]
         )
         self.assertEqual(output.returncode, 0)
+
+    def test_dqn_pipeline(self) -> None:
+        self.run_pipeline("DQN")
 
     def test_iqn_pipeline(self) -> None:
-        output = subprocess.run(
-            [
-                "launch_job/atari/launch_local_iqn.sh",
-                "-e",
-                f"{self.experiment_name}/{self.game}",
-                "-fs",
-                str(self.random_seed),
-                "-ls",
-                str(self.random_seed),
-                "-ns",
-                "1",
-            ]
-        )
-        self.assertEqual(output.returncode, 0)
-
-        time.sleep(10)
-
-        subprocess.run(["rm", "-r", f"experiments/atari/figures/{self.experiment_name}/{self.game}/IQN"])
-        self.assertEqual(output.returncode, 0)
-
-        subprocess.run(
-            [
-                "mv",
-                f"out/atari/{self.experiment_name}/{self.game}/train_iqn_1{str(self.random_seed)}.out",
-                f"out/atari/{self.experiment_name}/{self.game}/train_iqn.out",
-            ]
-        )
-        self.assertEqual(output.returncode, 0)
+        self.run_pipeline("IQN")
 
     def test_rem_pipeline(self) -> None:
-        output = subprocess.run(
-            [
-                "launch_job/atari/launch_local_rem.sh",
-                "-e",
-                f"{self.experiment_name}/{self.game}",
-                "-fs",
-                str(self.random_seed),
-                "-ls",
-                str(self.random_seed),
-                "-ns",
-                "1",
-            ]
-        )
-        self.assertEqual(output.returncode, 0)
-
-        time.sleep(10)
-
-        subprocess.run(["rm", "-r", f"experiments/atari/figures/{self.experiment_name}/{self.game}/REM"])
-        self.assertEqual(output.returncode, 0)
-
-        subprocess.run(
-            [
-                "mv",
-                f"out/atari/{self.experiment_name}/{self.game}/train_rem_1{str(self.random_seed)}.out",
-                f"out/atari/{self.experiment_name}/{self.game}/train_rem.out",
-            ]
-        )
-        self.assertEqual(output.returncode, 0)
+        self.run_pipeline("REM")
 
     def test_idqn_pipeline(self) -> None:
-        output = subprocess.run(
-            [
-                "launch_job/atari/launch_local_idqn.sh",
-                "-e",
-                f"{self.experiment_name}/{self.game}",
-                "-fs",
-                str(self.random_seed),
-                "-ls",
-                str(self.random_seed),
-                "-ns",
-                "1",
-                "-lb",
-                "3",
-            ]
-        )
-        self.assertEqual(output.returncode, 0)
-
-        time.sleep(10)
-
-        subprocess.run(["rm", "-r", f"experiments/atari/figures/{self.experiment_name}/{self.game}/iDQN"])
-        self.assertEqual(output.returncode, 0)
-
-        subprocess.run(
-            [
-                "mv",
-                f"out/atari/{self.experiment_name}/{self.game}/3_train_idqn_1{str(self.random_seed)}.out",
-                f"out/atari/{self.experiment_name}/{self.game}/3_train_idqn.out",
-            ]
-        )
-        self.assertEqual(output.returncode, 0)
+        self.run_pipeline("iDQN", iterated=True)
 
     def test_iiqn_pipeline(self) -> None:
-        output = subprocess.run(
-            [
-                "launch_job/atari/launch_local_iiqn.sh",
-                "-e",
-                f"{self.experiment_name}/{self.game}",
-                "-fs",
-                str(self.random_seed),
-                "-ls",
-                str(self.random_seed),
-                "-ns",
-                "1",
-                "-lb",
-                "3",
-            ]
-        )
-        self.assertEqual(output.returncode, 0)
-
-        time.sleep(10)
-
-        subprocess.run(["rm", "-r", f"experiments/atari/figures/{self.experiment_name}/{self.game}/iIQN"])
-        self.assertEqual(output.returncode, 0)
-
-        subprocess.run(
-            [
-                "mv",
-                f"out/atari/{self.experiment_name}/{self.game}/3_train_iiqn_1{str(self.random_seed)}.out",
-                f"out/atari/{self.experiment_name}/{self.game}/3_train_iiqn.out",
-            ]
-        )
-        self.assertEqual(output.returncode, 0)
+        self.run_pipeline("iIQN", iterated=True)
 
     def test_irem_pipeline(self) -> None:
-        output = subprocess.run(
-            [
-                "launch_job/atari/launch_local_irem.sh",
-                "-e",
-                f"{self.experiment_name}/{self.game}",
-                "-fs",
-                str(self.random_seed),
-                "-ls",
-                str(self.random_seed),
-                "-ns",
-                "1",
-                "-lb",
-                "3",
-            ]
-        )
-        self.assertEqual(output.returncode, 0)
-
-        time.sleep(10)
-
-        subprocess.run(["rm", "-r", f"experiments/atari/figures/{self.experiment_name}/{self.game}/iREM"])
-        self.assertEqual(output.returncode, 0)
-
-        subprocess.run(
-            [
-                "mv",
-                f"out/atari/{self.experiment_name}/{self.game}/3_train_irem_1{str(self.random_seed)}.out",
-                f"out/atari/{self.experiment_name}/{self.game}/3_train_irem.out",
-            ]
-        )
-        self.assertEqual(output.returncode, 0)
+        self.run_pipeline("iREM", iterated=True)
