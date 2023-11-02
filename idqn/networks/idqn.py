@@ -63,7 +63,7 @@ class iDQN(BaseIteratedQ):
         # output (n_heads - 1)
         q_values = self.apply_other_heads(params, sample[IDX_RB["state"]])[:, sample[IDX_RB["action"]]]
 
-        return self.metric(q_values - targets, ord="2")
+        return self.metric(q_values - targets, ord="2").mean()
 
     @partial(jax.jit, static_argnames="self")
     def best_action(self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKeyArray) -> jnp.int8:

@@ -45,7 +45,7 @@ class TestAtariREM(unittest.TestCase):
         target = sample[IDX_RB["reward"]] + (1 - sample[IDX_RB["terminal"]]) * self.cumulative_gamma * jnp.max(
             q.apply(q.params, sample[IDX_RB["next_state"]])
         )
-        self.assertAlmostEqual(computed_target, target)
+        self.assertAlmostEqual(target, computed_target)
 
     def test_loss(self) -> None:
         q = AtariREM(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
@@ -56,8 +56,9 @@ class TestAtariREM(unittest.TestCase):
 
         target = q.compute_target(q.params, sample)
         prediction = q.apply(q.params, sample[IDX_RB["state"]])[sample[IDX_RB["action"]].astype(jnp.int8)]
+        loss = np.square(target - prediction)
 
-        self.assertAlmostEqual(computed_loss, np.square(target - prediction))
+        self.assertAlmostEqual(loss, computed_loss)
 
     def test_best_action(self) -> None:
         q = AtariREM(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
@@ -67,4 +68,5 @@ class TestAtariREM(unittest.TestCase):
         computed_best_action = q.best_action(q.params, state, None)
 
         best_action = jnp.argmax(q.apply(q.params, state)).astype(jnp.int8)
+
         self.assertEqual(best_action, computed_best_action)

@@ -1,8 +1,6 @@
 from typing import Tuple, Callable
-from functools import partial
 from time import time
 import jax
-import jax.numpy as jnp
 import numpy as np
 
 from idqn.networks.base import BaseQ
@@ -12,6 +10,7 @@ from idqn.networks.architectures.rem import AtariREM
 from idqn.networks.architectures.idqn import AtariiDQN
 from idqn.networks.architectures.iiqn import AtariiIQN
 from idqn.networks.architectures.irem import AtariiREM
+from tests.networks.utils import Generator
 
 RANDOM_SEED = 845  # np.random.randint(1000)
 
@@ -46,39 +45,12 @@ def run_cli():
 
 
 class TimeAtariQ:
-    def __init__(self, q: BaseQ) -> None:
+    def __init__(self, q: BaseQ, state_shape: Tuple) -> None:
         self.n_runs = 6000
-        self.batch_size = 32
         self.q = q
         self.key = q.network_key
         self.n_actions = q.n_actions
-
-    @partial(jax.jit, static_argnames="self")
-    def generate_samples(self, key: jax.random.PRNGKeyArray) -> Tuple[jnp.ndarray]:
-        states = jax.random.uniform(key, (self.batch_size,) + self.state_shape)
-        actions = jax.random.uniform(key, (self.batch_size,))
-        _, key_ = jax.random.split(key)
-        rewards = jax.random.uniform(key_, (self.batch_size,))
-        terminals = jax.random.randint(key_, (self.batch_size,), 0, 2)
-        next_states = jax.random.uniform(key_, (self.batch_size,) + self.state_shape)
-        return (
-            jnp.array(states, dtype=jnp.float32),  # state
-            jnp.array(actions, dtype=jnp.int8),  # action
-            jnp.array(rewards, dtype=jnp.float32),  # reward
-            jnp.array(next_states, dtype=jnp.float32),  # next_state
-            jnp.ones((self.batch_size)),  # next_action
-            jnp.ones((self.batch_size)),  # next_reward
-            jnp.array(terminals, dtype=jnp.bool_),  # terminal
-            jnp.ones((self.batch_size)),  # indices
-        )
-
-    @partial(jax.jit, static_argnames="self")
-    def generate_states(self, key: jax.random.PRNGKeyArray) -> jnp.ndarray:
-        return jax.random.uniform(key, (self.batch_size,) + self.state_shape)
-
-    @partial(jax.jit, static_argnames="self")
-    def generate_state(self, key: jax.random.PRNGKeyArray) -> jnp.ndarray:
-        return jax.random.uniform(key, self.state_shape)
+        self.generator = Generator(32, state_shape)
 
     def base_timer(self, func: Callable, args_builder: Callable, generator: Callable) -> None:
         key = self.key
@@ -101,26 +73,26 @@ class TimeAtariQ:
         # apply_func only needs params and samples
         args_builder = lambda params, target_params, samples, key: (params, samples)
 
-        self.base_timer(apply_func, args_builder, self.generate_states)
+        self.base_timer(apply_func, args_builder, self.generator.generate_states)
 
     def time_compute_target(self) -> None:
         compute_target_func = jax.jit(jax.vmap(self.q.compute_target, in_axes=(None, 0)))
         # compute_target_func only needs target_params and samples
         args_builder = lambda params, target_params, samples, key: (target_params, samples)
 
-        self.base_timer(compute_target_func, args_builder, self.generate_samples)
+        self.base_timer(compute_target_func, args_builder, self.generator.generate_samples)
 
     def time_compute_gradient(self) -> None:
         loss_and_grad_func = jax.jit(jax.value_and_grad(self.q.loss_on_batch))
         args_builder = lambda *args: args
 
-        self.base_timer(loss_and_grad_func, args_builder, self.generate_samples)
+        self.base_timer(loss_and_grad_func, args_builder, self.generator.generate_samples)
 
     def time_best_action(self) -> None:
         # best_action only needs params, samples and key
         args_builder = lambda params, target_params, samples, key: (params, samples, key)
 
-        self.base_timer(self.q.best_action, args_builder, self.generate_state)
+        self.base_timer(self.q.best_action, args_builder, self.generator.generate_state)
 
 
 class TimeAtariQuantileQ(TimeAtariQ):
@@ -129,14 +101,14 @@ class TimeAtariQuantileQ(TimeAtariQ):
         # apply_func only needs params, samples, key and self.q.n_quantiles
         args_builder = lambda params, target_params, samples, key: (params, samples, key, self.q.n_quantiles)
 
-        self.base_timer(apply_func, args_builder, self.generate_states)
+        self.base_timer(apply_func, args_builder, self.generator.generate_states)
 
     def time_compute_target(self) -> None:
         compute_target_func = jax.jit(jax.vmap(self.q.compute_target, in_axes=(None, 0, None)))
         # compute_target_func only needs target_params and samples
         args_builder = lambda params, target_params, samples, key: (target_params, samples, key)
 
-        self.base_timer(compute_target_func, args_builder, self.generate_samples)
+        self.base_timer(compute_target_func, args_builder, self.generator.generate_samples)
 
 
 class TimeAtariDQN(TimeAtariQ):

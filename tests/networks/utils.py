@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Callable
 from functools import partial
 import jax
 import jax.numpy as jnp
@@ -59,6 +59,9 @@ class Generator:
         return jax.random.uniform(key, self.state_shape)
 
 
-def assertArray(func, list_a, list_b, places=7):
+def assertArray(func: Callable, list_a: jnp.ndarray, list_b: jnp.ndarray, delta: float = None):
     for a, b in zip(list_a, list_b):
-        func(a, b, places=places)
+        if a.ndim == 0:
+            func(a, b, delta=delta)
+        else:
+            assertArray(func, a, b, delta=delta)

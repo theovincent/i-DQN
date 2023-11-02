@@ -3,8 +3,9 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 
-from idqn.sample_collection import IDX_RB
 from idqn.networks.architectures.iiqn import AtariiIQN
+from tests.networks.utils import Generator, assertArray
+from idqn.sample_collection import IDX_RB
 
 
 class TestAtariiIQN(unittest.TestCase):
@@ -18,6 +19,7 @@ class TestAtariiIQN(unittest.TestCase):
         self.n_actions = int(jax.random.randint(self.key, (), minval=1, maxval=10))
         self.cumulative_gamma = jax.random.uniform(self.key)
         self.head_behaviorial_probability = jax.random.uniform(self.key, (self.n_heads,), minval=1, maxval=10)
+        self.generator = Generator(None, self.state_shape)
 
     def test_output(self) -> None:
         q = AtariiIQN(
@@ -38,24 +40,16 @@ class TestAtariiIQN(unittest.TestCase):
             shared_network=True,
         )
 
-        state = jax.random.uniform(self.key, self.state_shape, minval=-1, maxval=1)
+        state = self.generator.generate_state(self.key)
         state_copy = state.copy()
 
-        output, quantiles = q.apply_n_quantiles(q.params, state, self.key)
-        output_batch, batch_quantiles = q.apply_n_quantiles_target(
-            q.params, jax.random.uniform(self.key, (32,) + self.state_shape, minval=-1, maxval=1), self.key
-        )
+        output, quantiles = q.apply(q.params, state, self.key, q.n_quantiles)
 
         self.assertGreater(np.linalg.norm(output), 0)
-        self.assertGreater(np.linalg.norm(output_batch), 0)
 
-        self.assertEqual(quantiles.shape, (1, q.n_quantiles))
-        self.assertEqual(batch_quantiles.shape, (32, q.n_quantiles_policy + q.n_quantiles_target))
+        self.assertEqual(quantiles.shape, (q.n_quantiles,))
 
-        self.assertEqual(output.shape, (1, self.n_heads - 1, q.n_quantiles, self.n_actions))
-        self.assertEqual(
-            output_batch.shape, (32, self.n_heads, q.n_quantiles_policy + q.n_quantiles_target, self.n_actions)
-        )
+        self.assertEqual(output.shape, (self.n_heads, q.n_quantiles, self.n_actions))
 
         # test if the input has been changed
         self.assertEqual(np.linalg.norm(state - state_copy), 0)
@@ -80,44 +74,31 @@ class TestAtariiIQN(unittest.TestCase):
             shared_network=True,
         )
 
-        rewards = jax.random.uniform(self.key, (10,), minval=-1, maxval=1)
-        terminals = jax.random.randint(self.key, (10,), 0, 2)
-        next_states = jax.random.uniform(self.key, (10,) + self.state_shape, minval=-1, maxval=1)
-        samples = (
-            0,  # state
-            0,  # action
-            jnp.array(rewards, dtype=jnp.float32),  # reward
-            jnp.array(next_states, dtype=jnp.float32),  # next_state
-            0,  # next_action
-            0,  # next_reward
-            jnp.array(terminals, dtype=jnp.bool_),  # terminal
-            0,  # indices
-            jax.random.split(self.key)[0],  # key
-            jax.random.split(self.key)[1],  # next_key
+        sample = self.generator.generate_sample(self.key)
+
+        # output (n_heads - 1, n_quantiles_target)
+        computed_targets = q.compute_target(q.target_params, sample, self.key)
+
+        # output (n_heads, n_quantiles_policies + n_quantiles_target, n_actions)
+        quantiles_policy_target, _ = q.apply(
+            q.target_params, sample[IDX_RB["next_state"]], self.key, q.n_quantiles_policy + q.n_quantiles_target
         )
+        quantiles_policy = quantiles_policy_target[:-1, : q.n_quantiles_policy]
+        quantiles_targets = quantiles_policy_target[:-1, q.n_quantiles_policy :]
 
-        computed_targets = q.compute_target(q.params, samples)
+        # output (n_heads - 1, n_actions)
+        values_policy = jnp.mean(quantiles_policy, axis=1)
+        actions = jnp.argmax(values_policy, axis=1)
 
-        quantiles_policy_targets, _ = q.apply_n_quantiles_target(
-            q.target_params, next_states, samples[IDX_RB["next_key"]]
-        )
-        quantiles_policy, quantiles_targets = (
-            quantiles_policy_targets[:, :, : q.n_quantiles_policy],
-            quantiles_policy_targets[:, :, q.n_quantiles_policy :],
-        )
+        for idx_head in range(self.n_heads - 1):
+            targets = (
+                sample[IDX_RB["reward"]]
+                + (1 - sample[IDX_RB["terminal"]])
+                * self.cumulative_gamma
+                * quantiles_targets[idx_head, :, actions[idx_head]]
+            )
 
-        for idx_sample in range(10):
-            for idx_head in range(self.n_heads - 1):
-                value_policy = jnp.mean(quantiles_policy[idx_sample, idx_head], axis=0)
-                action = jnp.argmax(value_policy)
-
-                target = (
-                    rewards[idx_sample]
-                    + (1 - terminals[idx_sample])
-                    * self.cumulative_gamma
-                    * quantiles_targets[idx_sample, idx_head, :, action]
-                )
-                self.assertAlmostEqual(jnp.linalg.norm(computed_targets[idx_sample, idx_head] - target), 0, places=6)
+            assertArray(self.assertAlmostEqual, targets, computed_targets[idx_head])
 
     def test_loss(self) -> None:
         n_heads = 5
@@ -139,47 +120,31 @@ class TestAtariiIQN(unittest.TestCase):
             shared_network=True,
         )
 
-        states = jax.random.uniform(self.key, (10,) + self.state_shape, minval=-1, maxval=1)
-        actions = jax.random.randint(self.key, (10,), minval=0, maxval=self.n_actions)
-        key, _ = jax.random.split(self.key)
-        rewards = jax.random.uniform(key, (10,), minval=-1, maxval=1)
-        terminals = jax.random.randint(key, (10,), 0, 2)
-        next_states = jax.random.uniform(key, (10,) + self.state_shape, minval=-1, maxval=1)
-        samples = (
-            jnp.array(states, dtype=jnp.float32),  # state
-            jnp.array(actions, dtype=jnp.int8),  # action
-            jnp.array(rewards, dtype=jnp.float32),  # reward
-            jnp.array(next_states, dtype=jnp.float32),  # next_state
-            0,  # next_action
-            0,  # next_reward
-            jnp.array(terminals, dtype=jnp.bool_),  # terminal
-            0,  # indices
-            jax.random.split(self.key)[0],  # key
-            jax.random.split(self.key)[1],  # next_key
-        )
-        computed_loss = q.loss(q.params, q.params, samples)
+        sample = self.generator.generate_sample(self.key)
 
-        targets = q.compute_target(q.params, samples)
-        predictions, quantiles = q.apply_n_quantiles(q.params, states, samples[IDX_RB["key"]])
+        computed_loss = q.loss(q.params, q.params, sample, self.key)
+
+        # output (n_heads - 1, n_quantiles_target)
+        targets = q.compute_target(q.params, sample, jax.random.split(self.key)[1])
+        # output (n_heads, n_quantiles, n_actions)
+        predictions_values, quantiles = q.apply(q.params, sample[IDX_RB["state"]], self.key, q.n_quantiles)
+        # output (n_heads - 1, n_quantiles)
+        predictions = predictions_values[1:, :, sample[IDX_RB["action"]]]
 
         loss = 0
 
-        for idx_sample in range(10):
-            for idx_head in range(n_heads - 1):
-                for idx_quantile in range(q.n_quantiles):
-                    for idx_quantile_target in range(q.n_quantiles_target):
-                        bellman_error = (
-                            targets[idx_sample, idx_head, idx_quantile_target]
-                            - predictions[idx_sample, idx_head + 1, idx_quantile, actions[idx_sample]]
-                        )
-                        huber_loss = (
-                            1 / 2 * bellman_error**2 if jnp.abs(bellman_error) < 1 else jnp.abs(bellman_error) - 1 / 2
-                        )
-                        loss += jnp.abs(quantiles[idx_sample, idx_quantile] - (bellman_error < 0)) * huber_loss
+        for idx_head in range(n_heads - 1):
+            for idx_quantile in range(q.n_quantiles):
+                for idx_quantile_target in range(q.n_quantiles_target):
+                    bellman_error = targets[idx_head, idx_quantile_target] - predictions[idx_head, idx_quantile]
+                    huber_loss = (
+                        1 / 2 * bellman_error**2 if jnp.abs(bellman_error) < 1 else jnp.abs(bellman_error) - 1 / 2
+                    )
+                    loss += jnp.abs(quantiles[idx_quantile] - (bellman_error < 0).astype(jnp.float32)) * huber_loss
 
-        loss /= 10 * (n_heads - 1) * q.n_quantiles_target
+        loss /= (n_heads - 1) * q.n_quantiles_target
 
-        self.assertAlmostEqual(computed_loss, loss, places=5)
+        self.assertAlmostEqual(loss, computed_loss, delta=loss / 1e6)
 
     def test_best_action(self) -> None:
         q = AtariiIQN(
@@ -199,9 +164,9 @@ class TestAtariiIQN(unittest.TestCase):
             64,
             shared_network=True,
         )
-        state = jax.random.uniform(self.key, self.state_shape, minval=-1, maxval=1)
+        state = self.generator.generate_state(self.key)
 
-        computed_best_action = q.best_action(q.params, state, key=self.key)
+        computed_best_action = q.best_action(q.params, state, self.key)
 
         quantiles_policy, _ = q.network.apply(q.params, state, self.key, q.n_quantiles_policy)
         # -1 since head behavioral policy equals to [0, ..., 0, 1]
@@ -228,12 +193,12 @@ class TestAtariiIQN(unittest.TestCase):
             64,
             shared_network=True,
         )
-        state = jax.random.uniform(self.key, (50,) + self.state_shape, minval=-1, maxval=1)
+        state = self.generator.generate_state(self.key)
 
-        output, _ = q.apply_n_quantiles(q.params, state, self.key)
+        output, _ = q.apply(q.params, state, self.key, q.n_quantiles)
 
         q.params = q.rolling_step(q.params)
 
-        forward_output, _ = q.apply_n_quantiles(q.params, state, self.key)
+        forward_output, _ = q.apply(q.params, state, self.key, q.n_quantiles)
 
-        self.assertAlmostEqual(np.linalg.norm(forward_output[:, :-1] - output[:, 1:]), 0, places=8)
+        assertArray(self.assertAlmostEqual, forward_output[:-1], output[1:])

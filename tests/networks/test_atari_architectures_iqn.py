@@ -42,11 +42,17 @@ class TestAtariIQN(unittest.TestCase):
 
         sample = self.generator.generate_sample(self.key)
 
+        # output (n_quantiles_target)
         computed_targets = q.compute_target(q.target_params, sample, self.key)
 
-        quantiles_policy, _ = q.apply(q.target_params, sample[IDX_RB["next_state"]], self.key, q.n_quantiles_policy)
-        quantiles_targets, _ = q.apply(q.target_params, sample[IDX_RB["next_state"]], self.key, q.n_quantiles_target)
+        # output (n_quantiles_policy + n_quantiles_target, n_actions)
+        quantiles_policy_target, _ = q.apply(
+            q.target_params, sample[IDX_RB["next_state"]], self.key, q.n_quantiles_policy + q.n_quantiles_target
+        )
+        quantiles_policy = quantiles_policy_target[: q.n_quantiles_policy]
+        quantiles_targets = quantiles_policy_target[q.n_quantiles_policy :]
 
+        # output (n_actions)
         value_policy = jnp.mean(quantiles_policy, axis=0)
         action = jnp.argmax(value_policy)
 
@@ -55,7 +61,7 @@ class TestAtariIQN(unittest.TestCase):
             + (1 - sample[IDX_RB["terminal"]]) * self.cumulative_gamma * quantiles_targets[:, action]
         )
 
-        assertArray(self.assertAlmostEqual, computed_targets, targets, places=3)
+        assertArray(self.assertAlmostEqual, targets, computed_targets)
 
     def test_loss(self) -> None:
         q = AtariIQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
@@ -64,9 +70,11 @@ class TestAtariIQN(unittest.TestCase):
 
         computed_loss = q.loss(q.params, q.params, sample, self.key)
 
+        # output (n_quantiles_target)
         targets = q.compute_target(q.params, sample, jax.random.split(self.key)[1])
+        # output (n_quantiles, n_actions)
         predictions_values, quantiles = q.apply(q.params, sample[IDX_RB["state"]], self.key, q.n_quantiles)
-
+        # output (n_quantiles)
         predictions = predictions_values[:, sample[IDX_RB["action"]]]
 
         loss = 0
@@ -75,13 +83,13 @@ class TestAtariIQN(unittest.TestCase):
             for idx_quantile_target in range(q.n_quantiles_target):
                 bellman_error = targets[idx_quantile_target] - predictions[idx_quantile]
                 huber_loss = (
-                    1 / 2 * bellman_error**2 if jnp.abs(bellman_error) < 1 else jnp.abs(bellman_error) - 1 / 2
+                    1 / 2 * bellman_error**2 if jnp.abs(bellman_error) <= 1 else jnp.abs(bellman_error) - 1 / 2
                 )
-                loss += jnp.abs(quantiles[idx_quantile] - (bellman_error < 0)) * huber_loss
+                loss += jnp.abs(quantiles[idx_quantile] - (bellman_error < 0).astype(jnp.float32)) * huber_loss
 
         loss /= q.n_quantiles_target
 
-        self.assertAlmostEqual(computed_loss, loss, places=4)
+        self.assertAlmostEqual(loss, computed_loss, delta=loss / 1e5)
 
     def test_best_action(self) -> None:
         q = AtariIQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)

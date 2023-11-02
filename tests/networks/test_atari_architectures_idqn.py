@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import numpy as np
 
 from idqn.networks.architectures.idqn import AtariiDQN
-from tests.networks.utils import Generator
+from tests.networks.utils import Generator, assertArray
 from idqn.sample_collection import IDX_RB
 
 
@@ -73,7 +73,7 @@ class TestAtariiDQN(unittest.TestCase):
         targets = sample[IDX_RB["reward"]] + (1 - sample[IDX_RB["terminal"]]) * self.cumulative_gamma * jnp.max(
             q.apply(q.params, sample[IDX_RB["next_state"]])[:-1], axis=1
         )
-        self.assertAlmostEqual(jnp.linalg.norm(computed_targets - targets), 0)
+        assertArray(self.assertAlmostEqual, targets, computed_targets)
 
     def test_loss(self) -> None:
         q = AtariiDQN(
@@ -97,8 +97,9 @@ class TestAtariiDQN(unittest.TestCase):
 
         targets = q.compute_target(q.params, sample)
         predictions = q.apply(q.params, sample[IDX_RB["state"]])[1:, sample[IDX_RB["action"]].astype(jnp.int8)]
+        loss = jnp.square(targets - predictions).mean()
 
-        self.assertAlmostEqual(jnp.linalg.norm(computed_loss - np.square(targets - predictions)), 0, places=5)
+        self.assertAlmostEqual(loss, computed_loss, delta=loss / 1e6)
 
     def test_best_action(self) -> None:
         q = AtariiDQN(
@@ -146,4 +147,4 @@ class TestAtariiDQN(unittest.TestCase):
 
         forward_output = q.apply(q.params, state)
 
-        self.assertAlmostEqual(np.linalg.norm(forward_output[:-1] - output[1:]), 0)
+        assertArray(self.assertAlmostEqual, forward_output[:-1], output[1:])
