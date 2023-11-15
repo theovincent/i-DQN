@@ -180,7 +180,7 @@ EXPERIMENTED_GAME_SHORT = [
     "Alien",
     "BankHeist",
     "ChopperCommand",
-    # "Enduro",
+    "Enduro",
     "Frostbite",
     "Jamesbond",
     "KungFuMaster",
@@ -235,6 +235,7 @@ COLORS = {
     # iIQN + 3-step return
     "IQN_sanity_check_3_steps": AVAILABLE_COLORS["yellow"],
     "iIQN_sanity_check_3_steps_1": AVAILABLE_COLORS["light_cyan"],
+    "iIQN_ut30_uh6000_3_steps_3": AVAILABLE_COLORS["light_cyan"],
     "iIQN_ut30_uh6000_3_steps_old_5": AVAILABLE_COLORS["light_cyan"],
     # Ablations K
     "iDQN_ablation_study_K_5": AVAILABLE_COLORS["blue"],
@@ -246,6 +247,7 @@ COLORS = {
     # Ablations head std
     "iDQN_head_std_5": AVAILABLE_COLORS["brown"],
     # Ablations Bellman iterations
+    "DQN_ut30_uh2000": AVAILABLE_COLORS["light_pink"],
     "iDQN_ut30_uh2000_4": AVAILABLE_COLORS["blue"],
     # Ablations overfit
     "DQN_one_step_one_grad": AVAILABLE_COLORS["light_pink"],
@@ -255,7 +257,7 @@ COLORS = {
     "iDQN_ut30_uh100_5": AVAILABLE_COLORS["orange"],
     "iDQN_ut30_uh500_5": AVAILABLE_COLORS["orange"],
     # Ablations T
-    "iDQN_ut1_uh6000_5": AVAILABLE_COLORS["pink"],
+    "iDQN_ut1_uh6000_5": AVAILABLE_COLORS["red"],
     # Ablations independent
     "iDQN_ut30_uh6000_indep_5": AVAILABLE_COLORS["light_yellow"],
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
@@ -282,7 +284,7 @@ LABEL = {
     # iDQN
     "DQN_sanity_check": "DQN (our implementation)",
     "iDQN_sanity_check_1": "iDQN K=1",
-    "iDQN_ut30_uh6000_5": "iDQN K=5",  # "iDQN K=5, T=30, R=6000", # for ablations on R and T # "iDQN K=5", # normal
+    "iDQN_ut30_uh6000_5": "iDQN K=5",  # iDQN K=5, T=30, R=6000 for ablations on R and T | iDQN K=5, shared convolutions for indep | iDQN K=5 normal
     # iIQN
     "IQN_sanity_check": "IQN (our implementation)",
     "iIQN_sanity_check_1": "iIQN K=1 (iDQN + IQN)",
@@ -300,6 +302,7 @@ LABEL = {
     # iIQN + 3-step return
     "IQN_sanity_check_3_steps": "IQN + 3-step return (our implementation)",
     "iIQN_sanity_check_3_steps_1": "iIQN K=1 + 3-step return",
+    "iIQN_ut30_uh6000_3_steps_3": "iIQN K=3 + 3-step return",
     "iIQN_ut30_uh6000_3_steps_old_5": "iIQN K=5 (iDQN + IQN) + 3-step return (gamma=1)",
     # Ablations K
     "iDQN_ablation_study_K_5": "iDQN K=5",
@@ -311,6 +314,7 @@ LABEL = {
     # Ablations head std
     "iDQN_head_std_5": "inter-head standard deviation",
     # Ablations Bellman iterations
+    "DQN_ut30_uh2000": "DQN, T=2000",
     "iDQN_ut30_uh2000_4": "iDQN K=4, R=2000",
     # Ablations overfit
     "DQN_one_step_one_grad": "DQN, T=8000, G=1",
@@ -326,7 +330,7 @@ LABEL = {
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": "DQN (Nature)",
     "Quantile (JAX)_dopamine": "QR-DQN + 3-step return",
-    "DQN (Adam)": "DQN (Adam)",  # "DQN, T=8000, G=4", # for overfit # "DQN, T=8000", # for Bellman # "DQN (Adam)", # normal
+    "DQN (Adam)": "DQN (Adam)",  # DQN, T=8000, G=4 for overfit | DQN, T=8000 for Bellman | DQN (Adam) normal
     "DQN + n-step return": "DQN + 3-step return",  # Only on a few games
     "C51": "C51",
     "REM": "REM",
@@ -365,6 +369,7 @@ ORDER = {
     # iIQN + 3-step return
     "IQN_sanity_check_3_steps": 9,
     "iIQN_sanity_check_3_steps_1": 10,
+    "iIQN_ut30_uh6000_3_steps_3": 11,
     "iIQN_ut30_uh6000_3_steps_old_5": 11,
     # Ablations K
     "iDQN_ablation_study_K_5": 11,
@@ -376,7 +381,8 @@ ORDER = {
     # Ablations head std
     "iDQN_head_std_5": 2,
     # Ablations Bellman iterations
-    "iDQN_ut30_uh2000_4": 4,
+    "DQN_ut30_uh2000": 4,
+    "iDQN_ut30_uh2000_4": 5,
     # Ablations overfit
     "DQN_one_step_one_grad": 3,
     "DQN_ut30_uh8000": 3,
