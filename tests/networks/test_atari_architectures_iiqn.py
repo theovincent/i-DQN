@@ -144,7 +144,7 @@ class TestAtariiIQN(unittest.TestCase):
 
         loss /= (n_heads - 1) * q.n_quantiles_target
 
-        self.assertAlmostEqual(loss, computed_loss, delta=loss / 1e6)
+        self.assertAlmostEqual(loss, computed_loss, delta=abs(loss) / 1e6)
 
     def test_best_action(self) -> None:
         q = AtariiIQN(

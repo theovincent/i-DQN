@@ -99,7 +99,7 @@ class TestAtariiDQN(unittest.TestCase):
         predictions = q.apply(q.params, sample[IDX_RB["state"]])[1:, sample[IDX_RB["action"]].astype(jnp.int8)]
         loss = jnp.square(targets - predictions).mean()
 
-        self.assertAlmostEqual(loss, computed_loss, delta=loss / 1e6)
+        self.assertAlmostEqual(loss, computed_loss, delta=abs(loss) / 1e6)
 
     def test_best_action(self) -> None:
         q = AtariiDQN(

@@ -89,7 +89,7 @@ class TestAtariIQN(unittest.TestCase):
 
         loss /= q.n_quantiles_target
 
-        self.assertAlmostEqual(loss, computed_loss, delta=loss / 1e5)
+        self.assertAlmostEqual(loss, computed_loss, delta=abs(loss) / 1e5)
 
     def test_best_action(self) -> None:
         q = AtariIQN(self.state_shape, self.n_actions, self.cumulative_gamma, self.key, None, None, None, None)
