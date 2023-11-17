@@ -9,12 +9,12 @@ from idqn.networks.architectures.iqn import AtariIQNNet
 
 
 class AtariSharediIQNet:
-    def __init__(self, n_heads: int, n_actions: int) -> None:
+    def __init__(self, n_heads: int, n_actions: int, initialization_type: str) -> None:
         self.n_heads = n_heads
         self.n_actions = n_actions
-        self.torso = Torso(dqn_initialisation=False)
+        self.torso = Torso(initialization_type)
         self.quantile_embedding = QuantileEmbedding()
-        self.head = Head(self.n_actions, dqn_initialisation=False)
+        self.head = Head(self.n_actions, initialization_type)
 
     def init(
         self, key_init: jax.random.PRNGKey, state: jnp.ndarray, key: jax.random.PRNGKey, n_quantiles: int
@@ -127,9 +127,9 @@ class AtariSharediIQNet:
 
 
 class AtariiIQNet:
-    def __init__(self, n_nets: int, n_actions: int) -> None:
+    def __init__(self, n_nets: int, n_actions: int, initialization_type: str) -> None:
         self.n_nets = n_nets
-        self.iqn_net = AtariIQNNet(n_actions)
+        self.iqn_net = AtariIQNNet(n_actions, initialization_type)
 
     def init(
         self, key_init: jax.random.PRNGKey, state: jnp.ndarray, key: jax.random.PRNGKey, n_quantiles: int
@@ -196,7 +196,7 @@ class AtariiIQN(iIQN):
             state_shape,
             n_actions,
             cumulative_gamma,
-            AtariSharediIQNet(n_heads, n_actions) if shared_network else AtariiIQNet(n_heads, n_actions),
+            AtariSharediIQNet(n_heads, n_actions, "iqn") if shared_network else AtariiIQNet(n_heads, n_actions, "iqn"),
             network_key,
             head_behaviorial_probability,
             learning_rate,

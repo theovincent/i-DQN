@@ -7,10 +7,11 @@ from idqn.networks.architectures.base import Torso, Head
 
 class AtariDQNNet(nn.Module):
     n_actions: int
+    initialization_type: str
 
     def setup(self):
-        self.torso = Torso()
-        self.head = Head(self.n_actions)
+        self.torso = Torso(self.initialization_type)
+        self.head = Head(self.n_actions, self.initialization_type)
 
     def __call__(self, state):
         return self.head(self.torso(state))
@@ -32,7 +33,7 @@ class AtariDQN(DQN):
             state_shape,
             n_actions,
             cumulative_gamma,
-            AtariDQNNet(n_actions),
+            AtariDQNNet(n_actions, "dqn"),
             network_key,
             learning_rate,
             epsilon_optimizer,

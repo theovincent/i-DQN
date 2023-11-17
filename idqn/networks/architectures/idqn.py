@@ -8,11 +8,11 @@ from idqn.networks.architectures.dqn import AtariDQNNet
 
 
 class AtariSharediDQNNet:
-    def __init__(self, n_heads: int, n_actions: int) -> None:
+    def __init__(self, n_heads: int, n_actions: int, initialization_type: str) -> None:
         self.n_heads = n_heads
         self.n_actions = n_actions
-        self.torso = Torso()
-        self.head = Head(self.n_actions)
+        self.torso = Torso(initialization_type)
+        self.head = Head(self.n_actions, initialization_type)
 
     def init(self, key_init: jax.random.PRNGKey, state: jnp.ndarray) -> FrozenDict:
         # We need only two sets of torso parameters
@@ -56,9 +56,9 @@ class AtariSharediDQNNet:
 
 
 class AtariiDQNNet:
-    def __init__(self, n_nets: int, n_actions: int) -> None:
+    def __init__(self, n_nets: int, n_actions: int, initialization_type: str) -> None:
         self.n_nets = n_nets
-        self.dqn_net = AtariDQNNet(n_actions)
+        self.dqn_net = AtariDQNNet(n_actions, initialization_type)
 
     def init(self, key_init: jax.random.PRNGKey, state: jnp.ndarray) -> FrozenDict:
         return jax.vmap(self.dqn_net.init, in_axes=(0, None))(jax.random.split(key_init, self.n_nets), state)
@@ -102,7 +102,9 @@ class AtariiDQN(iDQN):
             state_shape,
             n_actions,
             cumulative_gamma,
-            AtariSharediDQNNet(n_heads, n_actions) if shared_network else AtariiDQNNet(n_heads, n_actions),
+            AtariSharediDQNNet(n_heads, n_actions, "dqn")
+            if shared_network
+            else AtariiDQNNet(n_heads, n_actions, "dqn"),
             network_key,
             head_behaviorial_probability,
             learning_rate,

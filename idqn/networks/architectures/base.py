@@ -8,16 +8,18 @@ def scale(state: jnp.ndarray) -> jnp.ndarray:
 
 
 class Torso(nn.Module):
-    dqn_initialisation: bool = True
+    initialization_type: str
 
     @nn.compact
     def __call__(self, state):
-        if self.dqn_initialisation:
+        if self.initialization_type == "dqn":
             initializer = nn.initializers.variance_scaling(scale=1.0, mode="fan_avg", distribution="truncated_normal")
-        else:
+        elif self.initialization_type == "iqn":
             initializer = nn.initializers.variance_scaling(
                 scale=1.0 / jnp.sqrt(3.0), mode="fan_in", distribution="uniform"
             )
+        elif self.initialization_type == "rem":
+            initializer = nn.initializers.variance_scaling(scale=1.0, mode="fan_avg", distribution="uniform")
 
         x = nn.Conv(features=32, kernel_size=(8, 8), strides=(4, 4), kernel_init=initializer)(state)
         x = nn.relu(x)
@@ -31,16 +33,18 @@ class Torso(nn.Module):
 
 class Head(nn.Module):
     n_actions: int
-    dqn_initialisation: bool = True
+    initialization_type: str
 
     @nn.compact
     def __call__(self, x):
-        if self.dqn_initialisation:
+        if self.initialization_type == "dqn":
             initializer = nn.initializers.variance_scaling(scale=1.0, mode="fan_avg", distribution="truncated_normal")
-        else:
+        elif self.initialization_type == "iqn":
             initializer = nn.initializers.variance_scaling(
                 scale=1.0 / jnp.sqrt(3.0), mode="fan_in", distribution="uniform"
             )
+        elif self.initialization_type == "rem":
+            initializer = nn.initializers.variance_scaling(scale=1.0, mode="fan_avg", distribution="uniform")
 
         x = nn.Dense(features=512, kernel_init=initializer)(x)
         x = nn.relu(x)

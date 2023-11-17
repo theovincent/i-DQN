@@ -11,10 +11,14 @@ from idqn.networks.architectures.idqn import AtariSharediDQNNet, AtariiDQNNet
 
 
 class AtariiREMNet:
-    def __init__(self, n_nets_rem: int, shared_network: bool, n_head_idqn: int, n_actions: int) -> None:
+    def __init__(
+        self, n_nets_rem: int, shared_network: bool, n_head_idqn: int, n_actions: int, initialization_type: str
+    ) -> None:
         self.n_nets_rem = n_nets_rem
         self.idqn_net = (
-            AtariSharediDQNNet(n_head_idqn, n_actions) if shared_network else AtariiDQNNet(n_head_idqn, n_actions)
+            AtariSharediDQNNet(n_head_idqn, n_actions, initialization_type)
+            if shared_network
+            else AtariiDQNNet(n_head_idqn, n_actions, initialization_type)
         )
 
         uniform_initializer = jax.nn.initializers.uniform(1)
@@ -86,7 +90,7 @@ class AtariiREM(iREM):
             state_shape,
             n_actions,
             cumulative_gamma,
-            AtariiREMNet(4, shared_network, n_heads, n_actions),
+            AtariiREMNet(4, shared_network, n_heads, n_actions, "rem"),
             network_key,
             head_behaviorial_probability,
             learning_rate,

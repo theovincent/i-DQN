@@ -9,11 +9,12 @@ from idqn.networks.architectures.base import Torso, Head, QuantileEmbedding
 
 class AtariIQNNet(nn.Module):
     n_actions: int
+    initialization_type: str
 
     def setup(self):
-        self.torso = Torso(dqn_initialisation=False)
+        self.torso = Torso(self.initialization_type)
         self.quantile_embedding = QuantileEmbedding()
-        self.head = Head(self.n_actions, dqn_initialisation=False)
+        self.head = Head(self.n_actions, self.initialization_type)
 
     def __call__(self, state, key, n_quantiles) -> Tuple[jnp.ndarray, jnp.ndarray]:
         # output (n_features)
@@ -48,7 +49,7 @@ class AtariIQN(IQN):
             state_shape,
             n_actions,
             cumulative_gamma,
-            AtariIQNNet(n_actions),
+            AtariIQNNet(n_actions, "iqn"),
             network_key,
             learning_rate,
             epsilon_optimizer,

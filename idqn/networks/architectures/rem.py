@@ -8,9 +8,9 @@ from idqn.networks.architectures.dqn import AtariDQNNet
 
 
 class AtariREMNet:
-    def __init__(self, n_nets: int, n_actions: int) -> None:
+    def __init__(self, n_nets: int, n_actions: int, initialization_type: str) -> None:
         self.n_nets = n_nets
-        self.dqn_net = AtariDQNNet(n_actions)
+        self.dqn_net = AtariDQNNet(n_actions, initialization_type)
 
         uniform_initializer = jax.nn.initializers.uniform(1)
         normed_uniform_initializer = lambda *args: uniform_initializer(*args) / uniform_initializer(*args).sum()
@@ -53,7 +53,7 @@ class AtariREM(REM):
             state_shape,
             n_actions,
             cumulative_gamma,
-            AtariREMNet(4, n_actions),
+            AtariREMNet(4, n_actions, "rem"),
             network_key,
             learning_rate,
             epsilon_optimizer,
