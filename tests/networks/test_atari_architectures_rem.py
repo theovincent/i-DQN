@@ -68,7 +68,7 @@ class TestAtariREM(unittest.TestCase):
             self.assertAlmostEqual,
             output_dqn,
             output,
-            delta=np.abs(output_dqn.min() / 1e3),
+            delta=np.abs(output_dqn.min()) / 1e3,
         )
 
     def test_compute_target(self) -> None:
