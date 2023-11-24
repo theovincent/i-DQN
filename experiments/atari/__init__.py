@@ -189,6 +189,29 @@ EXPERIMENTED_GAME_SHORT = [
     "StarGunner",
 ]
 
+EXPERIMENTED_GAME_MEDIUM = [
+    "Alien",
+    "Assault",
+    "BankHeist",
+    "Berzerk",
+    "Breakout",
+    "Centipede",
+    "ChopperCommand",
+    "DemonAttack",
+    "Enduro",
+    "Frostbite",
+    "Gopher",
+    "Gravitar",
+    "IceHockey",
+    "Jamesbond",
+    "Krull",
+    "KungFuMaster",
+    "Riverraid",
+    "Seaquest",
+    "Skiing",
+    "StarGunner",
+]
+
 AVAILABLE_COLORS = {
     "black": "#000000",
     "blue": "#1F77B4",
@@ -252,6 +275,7 @@ COLORS = {
     # Ablations overfit
     "DQN_one_step_one_grad": AVAILABLE_COLORS["light_pink"],
     "DQN_ut30_uh8000": AVAILABLE_COLORS["light_pink"],
+    "iDQN_ut30_uh8000_2": AVAILABLE_COLORS["cyan"],
     "iDQN_ut30_uh8000_4": AVAILABLE_COLORS["blue"],
     # Ablations R
     "iDQN_ut30_uh100_5": AVAILABLE_COLORS["orange"],
@@ -319,6 +343,7 @@ LABEL = {
     # Ablations overfit
     "DQN_one_step_one_grad": "DQN, T=8000, G=1",
     "DQN_ut30_uh8000": "DQN, T=8000, G=1",
+    "iDQN_ut30_uh8000_2": "iDQN K=2",
     "iDQN_ut30_uh8000_4": "iDQN K=4, R=8000, G=4",
     # Ablations R
     "iDQN_ut30_uh100_5": "iDQN K=5, T=30, R=100",
@@ -386,6 +411,7 @@ ORDER = {
     # Ablations overfit
     "DQN_one_step_one_grad": 3,
     "DQN_ut30_uh8000": 3,
+    "iDQN_ut30_uh8000_2": 5,
     "iDQN_ut30_uh8000_4": 5,
     # Ablations R
     "iDQN_ut30_uh100_5": 12,
