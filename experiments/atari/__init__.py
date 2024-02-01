@@ -238,12 +238,12 @@ AVAILABLE_COLORS = {
 
 COLORS = {
     # iDQN
-    "DQN_sanity_check": AVAILABLE_COLORS["yellow"],
-    "iDQN_sanity_check_1": AVAILABLE_COLORS["blue"],
+    "DQN_sanity_check": AVAILABLE_COLORS["brown"],
+    "iDQN_sanity_check_1": AVAILABLE_COLORS["green"],
     "iDQN_ut30_uh6000_5": AVAILABLE_COLORS["green"],
     # iIQN
-    "IQN_sanity_check": AVAILABLE_COLORS["yellow"],
-    "iIQN_sanity_check_1": AVAILABLE_COLORS["green"],
+    "IQN_sanity_check": AVAILABLE_COLORS["orange"],
+    "iIQN_sanity_check_1": AVAILABLE_COLORS["cyan"],
     "iIQN_ut30_uh6000_3": AVAILABLE_COLORS["green"],
     "iIQN_ut30_uh6000_5": AVAILABLE_COLORS["green"],
     "iIQN_weak_ut30_uh6000_3": AVAILABLE_COLORS["green"],
@@ -251,48 +251,48 @@ COLORS = {
     "REM_sanity_check": AVAILABLE_COLORS["yellow"],
     "iREM_sanity_check_1": AVAILABLE_COLORS["black"],
     # iDQN + 3-step return
-    "DQN_sanity_check_3_steps": AVAILABLE_COLORS["yellow"],
+    "DQN_sanity_check_3_steps": AVAILABLE_COLORS["brown"],
     "DQN_sanity_check_3_steps_old": AVAILABLE_COLORS["yellow"],
     "iDQN_sanity_check_3_steps_1": AVAILABLE_COLORS["cyan"],
     "iDQN_ut30_uh6000_3_steps_5": AVAILABLE_COLORS["pink"],
     # iIQN + 3-step return
-    "IQN_sanity_check_3_steps": AVAILABLE_COLORS["yellow"],
+    "IQN_sanity_check_3_steps": AVAILABLE_COLORS["orange"],
     "iIQN_sanity_check_3_steps_1": AVAILABLE_COLORS["light_cyan"],
     "iIQN_ut30_uh6000_3_steps_3": AVAILABLE_COLORS["yellow"],
     "iIQN_ut30_uh6000_3_steps_old_5": AVAILABLE_COLORS["light_cyan"],
     # Ablations K
-    "iDQN_ablation_study_K_5": AVAILABLE_COLORS["blue"],
+    "iDQN_ablation_study_K_5": AVAILABLE_COLORS["green"],
     "iDQN_ablation_study_K_10": AVAILABLE_COLORS["orange"],
     # Ablations behavioral policy
-    "iDQN_ut30_uh6000_k1_5_5": AVAILABLE_COLORS["blue"],
-    "iDQN_ut30_uh6000_k1_5": AVAILABLE_COLORS["orange"],
+    "iDQN_ut30_uh6000_k1_5_5": AVAILABLE_COLORS["green"],
+    "iDQN_ut30_uh6000_k1_5": AVAILABLE_COLORS["blue"],
     "iDQN_ut30_uh6000_k5_5": AVAILABLE_COLORS["pink"],
     # Ablations head std
     "iDQN_head_std_5": AVAILABLE_COLORS["brown"],
     # Ablations Bellman iterations
     "DQN_ut30_uh2000": AVAILABLE_COLORS["light_pink"],
-    "iDQN_ut30_uh2000_4": AVAILABLE_COLORS["blue"],
+    "iDQN_ut30_uh2000_4": AVAILABLE_COLORS["green"],
     # Ablations overfit
     "DQN_one_step_one_grad": AVAILABLE_COLORS["light_pink"],
-    "DQN_ut30_uh8000": AVAILABLE_COLORS["light_pink"],
+    "DQN_ut30_uh8000": AVAILABLE_COLORS["orange"],
     "iDQN_ut30_uh8000_2": AVAILABLE_COLORS["cyan"],
-    "iDQN_ut30_uh8000_4": AVAILABLE_COLORS["blue"],
+    "iDQN_ut30_uh8000_4": AVAILABLE_COLORS["green"],
     # Ablations R
     "iDQN_ut30_uh100_5": AVAILABLE_COLORS["orange"],
     "iDQN_ut30_uh500_5": AVAILABLE_COLORS["orange"],
     # Ablations T
     "iDQN_ut1_uh6000_5": AVAILABLE_COLORS["red"],
     # Ablations independent
-    "iDQN_ut30_uh6000_indep_5": AVAILABLE_COLORS["light_yellow"],
+    "iDQN_ut30_uh6000_indep_5": AVAILABLE_COLORS["cyan"],
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": AVAILABLE_COLORS["grey"],
     "Quantile (JAX)_dopamine": AVAILABLE_COLORS["light_blue"],
     "DQN (Adam)": AVAILABLE_COLORS["green"],
-    "DQN + n-step return": AVAILABLE_COLORS["light_pink"],  # Only on a few games
+    "DQN + n-step return": AVAILABLE_COLORS["pink"],  # Only on a few games
     "C51": AVAILABLE_COLORS["purple"],
     "REM": AVAILABLE_COLORS["brown"],
     "Rainbow": AVAILABLE_COLORS["purple"],
-    "IQN_pure": AVAILABLE_COLORS["orange"],  # Only on a few games
+    "IQN_pure": AVAILABLE_COLORS["cyan"],  # Only on a few games
     "IQN": AVAILABLE_COLORS["yellow"],
     "IQN + n-step return (dopamine)": AVAILABLE_COLORS["light_green"],
     "M-IQN": AVAILABLE_COLORS["light_yellow"],
@@ -308,10 +308,10 @@ LABEL = {
     # iDQN
     "DQN_sanity_check": "DQN (our implementation)",
     "iDQN_sanity_check_1": "iDQN K=1",
-    "iDQN_ut30_uh6000_5": "iDQN",  # iDQN K=5, T=30, R=6000 for ablations on R and T | iDQN K=5, shared convolutions for indep | iDQN K=5 normal
+    "iDQN_ut30_uh6000_5": "iDQN, T=6000",  # iDQN K=5, T=30, R=6000 for ablations on R and T | iDQN K=5, shared convolutions for indep | iDQN K=5 normal
     # iIQN
-    "IQN_sanity_check": "IQN (our implementation)",
-    "iIQN_sanity_check_1": "iIQN K=1 (iDQN + IQN)",
+    "IQN_sanity_check": "IQN w/o 3-step return (our implementation)",
+    "iIQN_sanity_check_1": "iIQN K=1",
     "iIQN_ut30_uh6000_3": "iIQN K=3 (iDQN + IQN)",
     "iIQN_ut30_uh6000_5": "iIQN K=5 (iDQN + IQN)",
     "iIQN_weak_ut30_uh6000_3": "iIQN weak K=3 (iDQN + IQN weak)",
@@ -324,7 +324,7 @@ LABEL = {
     "iDQN_sanity_check_3_steps_1": "iDQN K=1 + 3-step return",
     "iDQN_ut30_uh6000_3_steps_5": "iDQN + 3-step return",
     # iIQN + 3-step return
-    "IQN_sanity_check_3_steps": "IQN + 3-step return (our implementation)",
+    "IQN_sanity_check_3_steps": "IQN (our implementation)",
     "iIQN_sanity_check_3_steps_1": "iIQN K=1 + 3-step return",
     "iIQN_ut30_uh6000_3_steps_3": "iIQN",
     "iIQN_ut30_uh6000_3_steps_old_5": "iIQN K=5 (iDQN + IQN) + 3-step return (gamma=1)",
@@ -339,29 +339,29 @@ LABEL = {
     "iDQN_head_std_5": "inter-head standard deviation",
     # Ablations Bellman iterations
     "DQN_ut30_uh2000": "DQN, T=2000",
-    "iDQN_ut30_uh2000_4": "iDQN K=4, R=2000",
+    "iDQN_ut30_uh2000_4": "iDQN K=4, T=2000",
     # Ablations overfit
-    "DQN_one_step_one_grad": "DQN, T=8000, G=1",
-    "DQN_ut30_uh8000": "DQN, T=8000, G=1",
+    "DQN_one_step_one_grad": "DQN, G=1",
+    "DQN_ut30_uh8000": "DQN, G=1",
     "iDQN_ut30_uh8000_2": "iDQN K=2",
-    "iDQN_ut30_uh8000_4": "iDQN K=4, R=8000, G=4",
+    "iDQN_ut30_uh8000_4": "iDQN K=4, G=4",
     # Ablations R
-    "iDQN_ut30_uh100_5": "iDQN K=5, T=30, R=100",
+    "iDQN_ut30_uh100_5": "iDQN, T=100",
     "iDQN_ut30_uh500_5": "iDQN K=5, T=30, R=500",
     # Ablations T
-    "iDQN_ut1_uh6000_5": "iDQN K=5, T=1, R=6000",
+    "iDQN_ut1_uh6000_5": "iDQN w/o delayed params",
     # Ablations independent
-    "iDQN_ut30_uh6000_indep_5": "iDQN K=5, independent nets",
+    "iDQN_ut30_uh6000_indep_5": "iDQN (independent networks)",
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": "DQN (Nature)",
     "Quantile (JAX)_dopamine": "QR-DQN + 3-step return",
-    "DQN (Adam)": "DQN",  # DQN, T=8000, G=4 for overfit | DQN, T=8000 for Bellman | DQN (Adam) normal
-    "DQN + n-step return": "DQN + 3-step return",  # Only on a few games
+    "DQN (Adam)": "DQN (dopamine)",  # DQN, T=8000, G=4 for overfit | DQN, T=8000 for Bellman | DQN (Adam) normal
+    "DQN + n-step return": "DQN + 3-step return (dopamine)",  # Only on a few games
     "C51": "C51",
     "REM": "REM",
     "Rainbow": "Rainbow",  # Rainbow (C51 + 3-step return + PER)
-    "IQN_pure": "IQN",  # Only on a few games
-    "IQN": "IQN",  # IQN + 3-step return
+    "IQN_pure": "IQN w/o 3-step return (dopamine)",  # Only on a few games
+    "IQN": "IQN (dopamine)",  # IQN + 3-step return
     "IQN + n-step return (dopamine)": "IQN + 3-step return (dopamine)",
     "M-IQN": "Munchausen + IQN + 3-step return",
     # Baselines from dopamine
@@ -414,10 +414,10 @@ ORDER = {
     "iDQN_ut30_uh8000_2": 5,
     "iDQN_ut30_uh8000_4": 5,
     # Ablations R
-    "iDQN_ut30_uh100_5": 12,
+    "iDQN_ut30_uh100_5": 10,
     "iDQN_ut30_uh500_5": 13,
     # Ablations T
-    "iDQN_ut1_uh6000_5": 12,
+    "iDQN_ut1_uh6000_5": 10,
     # Ablations independent
     "iDQN_ut30_uh6000_indep_5": 12,
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
