@@ -11,7 +11,7 @@ import jax.numpy as jnp
 import cv2
 from tqdm import tqdm
 
-from idqn.networks.base_q import BaseQ
+from idqn.networks.base import BaseQ
 from idqn.sample_collection.replay_buffer import ReplayBuffer
 from idqn.sample_collection.exploration import EpsilonGreedySchedule
 
@@ -47,7 +47,7 @@ class AtariEnv:
 
     @property
     def state(self) -> np.ndarray:
-        return np.copy(self.state_)
+        return jnp.array(self.state_, dtype=jnp.float32)
 
     def reset(self) -> None:
         self.env.reset()

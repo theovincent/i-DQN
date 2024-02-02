@@ -17,5 +17,10 @@ for bellman_iterations_scope in "${LIST_BELLMAN_ITERATIONS_SCOPE[@]}"
 do
     # iIQN
     echo "launch train iiqn"
-    submission_train_iiqn_1=$(sbatch -J $EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=$(( 4 * $N_PARALLEL_SEEDS )) --mem-per-cpu=3G --time=3-00:00:00 --gres=gpu:1 -p gpu --output=/dev/null launch_job/atari/train_iiqn.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope -ns $N_PARALLEL_SEEDS)
+    if [ $N_PARALLEL_SEEDS == 1 ]
+    then
+        submission_train_iiqn_1=$(sbatch -J $EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=2 --mem-per-cpu=6G --time=3-00:00:00 --gres=gpu:1 -p gpu --output=/dev/null launch_job/atari/train_iiqn.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope -ns $N_PARALLEL_SEEDS)
+    else
+        submission_train_iiqn_1=$(sbatch -J $EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=3 --mem-per-cpu=$(( 4 * $N_PARALLEL_SEEDS ))G --time=3-00:00:00 --gres=gpu:1 -p gpu --output=/dev/null launch_job/atari/train_iiqn.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope -ns $N_PARALLEL_SEEDS)
+    fi
 done

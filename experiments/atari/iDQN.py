@@ -1,6 +1,7 @@
 import sys
 import argparse
 import json
+import math
 import numpy as np
 
 from experiments.base.parser import addparse
@@ -23,7 +24,7 @@ def run_cli(argvs=sys.argv[1:]):
     from experiments.atari.utils import generate_keys
     from idqn.environments.atari import AtariEnv
     from idqn.sample_collection.replay_buffer import ReplayBuffer
-    from idqn.networks.q_architectures import AtariiDQN
+    from idqn.networks.architectures.idqn import AtariiDQN
     from idqn.utils.head_behaviorial_policy import head_behaviorial_policy
     from experiments.base.DQN import train
 
@@ -35,7 +36,7 @@ def run_cli(argvs=sys.argv[1:]):
         (env.state_height, env.state_width),
         p["replay_buffer_size"],
         p["batch_size"],
-        p["idqn_n_step_return"],
+        p["n_step_return"],
         p["gamma"],
         lambda x: np.clip(x, -1, 1),
     )
@@ -44,14 +45,15 @@ def run_cli(argvs=sys.argv[1:]):
         args.bellman_iterations_scope + 1,
         (env.state_height, env.state_width, env.n_stacked_frames),
         env.n_actions,
-        p["gamma"],
+        math.pow(p["gamma"], p["n_step_return"]),
         q_key,
         head_behaviorial_policy(p["idqn_head_behaviorial_policy"], args.bellman_iterations_scope + 1),
         p["idqn_learning_rate"],
         p["idqn_optimizer_eps"],
         p["n_training_steps_per_online_update"],
         p["idqn_n_training_steps_per_target_update"],
-        p["idqn_n_training_steps_per_head_update"],
+        p["idqn_n_training_steps_per_rolling_step"],
+        p["idqn_shared_network"],
     )
 
     train(
