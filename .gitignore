@@ -145,7 +145,8 @@ dmypy.json
 **/*.pdf
 
 # Avoid pushing experiments output
-experiments/car_on_hill/*
+experiments/car_on_hill/figures/*
+experiments/car_on_hill/old_figures/*
 experiments/lunar_lander/*
 experiments/atari/figures/*
 experiments/atari/baselines_scores/**.npy
