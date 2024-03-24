@@ -1,3 +1,4 @@
+from typing import Sequence
 import flax.linen as nn
 import jax
 import jax.numpy as jnp
@@ -68,6 +69,20 @@ class QuantileEmbedding(nn.Module):
         )
         # output (n_quantiles, n_features) | (n_quantiles)
         return (nn.relu(quantile_embedding), jnp.squeeze(quantiles, axis=1))
+
+
+class MLP(nn.Module):
+    features: Sequence[int]
+    n_actions: int
+
+    @nn.compact
+    def __call__(self, x):
+        for feat in self.features:
+            x = nn.relu(nn.Dense(feat)(x))
+
+        x = nn.Dense(self.n_actions)(x)
+
+        return x
 
 
 def roll(param):
