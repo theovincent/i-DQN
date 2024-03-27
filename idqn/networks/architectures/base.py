@@ -74,15 +74,60 @@ class QuantileEmbedding(nn.Module):
 class MLP(nn.Module):
     features: Sequence[int]
     n_actions: int
+    use_bias: bool = True
+
+    @nn.compact
+    def __call__(self, x):
+        for feat in self.features:
+            x = nn.relu(nn.Dense(feat, use_bias=self.use_bias)(x))
+
+        x = nn.Dense(self.n_actions, use_bias=self.use_bias)(x)
+
+        return x
+
+
+class FeatureNet(nn.Module):
+    features: Sequence[int]
 
     @nn.compact
     def __call__(self, x):
         for feat in self.features:
             x = nn.relu(nn.Dense(feat)(x))
 
-        x = nn.Dense(self.n_actions)(x)
-
         return x
+
+
+class PolynomialFeature:
+    def apply(self, params, x):
+        return jnp.array([x[0] ** i * x[1] ** j for i in jnp.arange(4) for j in jnp.arange(4)])
+
+
+class SineFeature:
+    def apply(self, params, x):
+        return jnp.array([jnp.sin(x[0] ** i) + jnp.sin(x[1] ** j) for i in jnp.arange(4) for j in jnp.arange(4)])
+
+
+class TileFeature:
+    n_tiles: int = 5
+
+    def apply(self, params, x):
+        greater_x = jax.vmap(lambda tile: x[0] < tile)(jnp.linspace(-1, 1, self.n_tiles + 1))
+        # Boundery conditions
+        greater_x = greater_x.at[-1].set(True)
+        greater_x = greater_x.at[0].set(False)
+        # Take the last zero
+        x_position = jnp.argmax(greater_x == 1) - 1
+        x_tile = jnp.zeros(self.n_tiles).at[x_position].set(1)
+
+        greater_v = jax.vmap(lambda tile: x[1] < tile)(jnp.linspace(-3, 3, self.n_tiles + 1))
+        # Boundery conditions
+        greater_v = greater_v.at[-1].set(True)
+        greater_v = greater_v.at[0].set(False)
+        # Take the last zero
+        v_position = jnp.argmax(greater_v == 1) - 1
+        v_tile = jnp.zeros(self.n_tiles).at[v_position].set(1)
+
+        return jnp.append(x_tile, v_tile)
 
 
 def roll(param):

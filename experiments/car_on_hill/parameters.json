@@ -1,9 +1,9 @@
 {
     "---- Shared parameters ---": "----------------",
-    "gamma": 0.99,
-    "replay_buffer_size": 6000,
-    "n_random_samples": 4500,
-    "n_oriented_samples": 1000,
+    "gamma": 0.95,
+    "replay_buffer_size": 50000,
+    "n_random_samples": 50000,
+    "n_oriented_samples": 0,
     "oriented_states": [
         [
             0.5,
@@ -16,14 +16,15 @@
     ],
     "horizon": 100,
     "n_bellman_iterations": 20,
-    "n_training_steps_per_bellman_iterations": 5000,
-    "batch_size": 500,
+    "n_training_steps_per_bellman_iterations": 500,
+    "batch_size": 100,
     "n_step_return": 1,
     "features": [
-        30
+        50
     ],
-    "learning_rate": 1e-4,
+    "learning_rate": 0.00001,
     "optimizer_eps": 1e-8,
     "n_states_x": 17,
-    "n_states_v": 17
+    "n_states_v": 17,
+    "features_path": "experiments/car_on_hill/figures/data/features"
 }

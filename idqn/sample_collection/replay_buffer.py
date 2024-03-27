@@ -571,3 +571,8 @@ class ReplayBuffer(object):
         for element in self._extra_storage_types:
             transition_elements.append(ReplayElement(element.name, (batch_size,) + tuple(element.shape), element.type))
         return transition_elements
+
+    def get_all_valid_samples(self):
+        all_valid_indices = [idx for idx in range(self._replay_capacity) if self.is_valid_transition(idx)]
+
+        return self.sample_transition_batch(batch_size=len(all_valid_indices), indices=all_valid_indices)

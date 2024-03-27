@@ -44,14 +44,11 @@ def count_samples(
 
 
 class TwoDimesionsMesh:
-    def __init__(
-        self, dimension_one, dimension_two, sleeping_time: float, axis_equal: bool = True, zero_centered: bool = False
-    ) -> None:
+    def __init__(self, dimension_one, dimension_two, axis_equal: bool = True, zero_centered: bool = False) -> None:
         self.dimension_one = dimension_one
         self.dimension_two = dimension_two
         self.grid_dimension_one, self.grid_dimension_two = np.meshgrid(self.dimension_one, self.dimension_two)
 
-        self.sleeping_time = sleeping_time
         self.axis_equal = axis_equal
         self.zero_centered = zero_centered
 

@@ -79,19 +79,3 @@ class iDQN(BaseIteratedQ):
             standard_deviation += jnp.std(self(self.params, batch_sample[IDX_RB["state"]]), axis=1).sum()
 
         return standard_deviation / (100 * replay_buffer.batch_size * self.n_actions)
-
-    def compute_approximation_error(self, replay_buffer: ReplayBuffer, key: jax.random.PRNGKeyArray) -> jnp.float32:
-        approximation_error = 0
-
-        for _ in range(500):
-            batch_sample = replay_buffer.sample_random_batch(key)
-
-            targets = self.compute_target(self.target_params, batch_sample)[:, 0]
-            values_actions = self.apply(self.params, batch_sample[IDX_RB["state"]])
-            # mapping over the state
-            predictions = jax.vmap(lambda value_actions, action: value_actions[1, action])(
-                values_actions, batch_sample[IDX_RB["action"]]
-            )
-            approximation_error += self.metric(predictions - targets, ord="sum")
-
-        return approximation_error / (500 * replay_buffer.batch_size)

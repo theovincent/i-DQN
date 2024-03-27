@@ -212,7 +212,7 @@ class CarOnHillEnv:
         while not absorbing and self.n_steps < horizon:
             action = q.best_action(q_params, self.state, None)
 
-            _, reward, absorbing, _ = self.step(action)
+            reward, absorbing, _ = self.step(action)
 
             performance += cumulative_gamma * reward
             cumulative_gamma *= self.gamma
@@ -229,3 +229,11 @@ class CarOnHillEnv:
                 v_mesh_[idx_state_x, idx_state_v] = self.evaluate(q, q_params, horizon, jnp.array([state_x, state_v]))
 
         return v_mesh_
+
+    def grid_states(self, n_points_per_axis):
+        x_states, v_states = np.meshgrid(
+            np.linspace(-self.max_position, self.max_position, n_points_per_axis),
+            np.linspace(-self.max_velocity, self.max_velocity, n_points_per_axis),
+        )
+
+        return np.stack((x_states.flatten(), v_states.flatten())).T
