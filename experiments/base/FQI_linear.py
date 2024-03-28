@@ -34,7 +34,7 @@ def train(
     dataset = replay_buffer.get_all_valid_samples()
     list_parameters = [jax.tree_map(lambda param: jnp.repeat(param[0][None], 2, axis=0), q.target_params)]
 
-    for idx_rolling_step in tqdm(range(1, n_rolling_steps + 1)):
+    for _ in tqdm(range(1, n_rolling_steps + 1)):
         for _ in range(n_training_steps_per_rolling_step):
             # 1 so that a training step is done and no rolling step is done
             q.update_online_params(1, replay_buffer)
@@ -72,8 +72,11 @@ def train(
             states_x,
             states_v,
         )
-        distance_optimal_q[idx_bellman_iteration] = np.sqrt(
-            np.square((optimal_q_values - q_values) * samples_mask_q_format).mean()
+        distance_optimal_q[idx_bellman_iteration] = (
+            np.sqrt(np.square((optimal_q_values - q_values) * samples_mask_q_format).mean())
+            / dataset[0].shape[0]
+            * p["n_states_x"]
+            * p["n_states_v"]
         )
 
     np.save(f"{experiment_path}{args.bellman_iterations_scope}_distance_w_s{args.seed}", diff_weights)

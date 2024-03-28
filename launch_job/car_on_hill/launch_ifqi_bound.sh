@@ -18,5 +18,5 @@ do
     # iFQI_bound
     echo "launch train ifqi bound"
     # --gres=gpu:1 -p gpu
-    submission_train_ifqi_bound_1=$(sbatch -J $EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=3 --mem-per-cpu=500M --time=1:00:00 --output=/dev/null launch_job/car_on_hill/train_ifqi_bound.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope -ns $N_PARALLEL_SEEDS)
+    submission_train_ifqi_bound_1=$(sbatch -J $EXPERIMENT_NAME\_$bellman_iterations_scope --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=3 --mem-per-cpu=500M --time=1:00:00 --output=/dev/null launch_job/car_on_hill/train_ifqi_bound.sh -e $EXPERIMENT_NAME -b $bellman_iterations_scope -ns $N_PARALLEL_SEEDS)
 done

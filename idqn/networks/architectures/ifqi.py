@@ -96,7 +96,7 @@ class CarOnHilliFQI(iDQN):
             cumulative_gamma,
             (
                 CarOnHilliFQINet(n_heads, features, n_actions)
-                if type(features) == Sequence
+                if type(features) == list
                 else CarOnHilliFQILinearNet(n_heads, features, n_actions)
             ),
             network_key,
@@ -118,36 +118,35 @@ class CarOnHilliFQI(iDQN):
     def best_action(self, params: FrozenDict, state: jnp.ndarray, key: jax.random.PRNGKeyArray) -> jnp.int8:
         return jnp.argmax(self.network.apply(params, state)).astype(jnp.int8)
 
-    @partial(jax.jit, static_argnames="self")
+    # @partial(jax.jit, static_argnames="self")
     def compute_proposition_value(self, params, target_params, dataset, states, gamma):
-        previous_loss = self.loss_on_batch(target_params, target_params, dataset, None)
-        current_loss = self.loss_on_batch(params, target_params, dataset, None)
-        # We do not compute the shift for the first and last Q-functions.
-        # The first did not move. The last one can move freely.
-        if self.n_heads > 2:
-            shift = (
-                jax.vmap(self.compute_norm_2, in_axes=(None, None, 0), out_axes=1)(
-                    jax.tree_map(lambda param: param[1:-1], params),
-                    jax.tree_map(lambda param: param[1:-1], target_params),
-                    states,
-                )
-                .max(axis=(1, 2))  # over the state-action pairs
-                .mean()  # over the heads
+        proposition_value = float("inf")
+
+        for idx_head in range(1, self.n_heads):
+            target_params_ = jax.tree_map(lambda param: param[idx_head - 1 : idx_head + 1], target_params)
+            params_ = jax.tree_map(lambda param: param[idx_head - 1 : idx_head + 1], params)
+
+            previous_loss = np.sqrt(self.loss_on_batch(target_params_, target_params_, dataset, None))
+            current_loss = np.sqrt(self.loss_on_batch(params_, target_params_, dataset, None))
+            shift = np.sqrt(
+                jax.vmap(self.compute_diff_target, in_axes=(None, None, 0))(params_, target_params_, dataset).mean()
             )
-        else:
-            shift = 0
 
-        return jnp.around(previous_loss - current_loss - gamma * shift, 4)
+            proposition_value = jnp.minimum(previous_loss - current_loss - gamma * shift, proposition_value)
 
-    def compute_norm_2(self, params, target_params, state):
-        return self.metric(self.apply(params, state) - self.apply(target_params, state), ord="2")
+        return proposition_value
+
+    def compute_diff_target(self, params, target_params, sample):
+        return self.metric(
+            self.compute_target(params, sample) - self.compute_target(target_params, sample),
+            ord="2",
+        )
 
     @partial(jax.jit, static_argnames="self")
     def compute_diff_approximation_errors(self, params, target_params, dataset):
-        return jnp.around(
+        return (self.n_heads - 1) * (
             self.loss_on_batch(target_params, target_params, dataset, None)
-            - self.loss_on_batch(params, params, dataset, None),
-            4,
+            - self.loss_on_batch(params, params, dataset, None)
         )
 
     def update_bellman_iteration(self, params, dataset):
