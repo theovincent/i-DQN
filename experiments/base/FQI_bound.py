@@ -33,7 +33,6 @@ def train(
 
     n_training_steps = 0
     dataset = replay_buffer.get_all_valid_samples()
-    states = env.grid_states(200)
     bound_info = []
     list_parameters = [jax.tree_map(lambda param: jnp.repeat(param[0][None], 2, axis=0), q.target_params)]
 
@@ -49,6 +48,7 @@ def train(
 
                 bound_info.append([proposition_value, diff_approximation_errors])
 
+            if n_training_steps % p["delayed_update_frequency"] == 0:
                 # 0 so that the target parameters are updated
                 q.update_target_params(0)
 

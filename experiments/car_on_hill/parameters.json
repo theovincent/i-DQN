@@ -24,6 +24,7 @@
     ],
     "learning_rate": 0.00001,
     "optimizer_eps": 1e-8,
+    "delayed_update_frequency": 1,
     "n_states_x": 17,
     "n_states_v": 17,
     "features_path": "experiments/car_on_hill/figures/data/features"

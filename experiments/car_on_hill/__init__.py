@@ -24,7 +24,8 @@ AVAILABLE_COLORS = {
 
 COLORS = {
     "1": AVAILABLE_COLORS["grey"],
-    "4": AVAILABLE_COLORS["orange"],
-    "7": AVAILABLE_COLORS["purple"],
-    "10": AVAILABLE_COLORS["black"],
+    "4": AVAILABLE_COLORS["yellow"],
+    "7": AVAILABLE_COLORS["orange"],
+    "10": AVAILABLE_COLORS["purple"],
+    "20": AVAILABLE_COLORS["black"],
 }
