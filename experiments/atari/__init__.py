@@ -165,7 +165,7 @@ EXPERIMENTED_GAME = [
     "Solaris",
     "SpaceInvaders",
     "StarGunner",
-    # "Tennis",
+    "Tennis",
     "TimePilot",
     "Tutankham",
     "UpNDown",
@@ -240,10 +240,16 @@ COLORS = {
     # iDQN
     "DQN_sanity_check": AVAILABLE_COLORS["brown"],
     "iDQN_sanity_check_1": AVAILABLE_COLORS["green"],
+    "DQN_baseline_6000": AVAILABLE_COLORS["brown"],
+    "iDQN_baseline_6000_5": AVAILABLE_COLORS["green"],
+    "DQN_big_dqn": AVAILABLE_COLORS["brown"],
+    "iDQN_big_dqn_5": AVAILABLE_COLORS["green"],
     "iDQN_ut30_uh6000_5": AVAILABLE_COLORS["green"],
     # iIQN
     "IQN_sanity_check": AVAILABLE_COLORS["orange"],
     "iIQN_sanity_check_1": AVAILABLE_COLORS["cyan"],
+    "IQN_big_dqn": AVAILABLE_COLORS["orange"],
+    "iIQN_big_dqn_3": AVAILABLE_COLORS["brown"],
     "iIQN_ut30_uh6000_3": AVAILABLE_COLORS["green"],
     "iIQN_ut30_uh6000_5": AVAILABLE_COLORS["green"],
     "iIQN_weak_ut30_uh6000_3": AVAILABLE_COLORS["green"],
@@ -258,7 +264,9 @@ COLORS = {
     # iIQN + 3-step return
     "IQN_sanity_check_3_steps": AVAILABLE_COLORS["orange"],
     "iIQN_sanity_check_3_steps_1": AVAILABLE_COLORS["light_cyan"],
-    "iIQN_ut30_uh6000_3_steps_3": AVAILABLE_COLORS["yellow"],
+    "IQN_baseline_6000_3_steps": AVAILABLE_COLORS["brown"],
+    "iIQN_baseline_6000_3_steps_3": AVAILABLE_COLORS["pink"],
+    "iIQN_ut30_uh6000_3_steps_3": AVAILABLE_COLORS["pink"],
     "iIQN_ut30_uh6000_3_steps_old_5": AVAILABLE_COLORS["light_cyan"],
     # Ablations K
     "iDQN_ablation_study_K_5": AVAILABLE_COLORS["green"],
@@ -288,13 +296,13 @@ COLORS = {
     "DQN (Nature)": AVAILABLE_COLORS["grey"],
     "Quantile (JAX)_dopamine": AVAILABLE_COLORS["light_blue"],
     "DQN (Adam)": AVAILABLE_COLORS["green"],
-    "DQN + n-step return": AVAILABLE_COLORS["pink"],  # Only on a few games
+    "DQN + n-step return": AVAILABLE_COLORS["blue"],  # Only on a few games
     "C51": AVAILABLE_COLORS["purple"],
     "REM": AVAILABLE_COLORS["brown"],
     "Rainbow": AVAILABLE_COLORS["purple"],
     "IQN_pure": AVAILABLE_COLORS["cyan"],  # Only on a few games
-    "IQN": AVAILABLE_COLORS["yellow"],
-    "IQN + n-step return (dopamine)": AVAILABLE_COLORS["light_green"],
+    "IQN": AVAILABLE_COLORS["pink"],
+    "IQN + n-step return (dopamine)": AVAILABLE_COLORS["light_pink"],
     "M-IQN": AVAILABLE_COLORS["light_yellow"],
     # Baselines from dopamine
     # "DQN_dopamine": AVAILABLE_COLORS["grey"],
@@ -308,10 +316,16 @@ LABEL = {
     # iDQN
     "DQN_sanity_check": "DQN (our implementation)",
     "iDQN_sanity_check_1": "iDQN K=1",
-    "iDQN_ut30_uh6000_5": "iDQN, T=6000",  # iDQN K=5, T=30, R=6000 for ablations on R and T | iDQN K=5, shared convolutions for indep | iDQN K=5 normal
+    "DQN_baseline_6000": "DQN T=6000",
+    "iDQN_baseline_6000_5": "iDQN T=6000",
+    "DQN_big_dqn": "DQN (5 times more parameters)",
+    "iDQN_big_dqn_5": "iDQN K = 5",
+    "iDQN_ut30_uh6000_5": "iDQN",  # "iDQN, T=6000",  # iDQN K=5, T=30, R=6000 for ablations on R and T | iDQN K=5, shared convolutions for indep | iDQN K=5 normal
     # iIQN
     "IQN_sanity_check": "IQN w/o 3-step return (our implementation)",
     "iIQN_sanity_check_1": "iIQN K=1",
+    "IQN_big_dqn": "IQN (3 times inflated)",
+    "iIQN_big_dqn_3": "iIQN K=3",
     "iIQN_ut30_uh6000_3": "iIQN K=3 (iDQN + IQN)",
     "iIQN_ut30_uh6000_5": "iIQN K=5 (iDQN + IQN)",
     "iIQN_weak_ut30_uh6000_3": "iIQN weak K=3 (iDQN + IQN weak)",
@@ -326,6 +340,8 @@ LABEL = {
     # iIQN + 3-step return
     "IQN_sanity_check_3_steps": "IQN (our implementation)",
     "iIQN_sanity_check_3_steps_1": "iIQN K=1 + 3-step return",
+    "IQN_baseline_6000_3_steps": "IQN T=6000",
+    "iIQN_baseline_6000_3_steps_3": "iIQN T=6000",
     "iIQN_ut30_uh6000_3_steps_3": "iIQN",
     "iIQN_ut30_uh6000_3_steps_old_5": "iIQN K=5 (iDQN + IQN) + 3-step return (gamma=1)",
     # Ablations K
@@ -349,19 +365,19 @@ LABEL = {
     "iDQN_ut30_uh100_5": "iDQN, T=100",
     "iDQN_ut30_uh500_5": "iDQN K=5, T=30, R=500",
     # Ablations T
-    "iDQN_ut1_uh6000_5": "iDQN w/o delayed params",
+    "iDQN_ut1_uh6000_5": "iDQN with D = 1",
     # Ablations independent
     "iDQN_ut30_uh6000_indep_5": "iDQN (independent networks)",
     # Baselines from "Deep Reinforcement Learning at the Edge of the Statistical Precipice"
     "DQN (Nature)": "DQN (Nature)",
     "Quantile (JAX)_dopamine": "QR-DQN + 3-step return",
-    "DQN (Adam)": "DQN (dopamine)",  # DQN, T=8000, G=4 for overfit | DQN, T=8000 for Bellman | DQN (Adam) normal
+    "DQN (Adam)": "DQN",  # DQN, T=8000, G=4 for overfit | DQN, T=8000 for Bellman | DQN (Adam) normal
     "DQN + n-step return": "DQN + 3-step return (dopamine)",  # Only on a few games
     "C51": "C51",
     "REM": "REM",
     "Rainbow": "Rainbow",  # Rainbow (C51 + 3-step return + PER)
     "IQN_pure": "IQN w/o 3-step return (dopamine)",  # Only on a few games
-    "IQN": "IQN (dopamine)",  # IQN + 3-step return
+    "IQN": "IQN",  # IQN + 3-step return
     "IQN + n-step return (dopamine)": "IQN + 3-step return (dopamine)",
     "M-IQN": "Munchausen + IQN + 3-step return",
     # Baselines from dopamine
@@ -376,10 +392,16 @@ ORDER = {
     # iDQN
     "DQN_sanity_check": 5,
     "iDQN_sanity_check_1": 6,
+    "DQN_baseline_6000": 5,
+    "iDQN_baseline_6000_5": 5,
+    "DQN_big_dqn": 5,
+    "iDQN_big_dqn_5": 6,
     "iDQN_ut30_uh6000_5": 11,
     # iIQN
     "IQN_sanity_check": 9,
     "iIQN_sanity_check_1": 10,
+    "IQN_big_dqn": 9,
+    "iIQN_big_dqn_3": 10,
     "iIQN_ut30_uh6000_3": 12,
     "iIQN_ut30_uh6000_5": 14,
     "iIQN_weak_ut30_uh6000_3": 13,
@@ -394,6 +416,8 @@ ORDER = {
     # iIQN + 3-step return
     "IQN_sanity_check_3_steps": 9,
     "iIQN_sanity_check_3_steps_1": 10,
+    "IQN_baseline_6000_3_steps": 9,
+    "iIQN_baseline_6000_3_steps_3": 10,
     "iIQN_ut30_uh6000_3_steps_3": 11,
     "iIQN_ut30_uh6000_3_steps_old_5": 11,
     # Ablations K
