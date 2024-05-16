@@ -119,7 +119,7 @@ class CarOnHilliFQI(iDQN):
         return jnp.argmax(self.network.apply(params, state)).astype(jnp.int8)
 
     # @partial(jax.jit, static_argnames="self")
-    def compute_proposition_value(self, params, target_params, dataset, states, gamma):
+    def compute_proposition_value(self, params, target_params, dataset, gamma):
         proposition_value = float("inf")
 
         for idx_head in range(1, self.n_heads):

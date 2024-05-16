@@ -52,7 +52,9 @@ def train(
 
     diff_weights = np.zeros(p["n_bellman_iterations"] + 1) * np.nan
     distance_optimal_q = np.zeros(p["n_bellman_iterations"] + 1) * np.nan
+    pi_distance_optimal_q = np.zeros(p["n_bellman_iterations"] + 1) * np.nan
     optimal_q_values = np.load("experiments/car_on_hill/figures/data/optimal/Q.npy")
+    optimal_v_values = np.load("experiments/car_on_hill/figures/data/optimal/V.npy")
     samples_mask = np.load("experiments/car_on_hill/figures/data/samples_count.npy")
     samples_mask_q_format = np.repeat(samples_mask[:, :, None], 2, axis=-1)
     states_x = np.linspace(-env.max_position, env.max_position, p["n_states_x"])
@@ -72,6 +74,19 @@ def train(
             states_x,
             states_v,
         )
+        v_values_pi = env.v_mesh(
+            q,
+            jax.tree_map(lambda param: param[1][None], list_parameters[idx_bellman_iteration]),
+            p["horizon"],
+            states_x,
+            states_v,
+        )
+        pi_distance_optimal_q[idx_bellman_iteration] = (
+            np.sqrt(np.square((optimal_v_values - v_values_pi) * samples_mask).mean())
+            / dataset[0].shape[0]
+            * p["n_states_x"]
+            * p["n_states_v"]
+        )
         distance_optimal_q[idx_bellman_iteration] = (
             np.sqrt(np.square((optimal_q_values - q_values) * samples_mask_q_format).mean())
             / dataset[0].shape[0]
@@ -81,3 +96,4 @@ def train(
 
     np.save(f"{experiment_path}{args.bellman_iterations_scope}_distance_w_s{args.seed}", diff_weights)
     np.save(f"{experiment_path}{args.bellman_iterations_scope}_distance_Q_s{args.seed}", distance_optimal_q)
+    np.save(f"{experiment_path}{args.bellman_iterations_scope}_distance_Q_pi_s{args.seed}", pi_distance_optimal_q)

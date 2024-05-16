@@ -43,7 +43,7 @@ def train(
             n_training_steps += 1
 
             if n_training_steps % 30 == 0:
-                proposition_value = q.compute_proposition_value(q.params, q.target_params, dataset, states, p["gamma"])
+                proposition_value = q.compute_proposition_value(q.params, q.target_params, dataset, p["gamma"])
                 diff_approximation_errors = q.compute_diff_approximation_errors(q.params, q.target_params, dataset)
 
                 bound_info.append([proposition_value, diff_approximation_errors])
@@ -66,8 +66,10 @@ def train(
         list_parameters.append(jax.tree_map(lambda param: jnp.repeat(param[idx_in_params][None], 2, axis=0), q.params))
 
     distance_optimal_q = np.zeros(p["n_bellman_iterations"] + 1) * np.nan
+    pi_distance_optimal_q = np.zeros(p["n_bellman_iterations"] + 1) * np.nan
     approximation_errors = np.zeros(p["n_bellman_iterations"] + 1) * np.nan
     optimal_q_values = np.load("experiments/car_on_hill/figures/data/optimal/Q.npy")
+    optimal_v_values = np.load("experiments/car_on_hill/figures/data/optimal/V.npy")
     samples_mask = np.load("experiments/car_on_hill/figures/data/samples_count.npy")
     samples_mask_q_format = np.repeat(samples_mask[:, :, None], 2, axis=-1)
     states_x = np.linspace(-env.max_position, env.max_position, p["n_states_x"])
@@ -80,8 +82,21 @@ def train(
             states_x,
             states_v,
         )
+        v_values_pi = env.v_mesh(
+            q,
+            jax.tree_map(lambda param: param[1][None], list_parameters[idx_bellman_iteration]),
+            p["horizon"],
+            states_x,
+            states_v,
+        )
         distance_optimal_q[idx_bellman_iteration] = (
             np.sqrt(np.square((optimal_q_values - q_values) * samples_mask_q_format).mean())
+            / dataset[0].shape[0]
+            * p["n_states_x"]
+            * p["n_states_v"]
+        )
+        pi_distance_optimal_q[idx_bellman_iteration] = (
+            np.sqrt(np.square((optimal_v_values - v_values_pi) * samples_mask).mean())
             / dataset[0].shape[0]
             * p["n_states_x"]
             * p["n_states_v"]
@@ -91,4 +106,5 @@ def train(
         )
 
     np.save(f"{experiment_path}{args.bellman_iterations_scope}_distance_Q_s{args.seed}", distance_optimal_q)
+    np.save(f"{experiment_path}{args.bellman_iterations_scope}_distance_Q_pi_s{args.seed}", pi_distance_optimal_q)
     np.save(f"{experiment_path}{args.bellman_iterations_scope}_approx_errors_s{args.seed}", approximation_errors)
