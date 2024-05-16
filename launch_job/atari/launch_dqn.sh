@@ -17,7 +17,7 @@ EXPERIMENT_GENERAL_NAME=${split_experiment_name[0]}
 echo "launch train dqn"
 if [ $N_PARALLEL_SEEDS == 1 ]
 then
-    submission_train_dqn_1=$(sbatch -J $EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=2 --mem-per-cpu=6G --time=3-00:00:00 --gres=gpu:1 -p gpu --output=/dev/null launch_job/atari/train_dqn.sh -e $EXPERIMENT_NAME -ns $N_PARALLEL_SEEDS)
+    submission_train_dqn_1=$(sbatch -J $EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=2 --mem-per-cpu=6G --time=3-00:00:00 --gres=gpu:1 -p gpu --prefer="rtx3090|a5000" --output=/dev/null launch_job/atari/train_dqn.sh -e $EXPERIMENT_NAME -ns $N_PARALLEL_SEEDS)
 else
-    submission_train_dqn_1=$(sbatch -J $EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=3 --mem-per-cpu=$(( 4 * $N_PARALLEL_SEEDS ))G --time=3-00:00:00 --gres=gpu:1 -p gpu --output=/dev/null launch_job/atari/train_dqn.sh -e $EXPERIMENT_NAME -ns $N_PARALLEL_SEEDS)
+    submission_train_dqn_1=$(sbatch -J $EXPERIMENT_NAME --array=$FIRST_SEED-$LAST_SEED --cpus-per-task=3 --mem-per-cpu=$(( 4 * $N_PARALLEL_SEEDS ))G --time=3-00:00:00 --gres=gpu:1 -p gpu --prefer="rtx3090|a5000" --output=/dev/null launch_job/atari/train_dqn.sh -e $EXPERIMENT_NAME -ns $N_PARALLEL_SEEDS)
 fi
