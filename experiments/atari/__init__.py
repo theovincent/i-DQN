@@ -240,6 +240,7 @@ COLORS = {
     # iDQN
     "DQN_sanity_check": AVAILABLE_COLORS["brown"],
     "iDQN_sanity_check_1": AVAILABLE_COLORS["green"],
+    "DQN_sanity_check_5_steps": AVAILABLE_COLORS["brown"],
     "DQN_baseline_6000": AVAILABLE_COLORS["brown"],
     "iDQN_baseline_6000_5": AVAILABLE_COLORS["green"],
     "DQN_big_dqn": AVAILABLE_COLORS["brown"],
@@ -296,7 +297,8 @@ COLORS = {
     "DQN (Nature)": AVAILABLE_COLORS["grey"],
     "Quantile (JAX)_dopamine": AVAILABLE_COLORS["light_blue"],
     "DQN (Adam)": AVAILABLE_COLORS["green"],
-    "DQN + n-step return": AVAILABLE_COLORS["blue"],  # Only on a few games
+    "DQN + 3-step return": AVAILABLE_COLORS["blue"],  # Only on a few games
+    "DQN + 5-step return": AVAILABLE_COLORS["orange"],  # Only on a few games
     "C51": AVAILABLE_COLORS["purple"],
     "REM": AVAILABLE_COLORS["brown"],
     "Rainbow": AVAILABLE_COLORS["purple"],
@@ -316,6 +318,7 @@ LABEL = {
     # iDQN
     "DQN_sanity_check": "DQN (our implementation)",
     "iDQN_sanity_check_1": "iDQN K=1",
+    "DQN_sanity_check_5_steps": "DQN + 5-step return",
     "DQN_baseline_6000": "DQN T=6000",
     "iDQN_baseline_6000_5": "iDQN T=6000",
     "DQN_big_dqn": "DQN (5 times more parameters)",
@@ -372,7 +375,8 @@ LABEL = {
     "DQN (Nature)": "DQN (Nature)",
     "Quantile (JAX)_dopamine": "QR-DQN + 3-step return",
     "DQN (Adam)": "DQN",  # DQN, T=8000, G=4 for overfit | DQN, T=8000 for Bellman | DQN (Adam) normal
-    "DQN + n-step return": "DQN + 3-step return (dopamine)",  # Only on a few games
+    "DQN + 3-step return": "DQN + 3-step return",  # Only on a few games
+    "DQN + 5-step return": "DQN + 5-step return",  # Only on a few games
     "C51": "C51",
     "REM": "REM",
     "Rainbow": "Rainbow",  # Rainbow (C51 + 3-step return + PER)
@@ -392,6 +396,7 @@ ORDER = {
     # iDQN
     "DQN_sanity_check": 5,
     "iDQN_sanity_check_1": 6,
+    "DQN_sanity_check_5_steps": 6,
     "DQN_baseline_6000": 5,
     "iDQN_baseline_6000_5": 5,
     "DQN_big_dqn": 5,
@@ -448,7 +453,8 @@ ORDER = {
     "DQN (Nature)": 2,
     "Quantile (JAX)_dopamine": 3,
     "DQN (Adam)": 4,
-    "DQN + n-step return": 3,  # Only on a few games
+    "DQN + 3-step return": 3,  # Only on a few games
+    "DQN + 5-step return": 4,  # Only on a few games
     "C51": 5,
     "REM": 6,
     "Rainbow": 7,
