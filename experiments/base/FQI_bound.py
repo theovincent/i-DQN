@@ -18,8 +18,14 @@ def train(
     replay_buffer: ReplayBuffer,
 ) -> None:
     n_rolling_steps = p["n_bellman_iterations"] - args.bellman_iterations_scope + 1
+    # n_training_steps_per_rolling_step = (
+    #     p["n_training_steps_per_bellman_iterations"] * p["n_bellman_iterations"] // n_rolling_steps
+    # )
+    # To see oscillations with K.
+    # We set n_training_steps_per_rolling_step to be the same as with n_bellman_iterations = 40
+    # while running for n_bellman_iterations = 60
     n_training_steps_per_rolling_step = (
-        p["n_training_steps_per_bellman_iterations"] * p["n_bellman_iterations"] // n_rolling_steps
+        p["n_training_steps_per_bellman_iterations"] * 40 // (40 - args.bellman_iterations_scope + 1)
     )
 
     env.collect_random_samples(
@@ -65,8 +71,10 @@ def train(
     for idx_in_params in range(2, args.bellman_iterations_scope + 1):
         list_parameters.append(jax.tree_map(lambda param: jnp.repeat(param[idx_in_params][None], 2, axis=0), q.params))
 
-    distance_optimal_q = np.zeros(p["n_bellman_iterations"] + 1) * np.nan
-    pi_distance_optimal_q = np.zeros(p["n_bellman_iterations"] + 1) * np.nan
+    distance_optimal_q_l1 = np.zeros(p["n_bellman_iterations"] + 1) * np.nan
+    distance_optimal_q_l2 = np.zeros(p["n_bellman_iterations"] + 1) * np.nan
+    pi_distance_optimal_q_l1 = np.zeros(p["n_bellman_iterations"] + 1) * np.nan
+    pi_distance_optimal_q_l2 = np.zeros(p["n_bellman_iterations"] + 1) * np.nan
     approximation_errors = np.zeros(p["n_bellman_iterations"] + 1) * np.nan
     optimal_q_values = np.load("experiments/car_on_hill/figures/data/optimal/Q.npy")
     optimal_v_values = np.load("experiments/car_on_hill/figures/data/optimal/V.npy")
@@ -89,22 +97,25 @@ def train(
             states_x,
             states_v,
         )
-        distance_optimal_q[idx_bellman_iteration] = (
-            np.sqrt(np.square((optimal_q_values - q_values) * samples_mask_q_format).mean())
-            / dataset[0].shape[0]
-            * p["n_states_x"]
-            * p["n_states_v"]
+
+        distance_optimal_q_l1[idx_bellman_iteration] = (
+            np.sum(np.abs((optimal_q_values - q_values) * samples_mask_q_format)) / dataset[0].shape[0]
         )
-        pi_distance_optimal_q[idx_bellman_iteration] = (
-            np.sqrt(np.square((optimal_v_values - v_values_pi) * samples_mask).mean())
-            / dataset[0].shape[0]
-            * p["n_states_x"]
-            * p["n_states_v"]
+        distance_optimal_q_l2[idx_bellman_iteration] = (
+            np.sqrt(np.square((optimal_q_values - q_values) * samples_mask_q_format).sum()) / dataset[0].shape[0]
+        )
+        pi_distance_optimal_q_l1[idx_bellman_iteration] = (
+            np.sum(np.abs((optimal_v_values - v_values_pi) * samples_mask)) / dataset[0].shape[0]
+        )
+        pi_distance_optimal_q_l2[idx_bellman_iteration] = (
+            np.sqrt(np.square((optimal_v_values - v_values_pi) * samples_mask).sum()) / dataset[0].shape[0]
         )
         approximation_errors[idx_bellman_iteration] = q.loss_on_batch(
             list_parameters[idx_bellman_iteration], list_parameters[idx_bellman_iteration - 1], dataset, None
         )
 
-    np.save(f"{experiment_path}{args.bellman_iterations_scope}_distance_Q_s{args.seed}", distance_optimal_q)
-    np.save(f"{experiment_path}{args.bellman_iterations_scope}_distance_Q_pi_s{args.seed}", pi_distance_optimal_q)
+    np.save(f"{experiment_path}{args.bellman_iterations_scope}_distance_Q_l1_s{args.seed}", distance_optimal_q_l1)
+    np.save(f"{experiment_path}{args.bellman_iterations_scope}_distance_Q_l2_s{args.seed}", distance_optimal_q_l2)
+    np.save(f"{experiment_path}{args.bellman_iterations_scope}_distance_V_l1_pi_s{args.seed}", pi_distance_optimal_q_l1)
+    np.save(f"{experiment_path}{args.bellman_iterations_scope}_distance_V_l2_pi_s{args.seed}", pi_distance_optimal_q_l2)
     np.save(f"{experiment_path}{args.bellman_iterations_scope}_approx_errors_s{args.seed}", approximation_errors)
