@@ -203,14 +203,19 @@ class CarOnHillEnv:
 
         return q_mesh_.reshape(states_x.shape[0], states_v.shape[0], q.n_actions)
 
-    def evaluate(self, q: BaseQ, q_params: FrozenDict, horizon: int, initial_state: jnp.ndarray) -> float:
+    def evaluate(
+        self, q: BaseQ, q_params: FrozenDict, horizon: int, initial_state: jnp.ndarray, first_action: int = None
+    ) -> float:
         performance = 0
         cumulative_gamma = 1
         absorbing = False
         self.reset(initial_state)
 
         while not absorbing and self.n_steps < horizon:
-            action = q.best_action(q_params, self.state, None)
+            if self.n_steps == 0 and first_action is not None:
+                action = first_action
+            else:
+                action = q.best_action(q_params, self.state, None)
 
             reward, absorbing, _ = self.step(action)
 
@@ -229,6 +234,20 @@ class CarOnHillEnv:
                 v_mesh_[idx_state_x, idx_state_v] = self.evaluate(q, q_params, horizon, jnp.array([state_x, state_v]))
 
         return v_mesh_
+
+    def q_mesh(
+        self, q: BaseQ, q_params: FrozenDict, horizon: int, states_x: jnp.ndarray, states_v: jnp.ndarray
+    ) -> np.ndarray:
+        q_mesh_ = np.zeros((len(states_x), len(states_v), 2))
+
+        for idx_state_x, state_x in enumerate(states_x):
+            for idx_state_v, state_v in enumerate(states_v):
+                for action in [0, 1]:
+                    q_mesh_[idx_state_x, idx_state_v, action] = self.evaluate(
+                        q, q_params, horizon, jnp.array([state_x, state_v]), first_action=action
+                    )
+
+        return q_mesh_
 
     def grid_states(self, n_points_per_axis):
         x_states, v_states = np.meshgrid(

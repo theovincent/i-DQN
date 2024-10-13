@@ -15,7 +15,7 @@
         ]
     ],
     "horizon": 100,
-    "n_bellman_iterations": 20,
+    "n_bellman_iterations": 60,
     "n_training_steps_per_bellman_iterations": 500,
     "batch_size": 100,
     "n_step_return": 1,
