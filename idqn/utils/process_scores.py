@@ -137,6 +137,32 @@ def compute_iqm_and_confidence_interval(scores: Dict, selected_epochs: np.ndarra
     return iqms, iqms_confidence_interval
 
 
+def optimality_gap(scores: np.ndarray) -> np.ndarray:
+    return np.mean(np.maximum(1 - scores.reshape((-1, scores.shape[-1])), 0), axis=0)
+
+
+def compute_optimality_gap_and_confidence_interval(
+    scores: Dict, selected_epochs: np.ndarray, normalize: bool = True
+) -> Tuple:
+    """
+    scores: "algorithm": "game": 200 x n_seeds
+    """
+    if normalize:
+        scores = normalize_scores(scores)
+    stacked_scores = stack_dictionary_values(scores)
+    # transpose to have n_seeds x n_games x n_selected_epochs: format required by StratifiedBootstrap
+    selected_scores = stacked_scores[:, selected_epochs, :].transpose((2, 0, 1))
+
+    # Take IQM over games and seeds.
+    iqms = optimality_gap(selected_scores)
+    # Take the confidence interval over seeds only.
+    iqms_confidence_interval = StratifiedBootstrap(selected_scores).conf_int(
+        optimality_gap, reps=2000, size=0.95, method="percentile"
+    )
+
+    return iqms, iqms_confidence_interval
+
+
 @partial(np.vectorize, excluded=[0])
 def scores_distribution(scores: np.ndarray, tau: float) -> float:
     """Evaluates how many `scores` are above `tau` averaged across all runs."""

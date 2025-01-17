@@ -246,6 +246,7 @@ COLORS = {
     "DQN_big_dqn": AVAILABLE_COLORS["brown"],
     "iDQN_big_dqn_5": AVAILABLE_COLORS["green"],
     "iDQN_ut30_uh6000_5": AVAILABLE_COLORS["green"],
+    "iDQN_ut30_uh6000_episode_5": AVAILABLE_COLORS["orange"],
     # iIQN
     "IQN_sanity_check": AVAILABLE_COLORS["orange"],
     "iIQN_sanity_check_1": AVAILABLE_COLORS["cyan"],
@@ -283,7 +284,7 @@ COLORS = {
     "iDQN_ut30_uh2000_4": AVAILABLE_COLORS["green"],
     # Ablations overfit
     "DQN_one_step_one_grad": AVAILABLE_COLORS["light_pink"],
-    "DQN_ut30_uh8000": AVAILABLE_COLORS["orange"],
+    "DQN_ut30_uh8000": AVAILABLE_COLORS["brown"],
     "iDQN_ut30_uh8000_2": AVAILABLE_COLORS["cyan"],
     "iDQN_ut30_uh8000_4": AVAILABLE_COLORS["green"],
     # Ablations R
@@ -306,6 +307,7 @@ COLORS = {
     "IQN": AVAILABLE_COLORS["pink"],
     "IQN + n-step return (dopamine)": AVAILABLE_COLORS["light_pink"],
     "M-IQN": AVAILABLE_COLORS["light_yellow"],
+    "BootstrapDQN_baseline_8000_6": AVAILABLE_COLORS["brown"],
     # Baselines from dopamine
     # "DQN_dopamine": AVAILABLE_COLORS["grey"],
     # "DQN (Adam + MSE in JAX)_dopamine": AVAILABLE_COLORS["light_pink"],
@@ -323,7 +325,8 @@ LABEL = {
     "iDQN_baseline_6000_5": "iDQN T=6000",
     "DQN_big_dqn": "DQN (5 times more parameters)",
     "iDQN_big_dqn_5": "iDQN K = 5",
-    "iDQN_ut30_uh6000_5": "iDQN",  # "iDQN, T=6000",  # iDQN K=5, T=30, R=6000 for ablations on R and T | iDQN K=5, shared convolutions for indep | iDQN K=5 normal
+    "iDQN_ut30_uh6000_5": "iDQN, head change for each sample",  # "iDQN, T=6000",  # iDQN K=5, T=30, R=6000 for ablations on R and T | iDQN K=5, shared convolutions for indep | iDQN K=5 normal
+    "iDQN_ut30_uh6000_episode_5": "iDQN, constant head along episode",
     # iIQN
     "IQN_sanity_check": "IQN w/o 3-step return (our implementation)",
     "iIQN_sanity_check_1": "iIQN K=1",
@@ -384,6 +387,7 @@ LABEL = {
     "IQN": "IQN",  # IQN + 3-step return
     "IQN + n-step return (dopamine)": "IQN + 3-step return (dopamine)",
     "M-IQN": "Munchausen + IQN + 3-step return",
+    "BootstrapDQN_baseline_8000_6": "Bootstrap DQN",
     # Baselines from dopamine
     # "DQN_dopamine": "DQN (Nature) dopamine",
     # "DQN (Adam + MSE in JAX)_dopamine": "DQN (Adam) dopamine",
@@ -402,6 +406,7 @@ ORDER = {
     "DQN_big_dqn": 5,
     "iDQN_big_dqn_5": 6,
     "iDQN_ut30_uh6000_5": 11,
+    "iDQN_ut30_uh6000_episode_5": 10,
     # iIQN
     "IQN_sanity_check": 9,
     "iIQN_sanity_check_1": 10,
@@ -462,6 +467,7 @@ ORDER = {
     "IQN": 8,
     "IQN + n-step return (dopamine)": 8,
     "M-IQN": 9,
+    "BootstrapDQN_baseline_8000_6": 3,
     # Baselines from dopamine
     # "DQN_dopamine": 2,
     # "DQN (Adam + MSE in JAX)_dopamine": 4,
