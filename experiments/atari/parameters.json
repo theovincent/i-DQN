@@ -11,7 +11,7 @@
     "ending_eps": 0.01,
     "duration_eps": 250000,
     "batch_size": 32,
-    "n_step_return": 1,
+    "n_step_return": 3,
     "---- DQNs ---": "-----------------------------",
     "dqn_learning_rate": 6.25e-5,
     "dqn_optimizer_eps": 1.5e-4,
