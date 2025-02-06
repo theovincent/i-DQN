@@ -2,11 +2,10 @@ import os
 import sys
 
 import jax
-import numpy as np
 
 from experiments.base.dqn import train
 from experiments.base.utils import prepare_logs
-from slimdqn.environments.atari import AtariEnv
+from slimdqn.environments.lunar_lander import LunarLander
 from slimdqn.networks.dqn import DQN
 from slimdqn.sample_collection.replay_buffer import ReplayBuffer
 from slimdqn.sample_collection.samplers import UniformSamplingDistribution
@@ -18,20 +17,19 @@ def run(argvs=sys.argv[1:]):
 
     q_key, train_key = jax.random.split(jax.random.PRNGKey(p["seed"]))
 
-    env = AtariEnv(p["experiment_name"].split("_")[-1])
+    env = LunarLander()
     rb = ReplayBuffer(
         sampling_distribution=UniformSamplingDistribution(p["seed"]),
-        max_capacity=p["replay_buffer_capacity"],
         batch_size=p["batch_size"],
+        max_capacity=p["replay_buffer_capacity"],
+        stack_size=1,
         update_horizon=p["update_horizon"],
         gamma=p["gamma"],
-        clipping=lambda x: np.clip(x, -1, 1),
-        stack_size=4,
         compress=True,
     )
     agent = DQN(
         q_key,
-        (env.state_height, env.state_width, env.n_stacked_frames),
+        env.observation_shape[0],
         env.n_actions,
         features=p["features"],
         architecture_type=p["architecture_type"],
@@ -40,7 +38,6 @@ def run(argvs=sys.argv[1:]):
         update_horizon=p["update_horizon"],
         update_to_data=p["update_to_data"],
         target_update_frequency=p["target_update_frequency"],
-        adam_eps=1.5e-4,
     )
     train(train_key, p, agent, env, rb)
 

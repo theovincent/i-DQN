@@ -1,89 +1,69 @@
-import os
-from tqdm import tqdm
-import numpy as np
 import jax
-from argparse import Namespace
+import numpy as np
+import optax
+from tqdm import tqdm
 
-from idqn.sample_collection.exploration import EpsilonGreedySchedule
-from idqn.sample_collection.replay_buffer import ReplayBuffer
-from idqn.networks.base import BaseQ
-from idqn.environments.atari import AtariEnv
+from experiments.base.utils import save_data
+from slimdqn.networks.dqn import DQN
+from slimdqn.sample_collection.replay_buffer import ReplayBuffer
+from slimdqn.sample_collection.utils import collect_single_sample
 
 
 def train(
     key: jax.random.PRNGKey,
-    experiment_path: str,
-    args: Namespace,
     p: dict,
-    q: BaseQ,
-    env: AtariEnv,
-    replay_buffer: ReplayBuffer,
-) -> None:
-    sample_key, exploration_key = jax.random.split(key)
+    agent: DQN,
+    env,
+    rb: ReplayBuffer,
+):
+    epsilon_schedule = optax.linear_schedule(1.0, p["epsilon_end"], p["epsilon_duration"])
+
     n_training_steps = 0
-    losses = np.zeros((p["n_epochs"], p["n_training_steps_per_epoch"])) * np.nan
-    js = np.zeros(p["n_epochs"]) * np.nan
-    stds = np.zeros(p["n_epochs"]) * np.nan
-    approximation_errors = np.zeros(p["n_epochs"]) * np.nan
-    max_j = -float("inf")
-    argmax_j = None
-
-    env.collect_random_samples(sample_key, replay_buffer, p["n_initial_samples"], p["horizon"])
-
-    epsilon_schedule = EpsilonGreedySchedule(
-        p["starting_eps"],
-        p["ending_eps"],
-        p["duration_eps"],
-        exploration_key,
-        n_training_steps,
-    )
+    env.reset()
+    episode_returns_per_epoch = [[0]]
+    episode_lengths_per_epoch = [[0]]
 
     for idx_epoch in tqdm(range(p["n_epochs"])):
-        sum_reward = 0
-        n_episodes = 0
-        idx_training_step = 0
+        n_training_steps_epoch = 0
         has_reset = False
 
-        while idx_training_step < p["n_training_steps_per_epoch"] or not has_reset:
-            reward, has_reset = env.collect_one_sample(q, q.params, p["horizon"], replay_buffer, epsilon_schedule)
+        while n_training_steps_epoch < p["n_training_steps_per_epoch"] or not has_reset:
+            key, exploration_key = jax.random.split(key)
+            reward, has_reset = collect_single_sample(
+                exploration_key, env, agent, rb, p, epsilon_schedule, n_training_steps
+            )
 
-            sum_reward += reward
-            n_episodes += int(has_reset)
-
-            losses[
-                idx_epoch, np.minimum(idx_training_step, p["n_training_steps_per_epoch"] - 1)
-            ] = q.update_online_params(n_training_steps, replay_buffer, has_reset=has_reset)
-            q.update_target_params(n_training_steps)
-
-            idx_training_step += 1
+            n_training_steps_epoch += 1
             n_training_steps += 1
 
-        js[idx_epoch] = sum_reward / n_episodes
-        np.save(
-            f"{experiment_path}J_{args.seed}.npy",
-            js,
-        )
-        np.save(
-            f"{experiment_path}L_{args.seed}.npy",
-            losses,
-        )
-        if js[idx_epoch] > max_j:
-            if argmax_j is not None:
-                os.remove(f"{experiment_path}Q_{args.seed}_{argmax_j}_best_online_params")
+            episode_returns_per_epoch[idx_epoch][-1] += reward
+            episode_lengths_per_epoch[idx_epoch][-1] += 1
+            if has_reset and n_training_steps_epoch < p["n_training_steps_per_epoch"]:
+                episode_returns_per_epoch[idx_epoch].append(0)
+                episode_lengths_per_epoch[idx_epoch].append(0)
 
-            argmax_j = idx_epoch
-            max_j = js[idx_epoch]
-            q.save(f"{experiment_path}Q_{args.seed}_{argmax_j}_best")
+            if n_training_steps > p["n_initial_samples"]:
+                agent.update_online_params(n_training_steps, rb)
+                target_updated, logs = agent.update_target_params(n_training_steps)
 
-        if args.bellman_iterations_scope is not None and p.get("compute_head_std", False):
-            stds[idx_epoch] = q.compute_standard_deviation_head(replay_buffer, key)
-            np.save(
-                f"{experiment_path}S_{args.seed}.npy",
-                stds,
-            )
-        if args.bellman_iterations_scope is not None and p.get("compute_approximation_error", False):
-            approximation_errors[idx_epoch] = q.compute_approximation_error(replay_buffer, key)
-            np.save(
-                f"{experiment_path}A_{args.seed}.npy",
-                approximation_errors,
-            )
+                if target_updated:
+                    p["wandb"].log({"n_training_steps": n_training_steps, **logs})
+
+        avg_return = np.mean(episode_returns_per_epoch[idx_epoch])
+        avg_length_episode = np.mean(episode_lengths_per_epoch[idx_epoch])
+        n_episodes = len(episode_lengths_per_epoch[idx_epoch])
+        print(f"\nEpoch {idx_epoch}: Return {avg_return} averaged on {n_episodes} episodes.\n", flush=True)
+        p["wandb"].log(
+            {
+                "epoch": idx_epoch,
+                "n_training_steps": n_training_steps,
+                "avg_return": avg_return,
+                "avg_length_episode": avg_length_episode,
+            }
+        )
+
+        if idx_epoch < p["n_epochs"] - 1:
+            episode_returns_per_epoch.append([0])
+            episode_lengths_per_epoch.append([0])
+
+        save_data(p, episode_returns_per_epoch, episode_lengths_per_epoch, agent.get_model())

@@ -1,9 +1,23 @@
 #!/bin/bash
 
 function parse_arguments() {
+    IFS='_' read -ra splitted_file_name <<< $(basename $0)
+    ALGO_NAME=${splitted_file_name[-1]::-3}
+    ENV_NAME=$(basename $(dirname ${0}))
+    ARGS=""
     while [[ $# -gt 0 ]]; do
         case $1 in
-            -e | --experiment_name)
+            --algo_name)
+                ALGO_NAME=$2
+                shift
+                shift
+                ;;
+            --env_name)
+                ENV_NAME=$2
+                shift
+                shift
+                ;;
+            -en | --experiment_name)
                 EXPERIMENT_NAME=$2
                 shift
                 shift
@@ -18,31 +32,17 @@ function parse_arguments() {
                 shift
                 shift
                 ;;
-            -b | --bellman_iterations_scope)
-                BELLMAN_ITERATIONS_SCOPE=$2
-                shift
-                shift
-                ;;
-            -lb | --list_bellman_iterations_scope)
-                IFS=',' read -r -a LIST_BELLMAN_ITERATIONS_SCOPE <<< "$2"
-                shift
-                shift
-                ;;
-            -ns | --n_parallel_seeds)
+            -nps | --n_parallel_seeds)
                 N_PARALLEL_SEEDS=$2
                 shift
                 shift
                 ;;
-            -ud | --use_docker)
-                USE_DOCKER=true
+            -gpu)
+                GPU=true
                 shift
                 ;;
-            -?*)
-                printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
-                shift
-                ;;
-            ?*)
-                printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
+            -?* | ?*)
+                ARGS="$ARGS $1"
                 shift
                 ;;
         esac
@@ -50,20 +50,22 @@ function parse_arguments() {
 
     if [[ $EXPERIMENT_NAME == "" ]]
     then
-        echo "experiment name is missing, use -e" >&2
-        exit
-    elif ( [[ $FIRST_SEED != "" ]] && [[ $LAST_SEED = "" ]] ) || ( [[ $FIRST_SEED == "" ]] && [[ $LAST_SEED != "" ]] )
+        echo "experiment name is missing, use --experiment_name" >&2
+        exit 1
+    elif ( [[ $FIRST_SEED = "" ]] || [[ $LAST_SEED = "" ]] || [[ $FIRST_SEED -gt $LAST_SEED ]] )
     then
-        echo "you need to specify the first and last seed, use -fs and -ls" >&2
-        exit
+        echo "you need to specify --first_seed and --last_seed and make to sure that first_seed <= last_seed" >&2
+        exit 1
     fi
     if [[ $N_PARALLEL_SEEDS == "" ]]
     then
-        echo "the number of parallel seeds is missing, use -ns" >&2
-        exit
+        N_PARALLEL_SEEDS=1
     fi
-    if [[ $USE_DOCKER == "" ]]
+    if [[ $GPU == "" ]]
     then
-        USE_DOCKER=false
+        GPU=false
     fi
+
+    [ -d experiments/$ENV_NAME/logs/$EXPERIMENT_NAME/$ALGO_NAME ] || mkdir -p experiments/$ENV_NAME/logs/$EXPERIMENT_NAME/$ALGO_NAME
+
 }
