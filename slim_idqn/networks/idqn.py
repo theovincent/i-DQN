@@ -28,13 +28,13 @@ class iDQN:
         num_networks: int = 5
     ):
         keys = jax.random.split(key, num=num_networks+1)
-        
+
         self.num_networks = num_networks
         self.network = DQNNet(features, architecture_type, n_actions)
         self.target_params = []
         self.online_params = []
 
-        self.target_params[0] = self.network.init(keys[0], jnp.zeros(observation_dim, dtype=jnp.float32))
+        self.target_params.append(self.network.init(keys[0], jnp.zeros(observation_dim, dtype=jnp.float32)))
         for k in range(num_networks):
             params = self.network.init(keys[k+1], jnp.zeros(observation_dim, dtype=jnp.float32))
             self.online_params.append(params)
