@@ -13,7 +13,7 @@ from slimdqn.sample_collection.replay_buffer import ReplayBuffer, ReplayElement
 class iDQN:
     def __init__(
         self,
-        keys: dict[str, jax.random.PRNGKey],
+        key: jax.random.PRNGKey,
         observation_dim,
         n_actions,
         features: list,
@@ -27,6 +27,8 @@ class iDQN:
         adam_eps: float = 1e-8,
         num_networks: int = 5
     ):
+        keys = jax.random.split(key, num=num_networks+1)
+        
         self.num_networks = num_networks
         self.network = DQNNet(features, architecture_type, n_actions)
         self.target_params = []
