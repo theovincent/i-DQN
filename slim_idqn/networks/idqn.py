@@ -27,7 +27,7 @@ class iDQN:
         adam_eps: float = 1e-8,
         num_networks: int = 5
     ):
-        first_key, remaining_keys = jax.random.split(key, num=num_networks+1)
+        first_key, *remaining_keys = jax.random.split(key, num=num_networks+1)
 
         self.num_networks = num_networks
         self.network = DQNNet(features, architecture_type, n_actions)
