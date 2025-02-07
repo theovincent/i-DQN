@@ -41,7 +41,7 @@ class iDQN:
             self.target_params.append(self.online_params[k-1])
 
         self.optimizer = optax.adam(learning_rate, eps=adam_eps)
-        self.optimizer_state = self.optimizer.init(self.params)
+        self.optimizer_state = self.optimizer.init(self.target_params[0])
 
         self.gamma = gamma
         self.update_horizon = update_horizon
