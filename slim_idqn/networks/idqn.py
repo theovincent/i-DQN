@@ -10,10 +10,10 @@ from slimdqn.networks.architectures.dqn import DQNNet
 from slimdqn.sample_collection.replay_buffer import ReplayBuffer, ReplayElement
 
 
-class DQN:
+class iDQN:
     def __init__(
         self,
-        key: jax.random.PRNGKey,
+        keys: dict[str, jax.random.PRNGKey],
         observation_dim,
         n_actions,
         features: list,
@@ -23,42 +23,72 @@ class DQN:
         update_horizon: int,
         update_to_data: int,
         target_update_frequency: int,
+        shift_params_frequency: int,
         adam_eps: float = 1e-8,
+        num_networks: int = 5
     ):
+        self.num_networks = num_networks
         self.network = DQNNet(features, architecture_type, n_actions)
-        self.params = self.network.init(key, jnp.zeros(observation_dim, dtype=jnp.float32))
+        self.target_params = []
+        self.online_params = []
+
+        self.target_params[0] = self.network.init(keys[0], jnp.zeros(observation_dim, dtype=jnp.float32))
+        for k in range(num_networks):
+            params = self.network.init(keys[k+1], jnp.zeros(observation_dim, dtype=jnp.float32))
+            self.online_params.append(params)
+            self.target_params.append(self.online_params[k-1])
 
         self.optimizer = optax.adam(learning_rate, eps=adam_eps)
         self.optimizer_state = self.optimizer.init(self.params)
-        self.target_params = self.params
 
         self.gamma = gamma
         self.update_horizon = update_horizon
         self.update_to_data = update_to_data
         self.target_update_frequency = target_update_frequency
+        self.shift_params_frequency = shift_params_frequency
         self.cumulated_loss = 0
 
     def update_online_params(self, step: int, replay_buffer: ReplayBuffer):
         if step % self.update_to_data == 0:
             batch_samples = replay_buffer.sample()
 
-            self.params, self.optimizer_state, loss = self.learn_on_batch(
-                self.params, self.target_params, self.optimizer_state, batch_samples
-            )
+            for k in range(self.num_networks):
+                self.online_params[k], self.optimizer_state, loss = self.single_learn_on_batch(
+                    self.online_params[k],
+                    self.target_params[k],
+                    self.optimizer_state,
+                    batch_samples
+                )
+
             self.cumulated_loss += loss
 
     def update_target_params(self, step: int):
         if step % self.target_update_frequency == 0:
-            self.target_params = self.params.copy()
+            for k in range(1, self.num_networks):
+                self.target_params[k] = self.online_params[k-1].copy()
+                
+            logs = {"loss": self.cumulated_loss / (self.target_update_frequency / self.update_to_data)}
+            self.cumulated_loss = 0
+
+            return True, logs
+        return False, {}
+    
+    def shift_params(self, step: int):
+        if step % self.shift_params_frequency == 0:
+            for k in range(0, self.num_networks):
+                self.target_params[k] = self.online_params[k].copy()
 
             logs = {"loss": self.cumulated_loss / (self.target_update_frequency / self.update_to_data)}
             self.cumulated_loss = 0
 
             return True, logs
         return False, {}
+    
+
+
 
     @partial(jax.jit, static_argnames="self")
-    def learn_on_batch(
+    def single_learn_on_batch(
         self,
         params: FrozenDict,
         params_target: FrozenDict,
@@ -92,4 +122,4 @@ class DQN:
         return jnp.argmax(self.network.apply(params, state))
 
     def get_model(self):
-        return {"params": self.params}
+        return {"params": self.online_params}
