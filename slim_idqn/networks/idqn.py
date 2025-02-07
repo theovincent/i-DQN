@@ -27,22 +27,22 @@ class iDQN:
         adam_eps: float = 1e-8,
         num_networks: int = 5
     ):
-        keys = jax.random.split(key, num=num_networks+1)
+        first_key, remaining_keys = jax.random.split(key, num=num_networks+1)
 
         self.num_networks = num_networks
         self.network = DQNNet(features, architecture_type, n_actions)
-        self.target_params = []
-        self.online_params = []
+        self.online_params = jax.vmap(self.network.init, in_axes=(0, None))(remaining_keys, jnp.zeros(observation_dim, dtype=jnp.float32))
+        self.target_params = jnp.array(self.network.init(first_key, jnp.zeros(observation_dim, dtype=jnp.float32)))
+        self.target_params.append(self.online_params[:-1])
 
-        self.target_params.append(self.network.init(keys[0], jnp.zeros(observation_dim, dtype=jnp.float32)))
-        for k in range(num_networks):
-            params = self.network.init(keys[k+1], jnp.zeros(observation_dim, dtype=jnp.float32))
-            self.online_params.append(params)
-            self.target_params.append(self.online_params[k-1])
-        self.online_params = jnp.asarray(self.online_params)
-        self.target_params = jnp.asarray(self.target_params)
-        self.optimizers = jnp.asarray([optax.adam(learning_rate, eps=adam_eps) for k in range(self.num_networks)])
-        self.optimizer_states = jnp.asarray([self.optimizers[k].init(self.online_params[k]) for k in range(self.num_networks)])
+        #for k in range(num_networks):
+        #    params = self.network.init(keys[k+1], jnp.zeros(observation_dim, dtype=jnp.float32))
+        #    self.online_params.append(params)
+        #    self.target_params.append(self.online_params[k-1])
+        #self.online_params = jnp.asarray(self.online_params)
+        #self.target_params = jnp.asarray(self.target_params)
+        self.optimizers = jnp.full(self.num_networks, optax.adam(learning_rate, eps=adam_eps))
+        self.optimizer_states = jnp.asarray(list([self.optimizers[k].init(self.online_params[k]) for k in range(self.num_networks)]))
 
         self.gamma = gamma
         self.update_horizon = update_horizon
@@ -55,16 +55,13 @@ class iDQN:
         if step % self.update_to_data == 0:
             batch_samples = replay_buffer.sample()
 
-            results = jax.vmap(self.single_learn_on_batch, in_axes=(0, 0, 0, None))(
+            self.online_params, self.optimizer_states, losses = jax.vmap(self.single_learn_on_batch, in_axes=(0, 0, 0, None))(
                 self.online_params,
                 self.target_params,
                 self.optimizer_states,
                 batch_samples
             )
-            for k in range(self.num_networks):
-                self.online_params[k] = results[k, 0]
-                self.optimizer_states[k] = results[k, 1]
-            loss = results[-1, 2]
+            loss = losses[-1]
 
             #for k in range(self.num_networks):
             #    self.online_params[k], self.optimizer_state, loss = self.single_learn_on_batch(
