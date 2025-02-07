@@ -39,9 +39,10 @@ class iDQN:
             params = self.network.init(keys[k+1], jnp.zeros(observation_dim, dtype=jnp.float32))
             self.online_params.append(params)
             self.target_params.append(self.online_params[k-1])
-
-        self.optimizer = optax.adam(learning_rate, eps=adam_eps)
-        self.optimizer_state = self.optimizer.init(self.target_params[0])
+        self.online_params = jnp.asarray(self.online_params)
+        self.target_params = jnp.asarray(self.target_params)
+        self.optimizers = jnp.asarray([optax.adam(learning_rate, eps=adam_eps) for k in range(self.num_networks)])
+        self.optimizer_states = jnp.asarray([self.optimizers[k].init(self.online_params[k]) for k in range(self.num_networks)])
 
         self.gamma = gamma
         self.update_horizon = update_horizon
@@ -54,13 +55,24 @@ class iDQN:
         if step % self.update_to_data == 0:
             batch_samples = replay_buffer.sample()
 
+            results = jax.vmap(self.single_learn_on_batch, in_axes=(0, 0, 0, None))(
+                self.online_params,
+                self.target_params,
+                self.optimizer_states,
+                batch_samples
+            )
             for k in range(self.num_networks):
-                self.online_params[k], self.optimizer_state, loss = self.single_learn_on_batch(
-                    self.online_params[k],
-                    self.target_params[k],
-                    self.optimizer_state,
-                    batch_samples
-                )
+                self.online_params[k] = results[k, 0]
+                self.optimizer_states[k] = results[k, 1]
+            loss = results[-1, 2]
+
+            #for k in range(self.num_networks):
+            #    self.online_params[k], self.optimizer_state, loss = self.single_learn_on_batch(
+            #        self.online_params[k],
+            #        self.target_params[k],
+            #        self.optimizer_state,
+            #        batch_samples
+            #    )
 
             self.cumulated_loss += loss
 
