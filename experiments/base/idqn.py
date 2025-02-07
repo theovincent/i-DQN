@@ -5,8 +5,8 @@ from tqdm import tqdm
 
 from experiments.base.utils import save_data
 from slim_idqn.networks.idqn import iDQN
-from slimdqn.sample_collection.replay_buffer import ReplayBuffer
-from slimdqn.sample_collection.utils import collect_single_sample
+from slim_idqn.sample_collection.replay_buffer import ReplayBuffer
+from slim_idqn.sample_collection.utils import collect_single_sample
 
 
 def train( 
