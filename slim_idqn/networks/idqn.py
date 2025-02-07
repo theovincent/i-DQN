@@ -27,12 +27,12 @@ class iDQN:
         adam_eps: float = 1e-8,
         num_networks: int = 5
     ):
-        first_key, *remaining_keys = jax.random.split(key, num=num_networks+1)
+        keys = jax.random.split(key, num=num_networks+1)
 
         self.num_networks = num_networks
         self.network = DQNNet(features, architecture_type, n_actions)
-        self.online_params = jax.vmap(self.network.init, in_axes=(0, None))(remaining_keys, jnp.zeros(observation_dim, dtype=jnp.float32))
-        self.target_params = jnp.array(self.network.init(first_key, jnp.zeros(observation_dim, dtype=jnp.float32)))
+        self.online_params = jax.vmap(self.network.init, in_axes=(0, None))(keys[1::], jnp.zeros(observation_dim, dtype=jnp.float32))
+        self.target_params = jnp.array(self.network.init(keys[0], jnp.zeros(observation_dim, dtype=jnp.float32)))
         self.target_params.append(self.online_params[:-1])
 
         #for k in range(num_networks):
