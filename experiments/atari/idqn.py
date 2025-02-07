@@ -4,12 +4,12 @@ import sys
 import jax
 import numpy as np
 
-from experiments.base.idqn import train
 from experiments.base.utils import prepare_logs
-from slimdqn.environments.atari import AtariEnv
+from experiments.base.idqn import train
+from slim_idqn.environments.atari import AtariEnv
 from slim_idqn.networks.idqn import iDQN
-from slimdqn.sample_collection.replay_buffer import ReplayBuffer
-from slimdqn.sample_collection.samplers import UniformSamplingDistribution
+from slim_idqn.sample_collection.replay_buffer import ReplayBuffer
+from slim_idqn.sample_collection.samplers import UniformSamplingDistribution
 
 
 def run(argvs=sys.argv[1:]):
