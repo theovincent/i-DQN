@@ -217,3 +217,10 @@ def add_idqn_arguments(parser: argparse.ArgumentParser):
         type=float,
         default=1_000,
     )
+    parser.add_argument(
+        "-nn",
+        "--num_of_networks",
+        help="number of networks trained in parallel",
+        type=int,
+        default=5,
+    )

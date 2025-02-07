@@ -39,7 +39,8 @@ def run(argvs=sys.argv[1:]):
         update_to_data=p["update_to_data"],
         target_update_frequency=p["target_update_frequency"],
         shift_params_frequency=p["shift_params_frequency"],
-        adam_eps=1.5e-4
+        adam_eps=1.5e-4,
+        num_networks=p["num_of_networks"]
     )
     train(train_key, p, agent, env, rb)
 
