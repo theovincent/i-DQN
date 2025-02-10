@@ -32,17 +32,11 @@ class iDQN:
         self.num_networks = num_networks
         self.network = DQNNet(features, architecture_type, n_actions)
         self.online_params = jax.vmap(self.network.init, in_axes=(0, None))(keys[1::], jnp.zeros(observation_dim, dtype=jnp.float32))
-        self.target_params = jnp.array(self.network.init(keys[0], jnp.zeros(observation_dim, dtype=jnp.float32)))
-        self.target_params.append(self.online_params[:-1])
+        self.target_params = jnp.array([self.network.init(keys[0], jnp.zeros(observation_dim, dtype=jnp.float32))])
+        self.target_params = jnp.append(self.target_params, self.online_params[:-1])
 
-        #for k in range(num_networks):
-        #    params = self.network.init(keys[k+1], jnp.zeros(observation_dim, dtype=jnp.float32))
-        #    self.online_params.append(params)
-        #    self.target_params.append(self.online_params[k-1])
-        #self.online_params = jnp.asarray(self.online_params)
-        #self.target_params = jnp.asarray(self.target_params)
-        self.optimizers = jnp.full(self.num_networks, optax.adam(learning_rate, eps=adam_eps))
-        self.optimizer_states = jnp.asarray(list([self.optimizers[k].init(self.online_params[k]) for k in range(self.num_networks)]))
+        self.optimizer = self.num_networks, optax.adam(learning_rate, eps=adam_eps)
+        self.optimizer_state = self.optimizer.init(self.online_params[0])
 
         self.gamma = gamma
         self.update_horizon = update_horizon
