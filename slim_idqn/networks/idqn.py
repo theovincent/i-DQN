@@ -32,7 +32,7 @@ class iDQN:
         self.num_networks = num_networks
         self.network = DQNNet(features, architecture_type, n_actions)
         self.online_params = jax.vmap(self.network.init, in_axes=(0, None))(keys[1::], jnp.zeros(observation_dim, dtype=jnp.float32))
-        self.target_params = jax.roll(self.online_params, 1)
+        self.target_params = jnp.roll(self.online_params, 1)
         self.target_params = self.target_params.at[0].set(self.network.init(keys[0], jnp.zeros(observation_dim, dtype=jnp.float32)))
 
         self.optimizer = self.num_networks, optax.adam(learning_rate, eps=adam_eps)
