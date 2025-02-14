@@ -2,7 +2,7 @@ import jax
 import jax.numpy as jnp
 from functools import partial
 
-from slimdqn.sample_collection.replay_buffer import ReplayBuffer, TransitionElement
+from slim_idqn.sample_collection.replay_buffer import ReplayBuffer, TransitionElement
 
 
 @partial(jax.jit, static_argnames=("best_action_fn", "n_actions", "epsilon_fn"))
@@ -19,7 +19,7 @@ def collect_single_sample(key, env, agent, rb: ReplayBuffer, p, epsilon_schedule
 
     action_selection_key, network_selection_key = jax.random.split(key)
     chosen_network_idx = jax.random.randint(network_selection_key, (), 0, agent.num_networks)
-    sample_network_params = agent.online_params[chosen_network_idx]
+    sample_network_params = jax.tree_util.tree_map(lambda param: param[chosen_network_idx], agent.online_params)
 
     action = select_action(
         agent.best_action, sample_network_params , env.state, action_selection_key, env.n_actions, epsilon_schedule, n_training_steps

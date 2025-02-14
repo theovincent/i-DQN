@@ -6,8 +6,8 @@ import numpy.typing as npt
 
 import jax
 
-from slimdqn.sample_collection import ReplayItemID
-from slimdqn.sample_collection import sum_tree
+from slim_idqn.sample_collection import ReplayItemID
+from slim_idqn.sample_collection import sum_tree
 
 
 class UniformSamplingDistribution:
