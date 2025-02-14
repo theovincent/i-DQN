@@ -31,7 +31,7 @@ class iDQN:
         self.num_networks = num_networks
         self.network = DQNNet(features, architecture_type, n_actions)
 
-        self.online_params_params = jax.vmap(self.network.init, in_axes=(0, None))(keys, jnp.zeros(observation_dim, dtype=jnp.float32))
+        self.online_params = jax.vmap(self.network.init, in_axes=(0, None))(keys, jnp.zeros(observation_dim, dtype=jnp.float32))
         self.target_params = self.online_params
 
         self.optimizer = optax.adam(learning_rate, eps=adam_eps)
@@ -74,7 +74,7 @@ class iDQN:
         if step % self.shift_params_frequency == 0:
             self.target_params = self.roll(self.online_params)
 
-            logs = {"loss": self.cumulated_loss / (self.target_update_frequency / self.update_to_data)}
+            logs = {"loss": self.cumulated_loss / (self.shift_params_frequency / self.update_to_data)}
             self.cumulated_loss = 0
 
             return True, logs
@@ -89,31 +89,31 @@ class iDQN:
         optimizer_state,
         batch_samples,
     ):
-        losses, grad_losses = jax.value_and_grad(self.loss_on_batch)(params, params_target, batch_samples)
+        loss, grad_losses = jax.value_and_grad(self.loss_on_batch)(params, params_target, batch_samples)
         updates, optimizer_state = self.optimizer.update(grad_losses, optimizer_state)  
         params = optax.apply_updates(params, updates)
 
-        return params, optimizer_state, losses
+        return params, optimizer_state, loss
 
     def loss_on_batch(self, params: FrozenDict, params_target: FrozenDict, samples):
-        losses =  jax.vmap(self.loss, in_axes=(None, None, 0))(params, params_target, samples)
+        losses = jax.vmap(self.loss, in_axes=(None, None, 0))(params, params_target, samples)
 
         return losses.mean()
 
     def loss(self, params: FrozenDict, params_target: FrozenDict, sample: ReplayElement):
         # computes the loss for a single sample
         target = self.compute_target(params_target, sample)
-        q_value = self.apply_other_heads(params, sample.state)
+        q_value = self.apply_other_heads(params, sample.state)[:, sample.action]
 
         return jnp.square(q_value - target)
     
     def apply_other_heads(self, params, state):
         remaining_params = jax.tree_util.tree_map(lambda param: param[1:], params)
 
-        return jax.vmap(self.network.apply, in_axis=(0, None))(remaining_params, state)
+        return jax.vmap(self.network.apply, in_axes=(0, None))(remaining_params, state)
 
     def compute_target(self, params, sample: ReplayElement):
-        max_next_q = jnp.max(jax.vmap(self.network.apply, in_axis=(0, None))(params, sample.next_state)[:-1], axis=0)
+        max_next_q = jnp.max(jax.vmap(self.network.apply, in_axes=(0, None))(params, sample.next_state)[:-1], axis=1)
 
         return sample.reward + (1 - sample.is_terminal) * (self.gamma**self.update_horizon) * max_next_q
 

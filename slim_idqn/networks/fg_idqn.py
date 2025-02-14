@@ -23,7 +23,6 @@ class FG_iDQN(iDQN):
         gamma: float,
         update_horizon: int,
         update_to_data: int,
-        target_update_frequency: int,
         shift_params_frequency: int,
         adam_eps: float = 1e-8,
         num_networks: int = 5
@@ -41,7 +40,6 @@ class FG_iDQN(iDQN):
         self.gamma = gamma
         self.update_horizon = update_horizon
         self.update_to_data = update_to_data
-        self.target_update_frequency = target_update_frequency
         self.shift_params_frequency = shift_params_frequency
         self.cumulated_loss = 0
 
@@ -65,7 +63,7 @@ class FG_iDQN(iDQN):
     def loss(self, target_params: FrozenDict, online_params, sample: ReplayElement):
         # computes the loss for a single sample
         target = self.compute_target(target_params, online_params, sample)
-        q_value = self.network.apply(online_params, sample.state)
+        q_value = self.network.apply(online_params, sample.state)[:sample.action]
 
         return jnp.square(q_value - target)
     
@@ -83,7 +81,7 @@ class FG_iDQN(iDQN):
             self.target_params = jnp.tree_util.tree_map(lambda param: param[0], self.online_params)
             self.online_params = self.roll(self.online_params)
 
-            logs = {"loss": self.cumulated_loss / (self.target_update_frequency / self.update_to_data)}
+            logs = {"loss": self.cumulated_loss / (self.shift_params_frequency / self.update_to_data)}
             self.cumulated_loss = 0
 
             return True, logs
