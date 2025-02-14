@@ -224,3 +224,63 @@ def add_idqn_arguments(parser: argparse.ArgumentParser):
         type=int,
         default=5,
     )
+
+@output_added_arguments
+def add_fg_idqn_arguments(parser: argparse.ArgumentParser):
+    parser.add_argument(
+        "-ne",
+        "--n_epochs",
+        help="Number of epochs to perform.",
+        type=int,
+        default=50,
+    )
+    parser.add_argument(
+        "-ntspe",
+        "--n_training_steps_per_epoch",
+        help="Number of training steps per epoch.",
+        type=int,
+        default=10_000,
+    )
+    parser.add_argument(
+        "-utd",
+        "--update_to_data",
+        help="Number of data points to collect per online Q-network update.",
+        type=float,
+        default=1,
+    )
+    parser.add_argument(
+        "-spf",
+        "--shift_params_frequency",
+        help="Number of training steps before shifting the target Q-networks.",
+        type=int,
+        default=2000,
+    )
+    parser.add_argument(
+        "-nis",
+        "--n_initial_samples",
+        help="Number of initial samples before the training starts.",
+        type=int,
+        default=1_000,
+    )
+    parser.add_argument(
+        "-ee",
+        "--epsilon_end",
+        help="Ending value for the linear decaying epsilon used for exploration.",
+        type=float,
+        default=0.01,
+    )
+    parser.add_argument(
+        "-ed",
+        "--epsilon_duration",
+        help="Duration of epsilon's linear decay used for exploration.",
+        type=float,
+        default=1_000,
+    )
+    parser.add_argument(
+        "-nn",
+        "--num_of_networks",
+        help="number of networks trained in parallel",
+        type=int,
+        default=5,
+    )
+
