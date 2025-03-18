@@ -3,8 +3,8 @@
 source launch_job/parse_arguments.sh
 parse_arguments $@
 
-if ! tmux has-session -t slimidqn; then
-    tmux new-session -d -s slimidqn
+if ! tmux has-session -t shared_slimidqn; then
+    tmux new-session -d -s shared_slimidqn
     echo "Created new tmux session - shared_slimidqn"
 fi
 

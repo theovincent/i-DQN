@@ -11,7 +11,7 @@ from slim_idqn.sample_collection.replay_buffer import ReplayBuffer, ReplayElemen
 from slim_idqn.networks.idqn import iDQN
 
 
-class FG_iDQN(iDQN):
+class FG_iDQN:
     def __init__(
         self,
         key: jax.random.PRNGKey,
@@ -99,6 +99,11 @@ class FG_iDQN(iDQN):
         params = optax.apply_updates(online_params, updates)
 
         return params, optimizer_state, loss
+
+    def roll(self, params):
+        return jax.tree_util.tree_map(lambda param: param.at[:-1].set(param[1:]), params)
+    
+
 
     def get_model(self):
         return {"params": self.online_params}
