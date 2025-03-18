@@ -158,6 +158,8 @@ def add_dqn_arguments(parser: argparse.ArgumentParser):
         type=float,
         default=1_000,
     )
+   
+
 
 @output_added_arguments
 def add_idqn_arguments(parser: argparse.ArgumentParser):
@@ -223,6 +225,13 @@ def add_idqn_arguments(parser: argparse.ArgumentParser):
         help="number of networks trained in parallel",
         type=int,
         default=5,
+    )
+     parser.add_argument(
+        "-sl",
+        "--num_shared_layers",
+        help="number of layers shared between the Q-functions",
+        type=int,
+        default=0,
     )
 
 @output_added_arguments
