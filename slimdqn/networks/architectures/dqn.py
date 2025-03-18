@@ -2,6 +2,7 @@ from typing import Sequence
 
 import flax.linen as nn
 import jax.numpy as jnp
+import optax
 
 
 class Stack(nn.Module):
@@ -33,6 +34,11 @@ class DQNNet(nn.Module):
     features: Sequence[int]
     architecture_type: str
     n_actions: int
+
+    def __init__(self, learning_rate, epsilon_optimizer):
+        self.optimizer = optax.adam(learning_rate, eps=epsilon_optimizer)
+        self.optimizer_state = self.optimizer.init(self.params)
+        
 
     @nn.compact
     def __call__(self, x):

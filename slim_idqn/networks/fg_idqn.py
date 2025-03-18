@@ -47,14 +47,12 @@ class FG_iDQN(iDQN):
         if step % self.update_to_data == 0:
             batch_samples = replay_buffer.sample()
 
-            self.online_params, optimizer_states, losses = jax.vmap(self.single_learn_on_batch, in_axes=(None, 0,None, None))(
+            self.online_params, self.optimizer_states, loss = self.single_learn_on_batch(
                 self.target_params,
                 self.online_params,
                 self.optimizer_state,
                 batch_samples
             )
-            self.optimizer_state = optimizer_states[-1]
-            loss = losses[-1]
             self.cumulated_loss += loss
 
     def loss_on_batch(self, target_params: FrozenDict, online_params, samples):
@@ -63,14 +61,14 @@ class FG_iDQN(iDQN):
     def loss(self, target_params: FrozenDict, online_params, sample: ReplayElement):
         # computes the loss for a single sample
         target = self.compute_target(target_params, online_params, sample)
-        q_value = self.network.apply(online_params, sample.state)[:sample.action]
+        q_value = jax.vmap(self.network.apply, in_axes=(0,None))(online_params, sample.state)[:,sample.action]
 
         return jnp.square(q_value - target)
     
     
     def compute_target(self, target_params: FrozenDict, online_params, sample: ReplayElement):
         max_next_q_target = jnp.max(self.network.apply(target_params, sample.next_state))
-        max_next_q = jnp.max(self.network.apply(online_params, sample.next_state)[:-1], axis=1)
+        max_next_q = jnp.max(jax.vmap(self.network.apply, in_axes=(0, None))(online_params, sample.next_state)[:-1], axis=1)
 
         max_next_q_concat = jnp.insert(max_next_q, 0, max_next_q_target)
 
@@ -78,7 +76,7 @@ class FG_iDQN(iDQN):
     
     def shift_params(self, step: int):
         if step % self.shift_params_frequency == 0:
-            self.target_params = jnp.tree_util.tree_map(lambda param: param[0], self.online_params)
+            self.target_params = jax.tree_util.tree_map(lambda param: param[0], self.online_params)
             self.online_params = self.roll(self.online_params)
 
             logs = {"loss": self.cumulated_loss / (self.shift_params_frequency / self.update_to_data)}
@@ -98,7 +96,7 @@ class FG_iDQN(iDQN):
     ):
         loss, grad_loss = jax.value_and_grad(self.loss_on_batch, argnums=1)(target_params, online_params, batch_samples)
         updates, optimizer_state = self.optimizer.update(grad_loss, optimizer_state)
-        params = optax.apply_updates(params, updates)
+        params = optax.apply_updates(online_params, updates)
 
         return params, optimizer_state, loss
 

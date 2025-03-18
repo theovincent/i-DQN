@@ -6,7 +6,7 @@ import numpy as np
 import optax
 from flax.core import FrozenDict
 
-from slim_idqn.networks.architectures.shared_layer_DQN import SharedLayerDQN
+from slim_idqn.networks.architectures.shared_layer_DQN import SharedLayeriDQNNet
 from slim_idqn.sample_collection.replay_buffer import ReplayBuffer, ReplayElement
 
 
@@ -28,7 +28,7 @@ class SharedLayeriDQN:
         num_networks: int = 5,
     ):
         init_key = jax.random.split(key)
-        self.network = SharedLayerDQN(num_actions=n_actions, num_shared_layers=num_shared_layers, num_heads= num_networks, features=features, observation_dim=observation_dim)
+        self.network = SharedLayeriDQNNet(num_actions=n_actions, num_shared_layers=num_shared_layers, num_heads= num_networks, features=features, observation_dim=observation_dim)
         self.online_params = self.network.init(init_key)
         self.target_params = self.online_params
 

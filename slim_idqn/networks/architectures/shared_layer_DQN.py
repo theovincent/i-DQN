@@ -27,14 +27,14 @@ class Head(nn.Module):
         return nn.Dense(self.n_actions, kernel_init = initializer)
 
 
-class SharedLayerDQN:
+class SharedLayeriDQNNet:
     def __init__(
         self,        
+        observation_dim: int,
         features: list,
         num_actions,
-        num_shared_layers=1,
         num_heads=5,
-        observation_dim: int
+        num_shared_layers=1,
     ):
         self.num_actions = num_actions
         self.num_heads = num_heads

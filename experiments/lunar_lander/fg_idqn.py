@@ -3,7 +3,7 @@ import sys
 
 import jax
 
-from experiments.base.idqn import train
+from experiments.base.fg_idqn import train
 from experiments.base.utils import prepare_logs
 from slim_idqn.environments.lunar_lander import LunarLander
 from slim_idqn.networks.fg_idqn import FG_iDQN
