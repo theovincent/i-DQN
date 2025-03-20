@@ -103,6 +103,12 @@ class FG_iDQN:
     def roll(self, params):
         return jax.tree_util.tree_map(lambda param: param.at[:-1].set(param[1:]), params)
     
+    @partial(jax.jit, static_argnames="self")
+    def best_action(self, params: FrozenDict, head_idx: int, state: jnp.ndarray, network_selection_key):
+        head_idx = jax.random.randomint(network_selection_key, (), 0, self.num_networks-1)
+        sampled_params = jax.tree_util.tree_map(lambda param: param[head_idx], params)
+        # computes the best action for a single state and head
+        return jnp.argmax(self.network.apply(sampled_params, state))
 
 
     def get_model(self):

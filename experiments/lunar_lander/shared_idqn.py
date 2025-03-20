@@ -39,7 +39,7 @@ def run(argvs=sys.argv[1:]):
         target_update_frequency=p["target_update_frequency"],
         shift_params_frequency=p["shift_params_frequency"],
         adam_eps=1.5e-4,
-        num_networks=p["num_of_networks"],
+        num_networks=p["num_of_networks"] + 1,
         num_shared_layers = p["num_shared_layers"]
     ) 
     train(train_key, p, agent, env, rb)

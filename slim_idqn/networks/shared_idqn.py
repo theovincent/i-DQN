@@ -27,9 +27,10 @@ class SharedLayeriDQN:
         adam_eps: float = 1e-8,
         num_networks: int = 5,
     ):
-        init_key = jax.random.split(key)
+        self.num_networks = num_networks
         self.network = SharedLayeriDQNNet(num_actions=n_actions, num_shared_layers=num_shared_layers, num_heads= num_networks, features=features, observation_dim=observation_dim)
-        self.online_params = self.network.init(init_key)
+        self.online_params = self.network.init(key)
+        
         self.target_params = self.online_params
 
         self.optimizer = optax.adam(learning_rate, eps=adam_eps)
@@ -69,8 +70,10 @@ class SharedLayeriDQN:
     
     def shift_params(self, step: int):
         if step % self.shift_params_frequency == 0:
-            self.target_params = self.network.roll(self.online_params)
-
+            self.target_params = FrozenDict(
+                head_params=self.network.roll(self.online_params["head_params"]),
+                torso_params=self.online_params["torso_params"]
+            )
             logs = {"loss": self.cumulated_loss / (self.shift_params_frequency / self.update_to_data)}
             self.cumulated_loss = 0
 
@@ -100,19 +103,20 @@ class SharedLayeriDQN:
     def loss(self, params: FrozenDict, params_target: FrozenDict, sample: ReplayElement):
         # computes the loss for a single sample
         target = self.compute_target(params_target, sample)
-        q_value = self.network.apply_other_heads(params, sample.state)[:, sample.action]
+        q_value = self.network.apply_other_heads(params, sample.state.squeeze(1))[:, sample.action]
 
         return jnp.square(q_value - target)
 
     def compute_target(self, params, sample: ReplayElement):
-        max_next_q = jnp.max(self.network.apply(params, sample.next_state)[:-1], axis=1)
+        max_next_q = jnp.max(self.network.apply(params, sample.next_state.squeeze(1))[:-1], axis=1)
 
         return sample.reward + (1 - sample.is_terminal) * (self.gamma**self.update_horizon) * max_next_q
 
     @partial(jax.jit, static_argnames="self")
-    def best_action(self, params: FrozenDict, state: jnp.ndarray):
-        # computes the best action for a single state
-        return jnp.argmax(self.network.apply(params, state))
+    def best_action(self, params: FrozenDict, head_idx: int, state: jnp.ndarray, network_selection_key):
+        headx = jax.random.randomint(network_selection_key, (), 1, self.num_networks)
+        # computes the best action for a single state and head
+        return jnp.argmax(self.network.apply_specific_head(params,head_idx, state))
 
     def get_model(self):
         return {"params": self.online_params}

@@ -1,28 +1,25 @@
+from sys import set_asyncgen_hooks
 import jax
 import jax.numpy as jnp
 from functools import partial
-
+from flax.core import FrozenDict
 from slim_idqn.sample_collection.replay_buffer import ReplayBuffer, TransitionElement
 
 
 @partial(jax.jit, static_argnames=("best_action_fn", "n_actions", "epsilon_fn"))
 def select_action(best_action_fn, params, state, key, n_actions, epsilon_fn, n_training_steps):
-    uniform_key, action_key = jax.random.split(key)
+    uniform_key, action_key,network_selection_key = jax.random.split(key, 3)
     return jnp.where(
         jax.random.uniform(uniform_key) <= epsilon_fn(n_training_steps),  # if uniform < epsilon,
         jax.random.randint(action_key, (), 0, n_actions),  # take random action
-        best_action_fn(params, state),  # otherwise, take a greedy action
+        best_action_fn(params, state, network_selection_key),  # otherwise, take a greedy action
     )
 
 
 def collect_single_sample(key, env, agent, rb: ReplayBuffer, p, epsilon_schedule, n_training_steps: int):
 
-    action_selection_key, network_selection_key = jax.random.split(key)
-    chosen_network_idx = jax.random.randint(network_selection_key, (), 0, agent.num_networks)
-    sample_network_params = jax.tree_util.tree_map(lambda param: param[chosen_network_idx], agent.online_params)
-
     action = select_action(
-        agent.best_action, sample_network_params , env.state, action_selection_key, env.n_actions, epsilon_schedule, n_training_steps
+        agent.best_action,  agent.online_params, env.state, action_selection_key, env.n_actions, epsilon_schedule, n_training_steps
     ).item()
 
     obs = env.observation

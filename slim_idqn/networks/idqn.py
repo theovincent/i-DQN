@@ -27,7 +27,7 @@ class iDQN:
         adam_eps: float = 1e-8,
         num_networks: int = 5
     ):
-        keys = jax.random.split(key, num=num_networks+1)
+        keys = jax.random.split(key, num=num_networks)
         self.num_networks = num_networks
         self.network = DQNNet(features, architecture_type, n_actions)
 
@@ -118,9 +118,12 @@ class iDQN:
         return sample.reward + (1 - sample.is_terminal) * (self.gamma**self.update_horizon) * max_next_q
 
     @partial(jax.jit, static_argnames="self")
-    def best_action(self, params: FrozenDict, state: jnp.ndarray):
+    def best_action(self, params: FrozenDict, state: jnp.ndarray, network_selection_key):
+        chosen_network_idx = jax.random.randint(network_selection_key, (), 1, self.num_networks)
+        sampled_params = jax.tree_util.tree_map(lambda param: param[chosen_network_idx], params)
+
         # computes the best action for a single state
-        return jnp.argmax(self.network.apply(params, state))
+        return jnp.argmax(self.network.apply(sampled_params, state))
 
     def get_model(self):
         return {"params": self.online_params}
