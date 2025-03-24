@@ -70,10 +70,11 @@ class SharedLayeriDQN:
     
     def shift_params(self, step: int):
         if step % self.shift_params_frequency == 0:
-            self.target_params = FrozenDict(
+            self.online_params = FrozenDict(
                 head_params=self.network.roll(self.online_params["head_params"]),
                 torso_params=self.online_params["torso_params"]
             )
+            self.target_params = self.online_params
             logs = {"loss": self.cumulated_loss / (self.shift_params_frequency / self.update_to_data)}
             self.cumulated_loss = 0
 
@@ -113,8 +114,8 @@ class SharedLayeriDQN:
         return sample.reward + (1 - sample.is_terminal) * (self.gamma**self.update_horizon) * max_next_q
 
     @partial(jax.jit, static_argnames="self")
-    def best_action(self, params: FrozenDict, head_idx: int, state: jnp.ndarray, network_selection_key):
-        headx = jax.random.randomint(network_selection_key, (), 1, self.num_networks)
+    def best_action(self, params: FrozenDict, state: jnp.ndarray, network_selection_key):
+        head_idx = jax.random.randint(network_selection_key, (), 0, self.num_networks)
         # computes the best action for a single state and head
         return jnp.argmax(self.network.apply_specific_head(params,head_idx, state))
 

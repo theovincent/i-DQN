@@ -35,7 +35,7 @@ class iDQN:
         self.target_params = self.online_params
 
         self.optimizer = optax.adam(learning_rate, eps=adam_eps)
-        self.optimizer_state = self.optimizer.init(self.network.init(keys[0], jnp.zeros(observation_dim, dtype=jnp.float32)))
+        self.optimizer_state = self.optimizer.init(self.online_params)
 
         self.gamma = gamma
         self.update_horizon = update_horizon
@@ -72,13 +72,12 @@ class iDQN:
     
     def shift_params(self, step: int):
         if step % self.shift_params_frequency == 0:
-            self.target_params = self.roll(self.online_params)
+            self.online_params = self.roll(self.online_params)
+            self.target_params = self.online_params
 
-            logs = {"loss": self.cumulated_loss / (self.shift_params_frequency / self.update_to_data)}
-            self.cumulated_loss = 0
 
-            return True, logs
-        return False, {}
+            return True
+        return False
     
 
     @partial(jax.jit, static_argnames="self")
@@ -119,7 +118,7 @@ class iDQN:
 
     @partial(jax.jit, static_argnames="self")
     def best_action(self, params: FrozenDict, state: jnp.ndarray, network_selection_key):
-        chosen_network_idx = jax.random.randint(network_selection_key, (), 1, self.num_networks)
+        chosen_network_idx = jax.random.randint(network_selection_key, (), 0, self.num_networks)
         sampled_params = jax.tree_util.tree_map(lambda param: param[chosen_network_idx], params)
 
         # computes the best action for a single state
