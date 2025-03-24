@@ -45,9 +45,9 @@ def train(
             if n_training_steps > p["n_initial_samples"]:
                 agent.update_online_params(n_training_steps, rb)
                 target_updated, logs = agent.update_target_params(n_training_steps)
-                params_shifted, logs = agent.shift_params(n_training_steps)
+                params_shifted = agent.shift_params(n_training_steps)
 
-                if target_updated or params_shifted:
+                if target_updated:
                     p["wandb"].log({"n_training_steps": n_training_steps, **logs})
 
         avg_return = np.mean(episode_returns_per_epoch[idx_epoch])
