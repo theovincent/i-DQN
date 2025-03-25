@@ -60,7 +60,7 @@ def add_base_arguments(parser: argparse.ArgumentParser):
         "--replay_buffer_capacity",
         help="Replay Buffer capacity.",
         type=int,
-        default=10_000,
+        default=10000,
     )
     parser.add_argument(
         "-bs",
@@ -189,14 +189,14 @@ def add_idqn_arguments(parser: argparse.ArgumentParser):
         "--target_update_frequency",
         help="Number of training steps before updating the target Q-network.",
         type=int,
-        default=200,
+        default=50,
     )
     parser.add_argument(
         "-spf",
         "--shift_params_frequency",
         help="Number of training steps before shifting the target Q-networks.",
         type=int,
-        default=2000,
+        default=1000,
     )
     parser.add_argument(
         "-nis",
@@ -210,14 +210,14 @@ def add_idqn_arguments(parser: argparse.ArgumentParser):
         "--epsilon_end",
         help="Ending value for the linear decaying epsilon used for exploration.",
         type=float,
-        default=0.01,
+        default=0.05,
     )
     parser.add_argument(
         "-ed",
         "--epsilon_duration",
         help="Duration of epsilon's linear decay used for exploration.",
         type=float,
-        default=1_000,
+        default=1000,
     )
     parser.add_argument(
         "-nn",

@@ -5,10 +5,10 @@ import jax
 
 from experiments.base.dqn import train
 from experiments.base.utils import prepare_logs
-from slimdqn.environments.lunar_lander import LunarLander
-from slimdqn.networks.dqn import DQN
-from slimdqn.sample_collection.replay_buffer import ReplayBuffer
-from slimdqn.sample_collection.samplers import UniformSamplingDistribution
+from slim_idqn.environments.lunar_lander import LunarLander
+from slim_idqn.networks.dqn import DQN
+from slim_idqn.sample_collection.replay_buffer import ReplayBuffer
+from slim_idqn.sample_collection.samplers import UniformSamplingDistribution
 
 
 def run(argvs=sys.argv[1:]):
