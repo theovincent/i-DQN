@@ -55,7 +55,7 @@ class FG_iDQN:
             self.cumulated_loss += loss
 
     def loss_on_batch(self, online_params, samples):
-        return jax.vmap(self.loss, in_axes=(None, None, 0))(online_params, samples).mean()
+        return jax.vmap(self.loss, in_axes=(None, 0))(online_params, samples).mean()
     
     def loss(self, online_params, sample: ReplayElement):
         # computes the loss for a single sample

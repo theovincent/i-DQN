@@ -114,7 +114,7 @@ def add_dqn_arguments(parser: argparse.ArgumentParser):
         "--n_epochs",
         help="Number of epochs to perform.",
         type=int,
-        default=50,
+        default=75,
     )
     parser.add_argument(
         "-ntspe",
@@ -168,7 +168,7 @@ def add_idqn_arguments(parser: argparse.ArgumentParser):
         "--n_epochs",
         help="Number of epochs to perform.",
         type=int,
-        default=50,
+        default=75,
     )
     parser.add_argument(
         "-ntspe",
@@ -189,14 +189,14 @@ def add_idqn_arguments(parser: argparse.ArgumentParser):
         "--target_update_frequency",
         help="Number of training steps before updating the target Q-network.",
         type=int,
-        default=50,
+        default=30,
     )
     parser.add_argument(
         "-spf",
         "--shift_params_frequency",
         help="Number of training steps before shifting the target Q-networks.",
         type=int,
-        default=1000,
+        default=600,
     )
     parser.add_argument(
         "-nis",
@@ -210,7 +210,7 @@ def add_idqn_arguments(parser: argparse.ArgumentParser):
         "--epsilon_end",
         help="Ending value for the linear decaying epsilon used for exploration.",
         type=float,
-        default=0.05,
+        default=0.01,
     )
     parser.add_argument(
         "-ed",
@@ -235,7 +235,7 @@ def add_shared_idqn_arguments(parser: argparse.ArgumentParser):
         "--n_epochs",
         help="Number of epochs to perform.",
         type=int,
-        default=50,
+        default=75,
     )
     parser.add_argument(
         "-ntspe",
@@ -256,14 +256,14 @@ def add_shared_idqn_arguments(parser: argparse.ArgumentParser):
         "--target_update_frequency",
         help="Number of training steps before updating the target Q-network.",
         type=int,
-        default=200,
+        default=30,
     )
     parser.add_argument(
         "-spf",
         "--shift_params_frequency",
         help="Number of training steps before shifting the target Q-networks.",
         type=int,
-        default=2000,
+        default=600,
     )
     parser.add_argument(
         "-nis",
@@ -310,7 +310,7 @@ def add_fg_idqn_arguments(parser: argparse.ArgumentParser):
         "--n_epochs",
         help="Number of epochs to perform.",
         type=int,
-        default=50,
+        default=75,
     )
     parser.add_argument(
         "-ntspe",
@@ -331,7 +331,7 @@ def add_fg_idqn_arguments(parser: argparse.ArgumentParser):
         "--shift_params_frequency",
         help="Number of training steps before shifting the target Q-networks.",
         type=int,
-        default=2000,
+        default=600,
     )
     parser.add_argument(
         "-nis",
