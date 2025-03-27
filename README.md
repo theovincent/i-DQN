@@ -19,6 +19,20 @@ pip install -e .[dev,gpu]
 ```
 To verify the installation, run the tests as:```pytest```
 
+## Running code
+To launch experiments locally, run:
+```bash
+launch_job/[enviroment]/local_[algorithm].sh [ARGS]
+```
+This will launch an experiment in a tmux terminal. It will push the logs and performances to a WandB project called "i-dqn". 
+The list of hyperparameters is available at [experiments/base/parser_argument.py](./experiments/base/parser_argument.py). 
+
+For example:
+```bash
+launch_job/lunar_lander/local_idqn.sh --experiment_name K3_T200_D10 --first_seed 1 --last_seed 1 --n_networks 3 --target_update_frequency 200 --target_sync_frequency 10 
+```
+will run i-DQN with $K=3$, $T=200$, and $D=10$ for the seed $1$ on Lunar Lander.
+
 ## Citing `iterated Q-Network`
 ```
 @article{vincent2024iterated,
