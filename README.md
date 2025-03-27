@@ -7,7 +7,7 @@
 
 <img src="images/idea.png" alt="drawing" width="59%"/> <img src="images/performances.png" alt="drawing" width="39%"/>
 
-NB: For simplicity, this branch does not support parameter sharing between the networks. Checkout the branch "experiments" for shared network parameters.
+NB: For simplicity, this branch does not support parameter sharing between the networks. Checkout the branch [experiments](https://github.com/theovincent/i-DQN/tree/experiments) for shared network parameters.
 
 ## User installation
 We recommend using Python 3.11.5. In the folder where the code is, create a Python virtual environment, activate it, update pip and install the package and its dependencies in editable mode:
