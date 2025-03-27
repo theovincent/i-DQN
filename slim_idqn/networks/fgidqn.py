@@ -8,7 +8,6 @@ from flax.core import FrozenDict
 
 from slim_idqn.networks.architectures.dqn import DQNNet
 from slim_idqn.sample_collection.replay_buffer import ReplayBuffer, ReplayElement
-from slim_idqn.networks.idqn import iDQN
 
 
 class FG_iDQN:

@@ -4,7 +4,7 @@ import optax
 from tqdm import tqdm
 
 from experiments.base.utils import save_data
-from slim_idqn.networks.fg_idqn import FG_iDQN
+from slim_idqn.networks.fgidqn import FG_iDQN
 from slim_idqn.sample_collection.replay_buffer import ReplayBuffer
 from slim_idqn.sample_collection.utils import collect_single_sample
 

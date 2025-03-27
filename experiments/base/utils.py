@@ -34,7 +34,7 @@ def prepare_logs(env_name: str, algo_name: str, argvs: List[str]):
     p["wandb"] = wandb.init(
         project="slim-idqn",
         config=p,
-        name=str(f"{p['algo_name']}_{p["seed"]}"),
+        name=str(f"{p['algo_name']}_{p['seed']}"),
         group=f"{p['algo_name']}_{p['experiment_name']}",
         mode="online" if not p["disable_wandb"] else "disabled",
         settings=wandb.Settings(_disable_stats=True),
