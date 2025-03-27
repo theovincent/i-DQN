@@ -53,7 +53,7 @@ def add_base_arguments(parser: argparse.ArgumentParser):
         nargs="*",
         help="List of features for the Q-networks.",
         type=int,
-        default=[200, 200],
+        default=[100, 100],
     )
     parser.add_argument(
         "-rbc",
@@ -105,10 +105,6 @@ def add_base_arguments(parser: argparse.ArgumentParser):
         default="fc",
         choices=["cnn", "impala", "fc"],
     )
-
-
-@output_added_arguments
-def add_dqn_arguments(parser: argparse.ArgumentParser):
     parser.add_argument(
         "-ne",
         "--n_epochs",
@@ -131,13 +127,6 @@ def add_dqn_arguments(parser: argparse.ArgumentParser):
         default=1,
     )
     parser.add_argument(
-        "-tuf",
-        "--target_update_frequency",
-        help="Number of training steps before updating the target Q-network.",
-        type=int,
-        default=200,
-    )
-    parser.add_argument(
         "-nis",
         "--n_initial_samples",
         help="Number of initial samples before the training starts.",
@@ -157,4 +146,40 @@ def add_dqn_arguments(parser: argparse.ArgumentParser):
         help="Duration of epsilon's linear decay used for exploration.",
         type=float,
         default=1_000,
+    )
+
+
+@output_added_arguments
+def add_dqn_arguments(parser: argparse.ArgumentParser):
+    parser.add_argument(
+        "-tuf",
+        "--target_update_frequency",
+        help="Number of training steps before updating the target Q-network. (T)",
+        type=int,
+        default=200,
+    )
+
+
+@output_added_arguments
+def add_idqn_arguments(parser: argparse.ArgumentParser):
+    parser.add_argument(
+        "-nn",
+        "--n_networks",
+        help="Number of online networks to trainin in parallel. (K)",
+        type=int,
+        default=3,
+    )
+    parser.add_argument(
+        "-tuf",
+        "--target_update_frequency",
+        help="Number of training steps before updating the target Q-networks. (T)",
+        type=int,
+        default=200,
+    )
+    parser.add_argument(
+        "-tsf",
+        "--target_sync_frequency",
+        help="Number of training steps before updating each target Q-network to its corresponding online Q-network. (D)",
+        type=int,
+        default=10,
     )
