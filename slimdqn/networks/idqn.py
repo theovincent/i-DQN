@@ -81,7 +81,9 @@ class iDQN:
 
             logs = {"loss": np.mean(self.cumulated_losses) / (self.target_update_frequency / self.update_to_data)}
             for idx_network in range(self.n_networks):
-                logs[f"networks/{idx_network}_loss"] = self.cumulated_losses[idx_network]
+                logs[f"networks/{idx_network}_loss"] = self.cumulated_losses[idx_network] / (
+                    self.target_update_frequency / self.update_to_data
+                )
             self.cumulated_losses = np.zeros_like(self.cumulated_losses)
 
             return True, logs
