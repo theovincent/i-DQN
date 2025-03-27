@@ -1,6 +1,6 @@
 # Official implementation of iterated Deep $Q$-Network (i-DQN) in JAX
 [![custom_badge](https://img.shields.io/badge/TMLR_Paper-📄-730264)](https://arxiv.org/pdf/2403.02107)
-[![custom_badge](https://img.shields.io/badge/Pytorch_Code-💻-035f61)](https://github.com/timofey256/iqn-implementation)
+[![custom_badge](https://img.shields.io/badge/PyTorch_Implementation-💻-035f61)](https://github.com/timofey256/iqn-implementation)
 [![custom_badge](https://img.shields.io/badge/Atari_Weights-🏋️-805403)](https://huggingface.co/TheoVincent/Atari_i-QN)
 
 **`i-DQN`** and **`i-IQN`** consider multiple consecutive $Q$-functions in the loss, where each $Q$-function is learned as the projected Bellman iteration of the following one (see on the left). This directly translates to performance increase as the usual $Q$-Network approaches learn only one projected Bellman iteration at a time (see on the right).
