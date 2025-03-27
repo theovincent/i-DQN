@@ -6,8 +6,8 @@ import numpy as np
 import optax
 from flax.core import FrozenDict
 
-from slim_idqn.networks.architectures.dqn import DQNNet
-from slim_idqn.sample_collection.replay_buffer import ReplayBuffer, ReplayElement
+from slimdqn.networks.architectures.dqn import DQNNet
+from slimdqn.sample_collection.replay_buffer import ReplayBuffer, ReplayElement
 
 
 class DQN:
@@ -26,11 +26,11 @@ class DQN:
         adam_eps: float = 1e-8,
     ):
         self.network = DQNNet(features, architecture_type, n_actions)
-        self.online_params = self.network.init(key, jnp.zeros(observation_dim, dtype=jnp.float32))
+        self.params = self.network.init(key, jnp.zeros(observation_dim, dtype=jnp.float32))
 
         self.optimizer = optax.adam(learning_rate, eps=adam_eps)
-        self.optimizer_state = self.optimizer.init(self.online_params)
-        self.target_params = self.online_params
+        self.optimizer_state = self.optimizer.init(self.params)
+        self.target_params = self.params
 
         self.gamma = gamma
         self.update_horizon = update_horizon
@@ -42,14 +42,14 @@ class DQN:
         if step % self.update_to_data == 0:
             batch_samples = replay_buffer.sample()
 
-            self.online_params, self.optimizer_state, loss = self.learn_on_batch(
-                self.online_params, self.target_params, self.optimizer_state, batch_samples
+            self.params, self.optimizer_state, loss = self.learn_on_batch(
+                self.params, self.target_params, self.optimizer_state, batch_samples
             )
             self.cumulated_loss += loss
 
     def update_target_params(self, step: int):
         if step % self.target_update_frequency == 0:
-            self.target_params = self.online_params.copy()
+            self.target_params = self.params.copy()
 
             logs = {"loss": self.cumulated_loss / (self.target_update_frequency / self.update_to_data)}
             self.cumulated_loss = 0
@@ -87,9 +87,9 @@ class DQN:
         )
 
     @partial(jax.jit, static_argnames="self")
-    def best_action(self, params: FrozenDict, state: jnp.ndarray, network_selection_key):
+    def best_action(self, params: FrozenDict, state: jnp.ndarray):
         # computes the best action for a single state
         return jnp.argmax(self.network.apply(params, state))
 
     def get_model(self):
-        return {"params": self.online_params}
+        return {"params": self.params}

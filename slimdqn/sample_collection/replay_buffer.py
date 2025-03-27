@@ -12,7 +12,7 @@ import numpy.typing as npt
 from flax import struct
 import snappy
 
-from slim_idqn.sample_collection import ReplayItemID
+from slimdqn.sample_collection import ReplayItemID
 
 
 class TransitionElement(typing.NamedTuple):
