@@ -44,7 +44,7 @@ def test_prepare_logs():
 
     # Create again folders and parameters.json with different first parameter for dqn -> should throw an error
     parameters = json.load(open(os.path.join(save_path, "parameters.json"), "rb"))
-    first_dqn_param = list(parameters["dqn"].keys())[1]
+    first_dqn_param = list(parameters["dqn"].keys())[0]
     first_dqn_param_value = parameters["dqn"][first_dqn_param] + 1
     try:
         prepare_logs(
